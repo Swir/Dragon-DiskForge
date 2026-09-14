@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
     private readonly ImageVerificationService _verification = new();
     private readonly IMountService _mountService = new WindowsDiskImageMountService();
     private readonly JsonImageLibraryService _imageLibrary;
+    private readonly JsonMountHistoryService _mountHistory;
     private readonly ScrollViewer _mainScroll;
     private readonly object? _homeContent;
     private readonly ImagesView _imagesView;
@@ -38,14 +39,20 @@ public sealed partial class MainWindow : Window
             ?? throw new InvalidOperationException("Dragon shell content host is unavailable.");
         _homeContent = _mainScroll.Content;
         _imageLibrary = new JsonImageLibraryService(GetImageLibraryPath());
+        _mountHistory = new JsonMountHistoryService(GetMountHistoryPath());
         _imagesView = new ImagesView(_imageLibrary);
-        _mountedView = new MountedView();
+        _mountedView = new MountedView(_mountHistory);
         _explorerView = new ExplorerView(WindowNative.GetWindowHandle(this));
         _imagesView.OpenRequested += ImagesView_OpenRequested;
         _mountedView.ExploreRequested += MountedView_ExploreRequested;
+        _mountedView.OpenHistoryRequested += MountedView_OpenHistoryRequested;
         MountButton.Click += Mount_Click;
         ShellNav.SelectionChanged += ShellNav_SelectionChanged;
-        Closed += (_, _) => _imageLibrary.Dispose();
+        Closed += (_, _) =>
+        {
+            _imageLibrary.Dispose();
+            _mountHistory.Dispose();
+        };
         LockFutureNavigation();
     }
 
@@ -72,7 +79,7 @@ public sealed partial class MainWindow : Window
             if (string.Equals(tag, "mounted", StringComparison.OrdinalIgnoreCase))
             {
                 item.IsEnabled = true;
-                ToolTipService.SetToolTip(item, "Live ISO/VHD/VHDX state from Windows Storage");
+                ToolTipService.SetToolTip(item, "Live Windows Storage state plus local mounted-image history");
                 continue;
             }
 
@@ -109,6 +116,7 @@ public sealed partial class MainWindow : Window
         {
             if (!ReferenceEquals(_mainScroll.Content, _mountedView))
                 _mainScroll.Content = _mountedView;
+            await _mountedView.RefreshAsync();
             return;
         }
 
@@ -130,6 +138,12 @@ public sealed partial class MainWindow : Window
     }
 
     private async void ImagesView_OpenRequested(object? sender, OpenImageFromLibraryEventArgs e)
+        => await NavigateHomeAndLoadImageAsync(e.ImagePath);
+
+    private async void MountedView_OpenHistoryRequested(object? sender, OpenMountedHistoryImageEventArgs e)
+        => await NavigateHomeAndLoadImageAsync(e.ImagePath);
+
+    private async Task NavigateHomeAndLoadImageAsync(string imagePath)
     {
         var homeItem = ShellNav.MenuItems
             .OfType<NavigationViewItem>()
@@ -140,7 +154,7 @@ public sealed partial class MainWindow : Window
         else if (!ReferenceEquals(_mainScroll.Content, _homeContent))
             _mainScroll.Content = _homeContent;
 
-        await LoadImageAsync(e.ImagePath);
+        await LoadImageAsync(imagePath);
     }
 
     private async void MountedView_ExploreRequested(object? sender, ExploreMountedImageEventArgs e)
@@ -168,6 +182,7 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            await RecordMountHistoryBestEffortAsync(state);
             await _explorerView.OpenVolumeAsync(state.DriveLetters[0] + "\\", state.ImagePath);
         }
         catch (Exception ex)
@@ -345,6 +360,8 @@ public sealed partial class MainWindow : Window
                 return;
 
             _mountState = state;
+            if (state.IsMounted)
+                await RecordMountHistoryBestEffortAsync(state);
             UpdateImageMetaText();
             UpdateMountButton();
         }
@@ -401,6 +418,8 @@ public sealed partial class MainWindow : Window
                 return;
 
             _mountState = state;
+            if (state.IsMounted)
+                await RecordMountHistoryBestEffortAsync(state);
             UpdateImageMetaText();
         }
         catch (OperationCanceledException)
@@ -440,12 +459,29 @@ public sealed partial class MainWindow : Window
         try
         {
             _mountState = await _mountService.GetStateAsync(imagePath);
+            if (_mountState.IsMounted)
+                await RecordMountHistoryBestEffortAsync(_mountState);
             if (IsCurrentImage(imagePath))
                 UpdateImageMetaText();
         }
         catch
         {
             _mountState = null;
+        }
+    }
+
+    private async Task RecordMountHistoryBestEffortAsync(MountState state)
+    {
+        if (!state.IsMounted)
+            return;
+
+        try
+        {
+            await _mountHistory.RecordMountedAsync(state.ImagePath, state.TargetDisplay);
+        }
+        catch
+        {
+            // History persistence is supplemental and must never break a real mount operation.
         }
     }
 
@@ -565,6 +601,12 @@ public sealed partial class MainWindow : Window
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(localAppData, "DragonDiskForge", "image-library.json");
+    }
+
+    private static string GetMountHistoryPath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "DragonDiskForge", "mount-history.json");
     }
 
     private static void AnimateOpacity(UIElement target, double from, double to, int durationMs, Action? completed = null)
