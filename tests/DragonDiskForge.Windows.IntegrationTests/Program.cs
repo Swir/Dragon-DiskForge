@@ -19,35 +19,12 @@ if (!IsAdministrator())
 
 var tempRoot = Path.Combine(Path.GetTempPath(), $"dragon-diskforge-mount-{Guid.NewGuid():N}");
 Directory.CreateDirectory(tempRoot);
-var vhdPath = Path.Combine(tempRoot, "integration.vhd");
 var service = new WindowsDiskImageMountService();
-var progress = new CaptureProgress();
 
 try
 {
-    Console.WriteLine("INFO  Creating disposable VHD test image with DiskPart...");
-    await CreateVhdAsync(vhdPath);
-
-    Check(service.CanHandle(vhdPath), "Windows mount service accepts VHD");
-    Check(service.RequiresElevation(vhdPath), "VHD reports elevation requirement for normal desktop sessions");
-
-    var initial = await service.GetStateAsync(vhdPath);
-    Check(!initial.IsMounted, "fresh test VHD starts detached");
-
-    var mounted = await service.MountAsync(
-        new MountRequest(vhdPath, ReadOnly: true, NoDriveLetter: true),
-        progress);
-    Check(mounted.IsMounted, "native Windows service mounts VHD");
-    Check(progress.Last >= 0.999d, "mount operation reports completion");
-
-    var isReadOnly = await QueryReadOnlyAsync(vhdPath);
-    Check(isReadOnly, "mounted VHD is read-only");
-
-    progress.Reset();
-    var detached = await service.UnmountAsync(vhdPath, progress);
-    Check(!detached.IsMounted, "native Windows service unmounts VHD");
-    Check(progress.Last >= 0.999d, "unmount operation reports completion");
-
+    await ValidateImageAsync(new ImageCase("VHD", ".vhd", assignDriveLetter: false));
+    await ValidateImageAsync(new ImageCase("VHDX", ".vhdx", assignDriveLetter: true));
     Console.WriteLine("\nDragon DiskForge Windows mount integration tests passed.");
 }
 catch (Exception ex)
@@ -57,18 +34,18 @@ catch (Exception ex)
 }
 finally
 {
-    try
+    foreach (var path in Directory.EnumerateFiles(tempRoot, "*.vhd*"))
     {
-        if (File.Exists(vhdPath))
+        try
         {
-            var state = await service.GetStateAsync(vhdPath);
+            var state = await service.GetStateAsync(path);
             if (state.IsMounted)
-                await service.UnmountAsync(vhdPath);
+                await service.UnmountAsync(path);
         }
-    }
-    catch
-    {
-        // Best-effort cleanup; the hosted runner is disposable.
+        catch
+        {
+            // Best-effort cleanup; the hosted runner is disposable.
+        }
     }
 
     try
@@ -81,21 +58,69 @@ finally
     }
 }
 
+async Task ValidateImageAsync(ImageCase testCase)
+{
+    var imagePath = Path.Combine(tempRoot, $"integration{testCase.Extension}");
+    Console.WriteLine($"\nINFO  Creating disposable {testCase.Name} test image with DiskPart...");
+    await CreateVirtualDiskAsync(imagePath, testCase.AssignDriveLetter);
+
+    Check(service.CanHandle(imagePath), $"Windows mount service accepts {testCase.Name}");
+    Check(service.RequiresElevation(imagePath), $"{testCase.Name} reports elevation requirement for normal desktop sessions");
+
+    var initial = await service.GetStateAsync(imagePath);
+    Check(!initial.IsMounted, $"fresh test {testCase.Name} starts detached");
+
+    var progress = new CaptureProgress();
+    var mounted = await service.MountAsync(
+        new MountRequest(
+            imagePath,
+            ReadOnly: true,
+            NoDriveLetter: !testCase.AssignDriveLetter),
+        progress);
+
+    Check(mounted.IsMounted, $"native Windows service mounts {testCase.Name}");
+    Check(progress.Last >= 0.999d, $"{testCase.Name} mount operation reports completion");
+
+    var isReadOnly = await QueryReadOnlyAsync(imagePath);
+    Check(isReadOnly, $"mounted {testCase.Name} is read-only");
+
+    if (testCase.AssignDriveLetter)
+    {
+        Check(mounted.DriveLetters.Count > 0, $"mounted {testCase.Name} exposes a drive letter");
+        var driveRoot = mounted.DriveLetters[0] + "\\";
+        Check(Directory.Exists(driveRoot), $"detected {testCase.Name} drive letter is accessible");
+        Console.WriteLine($"INFO  {testCase.Name} mounted at {string.Join(", ", mounted.DriveLetters)}");
+    }
+    else
+    {
+        Check(mounted.DriveLetters.Count == 0, $"{testCase.Name} honors NoDriveLetter");
+    }
+
+    progress.Reset();
+    var detached = await service.UnmountAsync(imagePath, progress);
+    Check(!detached.IsMounted, $"native Windows service unmounts {testCase.Name}");
+    Check(progress.Last >= 0.999d, $"{testCase.Name} unmount operation reports completion");
+}
+
 static bool IsAdministrator()
 {
     using var identity = WindowsIdentity.GetCurrent();
     return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
 }
 
-static async Task CreateVhdAsync(string vhdPath)
+static async Task CreateVirtualDiskAsync(string imagePath, bool assignDriveLetter)
 {
-    var scriptPath = Path.Combine(Path.GetDirectoryName(vhdPath)!, "create-vhd.txt");
+    var scriptPath = Path.Combine(
+        Path.GetDirectoryName(imagePath)!,
+        $"create-{Path.GetExtension(imagePath).TrimStart('.')}.txt");
+    var assign = assignDriveLetter ? "assign" : string.Empty;
     var script = $"""
-        create vdisk file="{vhdPath}" maximum=32 type=expandable
-        select vdisk file="{vhdPath}"
+        create vdisk file="{imagePath}" maximum=32 type=expandable
+        select vdisk file="{imagePath}"
         attach vdisk
         create partition primary
         format fs=ntfs quick label=DRAGONCI
+        {assign}
         detach vdisk
         exit
         """;
@@ -103,15 +128,15 @@ static async Task CreateVhdAsync(string vhdPath)
 
     var result = await RunProcessAsync("diskpart.exe", $"/s \"{scriptPath}\"");
     if (result.ExitCode != 0 || result.Output.Contains("DiskPart has encountered an error", StringComparison.OrdinalIgnoreCase))
-        throw new InvalidOperationException($"DiskPart could not create the integration VHD.\n{result.Output}\n{result.Error}");
+        throw new InvalidOperationException($"DiskPart could not create {Path.GetExtension(imagePath)}.\n{result.Output}\n{result.Error}");
 
-    if (!File.Exists(vhdPath))
-        throw new FileNotFoundException("DiskPart completed without producing the VHD.", vhdPath);
+    if (!File.Exists(imagePath))
+        throw new FileNotFoundException("DiskPart completed without producing the virtual disk.", imagePath);
 }
 
-static async Task<bool> QueryReadOnlyAsync(string vhdPath)
+static async Task<bool> QueryReadOnlyAsync(string imagePath)
 {
-    var literal = $"'{vhdPath.Replace("'", "''", StringComparison.Ordinal)}'";
+    var literal = $"'{imagePath.Replace("'", "''", StringComparison.Ordinal)}'";
     var script = $"$ErrorActionPreference='Stop'; (Get-DiskImage -ImagePath {literal} | Get-Disk -ErrorAction Stop).IsReadOnly";
     var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
     var result = await RunProcessAsync(
@@ -119,7 +144,7 @@ static async Task<bool> QueryReadOnlyAsync(string vhdPath)
         $"-NoLogo -NoProfile -NonInteractive -EncodedCommand {encoded}");
 
     if (result.ExitCode != 0)
-        throw new InvalidOperationException($"Could not query VHD read-only state. {result.Error}");
+        throw new InvalidOperationException($"Could not query virtual-disk read-only state. {result.Error}");
 
     return result.Output.Trim().Equals("True", StringComparison.OrdinalIgnoreCase);
 }
@@ -161,4 +186,5 @@ sealed class CaptureProgress : IProgress<double>
     public void Reset() => Last = 0d;
 }
 
+sealed record ImageCase(string Name, string Extension, bool AssignDriveLetter);
 sealed record ProcessResult(int ExitCode, string Output, string Error);
