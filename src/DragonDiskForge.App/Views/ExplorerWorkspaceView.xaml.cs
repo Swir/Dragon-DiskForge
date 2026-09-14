@@ -54,6 +54,23 @@ public sealed partial class ExplorerWorkspaceView : UserControl
         UpdateEmptyState();
     }
 
+    public void CloseImageTabs(string imagePath)
+    {
+        var normalized = Path.GetFullPath(imagePath) + "|";
+        var keys = _tabs.Keys
+            .Where(key => key.StartsWith(normalized, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        foreach (var key in keys)
+        {
+            if (!_tabs.Remove(key, out var tab))
+                continue;
+            WorkspaceTabs.TabItems.Remove(tab);
+        }
+
+        UpdateEmptyState();
+    }
+
     public void ShowNoMountedVolume(string? message = null)
     {
         if (HasTabs)
