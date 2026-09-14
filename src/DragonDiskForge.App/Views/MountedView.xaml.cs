@@ -11,20 +11,25 @@ namespace DragonDiskForge.App.Views;
 public sealed partial class MountedView : UserControl
 {
     private readonly IMountService _mountService = new WindowsDiskImageMountService();
+    private readonly IMountHistoryService _historyService;
     private readonly ObservableCollection<MountedImageViewModel> _items = new();
+    private readonly ObservableCollection<MountHistoryItemViewModel> _historyItems = new();
     private CancellationTokenSource? _refreshCts;
     private CancellationTokenSource? _operationCts;
     private string? _activeOperationPath;
 
-    public MountedView()
+    public MountedView(IMountHistoryService historyService)
     {
+        _historyService = historyService ?? throw new ArgumentNullException(nameof(historyService));
         InitializeComponent();
         MountedList.ItemsSource = _items;
+        HistoryList.ItemsSource = _historyItems;
         Loaded += MountedView_Loaded;
         Unloaded += MountedView_Unloaded;
     }
 
     public event EventHandler<ExploreMountedImageEventArgs>? ExploreRequested;
+    public event EventHandler<OpenMountedHistoryImageEventArgs>? OpenHistoryRequested;
 
     public async Task RefreshAsync(bool showSuccess = false)
     {
@@ -44,8 +49,10 @@ public sealed partial class MountedView : UserControl
                 _items.Add(MountedImageViewModel.FromState(state));
 
             UpdateEmptyState();
+            await RefreshHistoryAsync(states, cts.Token);
+
             if (showSuccess)
-                ShowStatus("Mounted-image state refreshed from Windows Storage.", InfoBarSeverity.Success);
+                ShowStatus("Mounted-image state and history refreshed from Windows Storage.", InfoBarSeverity.Success);
         }
         catch (OperationCanceledException)
         {
@@ -64,6 +71,40 @@ public sealed partial class MountedView : UserControl
             }
 
             cts.Dispose();
+        }
+    }
+
+    private async Task RefreshHistoryAsync(IReadOnlyList<MountState> states, CancellationToken cancellationToken)
+    {
+        try
+        {
+            foreach (var state in states.Where(x => x.IsMounted))
+            {
+                await _historyService.RecordMountedAsync(
+                    state.ImagePath,
+                    state.TargetDisplay,
+                    cancellationToken);
+            }
+
+            var history = await _historyService.GetAsync(cancellationToken);
+            var mountedPaths = states
+                .Where(x => x.IsMounted)
+                .Select(x => Path.GetFullPath(x.ImagePath))
+                .ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+            _historyItems.Clear();
+            foreach (var entry in history)
+                _historyItems.Add(MountHistoryItemViewModel.FromEntry(entry, mountedPaths.Contains(Path.GetFullPath(entry.Path))));
+
+            UpdateHistoryState();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Mounted images are current, but local history could not be updated: {ShortMessage(ex.Message)}", InfoBarSeverity.Warning);
         }
     }
 
@@ -180,12 +221,80 @@ public sealed partial class MountedView : UserControl
         }
     }
 
+    private void OpenHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string imagePath || string.IsNullOrWhiteSpace(imagePath))
+            return;
+
+        if (!File.Exists(imagePath))
+        {
+            ShowStatus("This image is no longer available at the saved path. Remove the stale history entry if it is no longer needed.", InfoBarSeverity.Warning);
+            return;
+        }
+
+        OpenHistoryRequested?.Invoke(this, new OpenMountedHistoryImageEventArgs(imagePath));
+    }
+
+    private async void RemoveHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string imagePath || string.IsNullOrWhiteSpace(imagePath))
+            return;
+
+        try
+        {
+            var history = await _historyService.RemoveAsync(imagePath);
+            await ApplyHistorySnapshotAsync(history);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Could not remove history entry: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
+        }
+    }
+
+    private async void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await _historyService.ClearAsync();
+            _historyItems.Clear();
+            UpdateHistoryState();
+            ShowStatus("Mounted history cleared. Live mounted images are unchanged.", InfoBarSeverity.Success);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Could not clear mounted history: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
+        }
+    }
+
+    private Task ApplyHistorySnapshotAsync(IReadOnlyList<MountHistoryEntry> history)
+    {
+        var mountedPaths = _items
+            .Select(x => Path.GetFullPath(x.ImagePath))
+            .ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+        _historyItems.Clear();
+        foreach (var entry in history)
+            _historyItems.Add(MountHistoryItemViewModel.FromEntry(entry, mountedPaths.Contains(Path.GetFullPath(entry.Path))));
+
+        UpdateHistoryState();
+        return Task.CompletedTask;
+    }
+
     private void UpdateEmptyState()
     {
         var count = _items.Count;
         MountedCountText.Text = count == 1 ? "1 mounted" : $"{count} mounted";
         EmptyState.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
         MountedList.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void UpdateHistoryState()
+    {
+        var count = _historyItems.Count;
+        HistoryCountText.Text = count == 1 ? "1 history" : $"{count} history";
+        HistoryEmpty.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        HistoryList.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        ClearHistoryButton.IsEnabled = count > 0;
     }
 
     private void ShowStatus(string message, InfoBarSeverity severity)
@@ -203,6 +312,7 @@ public sealed partial class MountedView : UserControl
 }
 
 public sealed record ExploreMountedImageEventArgs(string ImagePath, string DriveRoot);
+public sealed record OpenMountedHistoryImageEventArgs(string ImagePath);
 
 public sealed class MountedImageViewModel
 {
@@ -239,5 +349,34 @@ public sealed class MountedImageViewModel
             $"{extension} • {target}{elevation}",
             primaryDriveRoot,
             primaryDriveRoot is not null);
+    }
+}
+
+public sealed class MountHistoryItemViewModel
+{
+    private MountHistoryItemViewModel(string path, string fileName, string meta, bool canOpen)
+    {
+        Path = path;
+        FileName = fileName;
+        Meta = meta;
+        CanOpen = canOpen;
+    }
+
+    public string Path { get; }
+    public string FileName { get; }
+    public string Meta { get; }
+    public bool CanOpen { get; }
+
+    public static MountHistoryItemViewModel FromEntry(MountHistoryEntry entry, bool isMounted)
+    {
+        var exists = File.Exists(entry.Path);
+        var state = isMounted ? "Mounted now" : exists ? "Available" : "Missing";
+        var target = string.IsNullOrWhiteSpace(entry.LastTargetDisplay) ? "no drive target" : entry.LastTargetDisplay;
+        var local = entry.LastSeenMountedUtc.LocalDateTime;
+        return new MountHistoryItemViewModel(
+            entry.Path,
+            Path.GetFileName(entry.Path),
+            $"{state} • last mounted {local:yyyy-MM-dd HH:mm} • {target}",
+            exists);
     }
 }
