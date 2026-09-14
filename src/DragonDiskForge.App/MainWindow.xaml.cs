@@ -1,3 +1,4 @@
+using DragonDiskForge.App.Views;
 using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Services;
 using DragonDiskForge.Windows.Services;
@@ -17,6 +18,9 @@ public sealed partial class MainWindow : Window
     private readonly ImageDetectionService _detector = new();
     private readonly ImageVerificationService _verification = new();
     private readonly IMountService _mountService = new WindowsDiskImageMountService();
+    private readonly ScrollViewer _mainScroll;
+    private readonly object? _homeContent;
+    private readonly MountedView _mountedView;
     private DiskImageInfo? _current;
     private MountState? _mountState;
     private CancellationTokenSource? _verificationCts;
@@ -27,7 +31,12 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
+        _mainScroll = ShellNav.Content as ScrollViewer
+            ?? throw new InvalidOperationException("Dragon shell content host is unavailable.");
+        _homeContent = _mainScroll.Content;
+        _mountedView = new MountedView();
         MountButton.Click += Mount_Click;
+        ShellNav.SelectionChanged += ShellNav_SelectionChanged;
         LockFutureNavigation();
     }
 
@@ -44,17 +53,40 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
+            if (string.Equals(tag, "mounted", StringComparison.OrdinalIgnoreCase))
+            {
+                item.IsEnabled = true;
+                ToolTipService.SetToolTip(item, "Live ISO/VHD/VHDX state from Windows Storage");
+                continue;
+            }
+
             item.IsEnabled = false;
             var milestone = tag switch
             {
                 "images" => "0.3",
-                "mounted" => "0.2",
                 "explorer" => "0.3",
                 "convert" => "0.6",
                 "tools" => "0.8",
                 _ => "future"
             };
             ToolTipService.SetToolTip(item, $"Planned for milestone {milestone}");
+        }
+    }
+
+    private void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        var tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag?.ToString();
+        if (string.Equals(tag, "mounted", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!ReferenceEquals(_mainScroll.Content, _mountedView))
+                _mainScroll.Content = _mountedView;
+            return;
+        }
+
+        if (string.Equals(tag, "home", StringComparison.OrdinalIgnoreCase)
+            && !ReferenceEquals(_mainScroll.Content, _homeContent))
+        {
+            _mainScroll.Content = _homeContent;
         }
     }
 
