@@ -25,21 +25,21 @@ This file is the source of truth for project progress. Every meaningful feature 
 - 🚧 Error states, cancellation and foundation testing
 
 ### Dragon visual system
-- 🚧 Dragon visual language specification
-- ⬜ Custom Dragon DiskForge dragon-head/sigil logo
-- ⬜ Windows application icon set
-- ⬜ Obsidian / charcoal base palette
-- ⬜ Ember / molten-metal accent palette
-- ⬜ Optional deep-crimson secondary accent
+- ✅ Dragon visual language specification
+- ✅ Initial custom Dragon DiskForge dragon-head/sigil
+- ⬜ Final Windows application icon set
+- ✅ Obsidian / charcoal base palette
+- ✅ Ember / molten-metal accent palette
+- ✅ Deep-crimson secondary accent
 - ⬜ Dragon-scale micro-pattern used subtly in selected surfaces
-- ⬜ Subtle fire/ember glow for active actions and mounted states
+- 🚧 Subtle fire/ember active-state treatment
 - ⬜ Dragon-themed splash/startup screen
-- ⬜ Branded empty states and loading states
-- ⬜ Custom title/header treatment
+- ✅ Branded Forge home/drop state
+- ✅ Custom Dragon header treatment
 - ⬜ Fluent/WinUI animations with a restrained Dragon character
-- ⬜ Light theme that preserves the Dragon identity
+- 🚧 Light theme preserving the Dragon identity
 - ⬜ High-contrast/accessibility-safe variants
-- ⬜ Responsive layout for small and large windows
+- 🚧 Responsive layout for small and large windows
 
 **Exit criteria:** clean Windows build, reliable image detection, no fake actions presented as complete, documented architecture, and a recognizably Dragon DiskForge UI rather than a generic WinUI utility.
 
@@ -162,7 +162,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ "Open with Dragon DiskForge"
 - ⬜ Windows context-menu integration
 - ⬜ CLI using the same Core engine
-- ⬜ Example commands: `dragon mount`, `dragon explore`, `dragon verify`, `dragon convert`
+- ⬜ `dragon mount`, `dragon explore`, `dragon verify`, `dragon convert`
 - ⬜ Optional PowerShell-friendly output
 - ⬜ Session restore
 - ⬜ Settings import/export
@@ -187,8 +187,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ English baseline
 - ⬜ Polish baseline
 - ⬜ Crash handling with privacy-preserving report export
-- ⬜ Performance profiling
-- ⬜ Memory-use profiling
+- ⬜ Performance and memory profiling
 - ⬜ Beta regression checklist
 
 ---
