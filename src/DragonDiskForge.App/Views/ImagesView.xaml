@@ -52,7 +52,7 @@
             <TextBlock x:Name="FavoritesEmpty"
                        Text="No favorites yet. Mark a recent image as favorite to keep it pinned here."
                        Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap"
-                       Padding="4,12" />
+                       Margin="4,12" />
             <ListView x:Name="FavoritesList" Visibility="Collapsed" SelectionMode="None"
                       Background="Transparent" HorizontalContentAlignment="Stretch">
                 <ListView.ItemContainerStyle>
@@ -116,7 +116,7 @@
             <TextBlock x:Name="RecentsEmpty"
                        Text="Images you open successfully will appear here automatically."
                        Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap"
-                       Padding="4,12" />
+                       Margin="4,12" />
             <ListView x:Name="RecentsList" Visibility="Collapsed" SelectionMode="None"
                       Background="Transparent" HorizontalContentAlignment="Stretch">
                 <ListView.ItemContainerStyle>
