@@ -94,7 +94,7 @@
                                 VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Ellipse Width="8" Height="8" Fill="{ThemeResource DragonSuccessBrush}" />
-                                <TextBlock Text="Core 0.1" FontWeight="SemiBold" />
+                                <TextBlock Text="Core 0.2" FontWeight="SemiBold" />
                                 <TextBlock Text="•" Foreground="{ThemeResource DragonMutedBrush}" />
                                 <TextBlock Text="Ready" Foreground="{ThemeResource DragonMutedBrush}" />
                             </StackPanel>
@@ -164,7 +164,7 @@
                                                CharacterSpacing="35"
                                                Foreground="{ThemeResource DragonTextBrush}"
                                                TextWrapping="Wrap" />
-                                    <TextBlock Text="Open, inspect and verify disk images in a safe read-only workflow. Mounting and Dragon Explorer are the next engine milestone."
+                                    <TextBlock Text="Open, inspect, verify and mount supported disk images in a safe read-only workflow. Dragon Explorer is the next engine milestone."
                                                MaxWidth="650" FontSize="14"
                                                Foreground="{ThemeResource DragonMutedBrush}"
                                                TextWrapping="Wrap" />
@@ -301,7 +301,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" Spacing="3">
                                     <TextBlock Text="Mount" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="Native engine • milestone 0.2"
+                                    <TextBlock Text="Native ISO • VHD • VHDX"
                                                Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
@@ -349,7 +349,7 @@
                                         ToolTipService.ToolTip="Dragon Explorer arrives in milestone 0.3" />
                                 <Button x:Name="MountButton" Content="Mount" IsEnabled="False"
                                         Style="{StaticResource DragonSecondaryButtonStyle}"
-                                        ToolTipService.ToolTip="Native mount service arrives in milestone 0.2" />
+                                        ToolTipService.ToolTip="Native mount is available for proven ISO/VHD/VHDX images" />
                                 <Button Content="Verify" Click="Verify_Click"
                                         Style="{StaticResource DragonPrimaryButtonStyle}" />
                             </StackPanel>
@@ -361,7 +361,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Dragon DiskForge • Foundation channel"
+                        <TextBlock Text="Dragon DiskForge • 0.2 Native Mount channel"
                                    FontSize="11" Foreground="{ThemeResource DragonMutedBrush}" />
                         <TextBlock x:Name="SafeModeText"
                                    Grid.Column="1" Text="READ-ONLY SAFE MODE"
