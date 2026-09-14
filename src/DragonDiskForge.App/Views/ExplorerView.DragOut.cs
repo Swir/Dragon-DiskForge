@@ -1,3 +1,4 @@
+using DragonDiskForge.Core.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
@@ -7,6 +8,8 @@ namespace DragonDiskForge.App.Views;
 
 public sealed partial class ExplorerView
 {
+    private readonly ExplorerDragOutValidator _dragOutValidator = new();
+
     private async void ExplorerItem_DragStarting(UIElement sender, DragStartingEventArgs args)
     {
         var deferral = args.GetDeferral();
@@ -20,42 +23,22 @@ public sealed partial class ExplorerView
                 return;
             }
 
-            if (item.IsReparsePoint)
-            {
-                args.Cancel = true;
-                ShowStatus("Drag-out is blocked for reparse points and junctions.", InfoBarSeverity.Warning);
-                return;
-            }
-
-            var sourcePath = Path.GetFullPath(item.FullPath);
-            if (!IsInsideRoot(_rootPath, sourcePath))
-            {
-                args.Cancel = true;
-                ShowStatus("Drag-out was blocked because the item is outside the mounted root.", InfoBarSeverity.Warning);
-                return;
-            }
-
-            var exists = item.IsDirectory ? Directory.Exists(sourcePath) : File.Exists(sourcePath);
-            if (!exists)
-            {
-                args.Cancel = true;
-                ShowStatus("The dragged item is no longer available. Refresh Dragon Explorer.", InfoBarSeverity.Warning);
-                return;
-            }
-
+            string sourcePath;
             try
             {
-                if ((File.GetAttributes(sourcePath) & System.IO.FileAttributes.ReparsePoint) != 0)
-                {
-                    args.Cancel = true;
-                    ShowStatus("Drag-out was blocked because the item became a reparse point.", InfoBarSeverity.Warning);
-                    return;
-                }
+                sourcePath = _dragOutValidator.Validate(
+                    _rootPath,
+                    item.FullPath,
+                    item.IsDirectory,
+                    item.IsReparsePoint);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is InvalidOperationException
+                                       or FileNotFoundException
+                                       or IOException
+                                       or UnauthorizedAccessException)
             {
                 args.Cancel = true;
-                ShowStatus($"Could not validate drag-out safety: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
+                ShowStatus($"Drag-out blocked: {ShortMessage(ex.Message)}", InfoBarSeverity.Warning);
                 return;
             }
 
