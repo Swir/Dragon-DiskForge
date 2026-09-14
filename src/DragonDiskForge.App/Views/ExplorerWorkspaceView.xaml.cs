@@ -12,6 +12,7 @@ public sealed partial class ExplorerWorkspaceView : UserControl
     {
         _windowHandle = windowHandle;
         InitializeComponent();
+        Loaded += ExplorerWorkspaceView_Loaded;
         UpdateEmptyState();
     }
 
@@ -62,17 +63,14 @@ public sealed partial class ExplorerWorkspaceView : UserControl
             .ToArray();
 
         foreach (var key in keys)
-        {
-            if (!_tabs.Remove(key, out var tab))
-                continue;
-            WorkspaceTabs.TabItems.Remove(tab);
-        }
+            RemoveTab(key);
 
         UpdateEmptyState();
     }
 
     public void ShowNoMountedVolume(string? message = null)
     {
+        PruneUnavailableTabs();
         if (HasTabs)
             return;
 
@@ -81,16 +79,43 @@ public sealed partial class ExplorerWorkspaceView : UserControl
         UpdateEmptyState();
     }
 
+    private void ExplorerWorkspaceView_Loaded(object sender, RoutedEventArgs e)
+        => PruneUnavailableTabs();
+
     private void WorkspaceTabs_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
     {
         if (args.Tab is not TabViewItem tab)
             return;
 
         if (tab.Tag is string key)
-            _tabs.Remove(key);
+            RemoveTab(key);
+        else
+            sender.TabItems.Remove(tab);
 
-        sender.TabItems.Remove(tab);
         UpdateEmptyState();
+    }
+
+    private void PruneUnavailableTabs()
+    {
+        var staleKeys = _tabs.Keys
+            .Where(key => !TryGetRootFromKey(key, out var root) || !Directory.Exists(root))
+            .ToArray();
+
+        foreach (var key in staleKeys)
+            RemoveTab(key);
+
+        if (staleKeys.Length > 0)
+        {
+            EmptyDescriptionText.Text = "One or more Explorer tabs were closed because their mounted Windows volumes are no longer available.";
+            UpdateEmptyState();
+        }
+    }
+
+    private void RemoveTab(string key)
+    {
+        if (!_tabs.Remove(key, out var tab))
+            return;
+        WorkspaceTabs.TabItems.Remove(tab);
     }
 
     private void UpdateEmptyState()
@@ -103,4 +128,17 @@ public sealed partial class ExplorerWorkspaceView : UserControl
 
     private static string BuildKey(string imagePath, string rootPath)
         => $"{Path.GetFullPath(imagePath)}|{Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath))}";
+
+    private static bool TryGetRootFromKey(string key, out string root)
+    {
+        var separator = key.LastIndexOf('|');
+        if (separator < 0 || separator == key.Length - 1)
+        {
+            root = string.Empty;
+            return false;
+        }
+
+        root = key[(separator + 1)..];
+        return true;
+    }
 }
