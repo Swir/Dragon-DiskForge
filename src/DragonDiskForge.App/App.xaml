@@ -21,6 +21,13 @@
                     <SolidColorBrush x:Key="DragonSuccessBrush" Color="#41C982" />
                     <SolidColorBrush x:Key="DragonEmberSoftBrush" Color="#33F47A1F" />
                     <SolidColorBrush x:Key="DragonCrimsonSoftBrush" Color="#26B92B35" />
+                    <SolidColorBrush x:Key="DragonPrimaryButtonTextBrush" Color="White" />
+                    <Color x:Key="DragonHeroStartColor">#40170D</Color>
+                    <Color x:Key="DragonHeroMidColor">#17181D</Color>
+                    <Color x:Key="DragonHeroEndColor">#111318</Color>
+                    <Color x:Key="DragonGradientStartColor">#FFB02E</Color>
+                    <Color x:Key="DragonGradientMidColor">#F47A1F</Color>
+                    <Color x:Key="DragonGradientEndColor">#B92B35</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="DragonBackgroundBrush" Color="#EEE9E1" />
@@ -38,6 +45,13 @@
                     <SolidColorBrush x:Key="DragonSuccessBrush" Color="#16734B" />
                     <SolidColorBrush x:Key="DragonEmberSoftBrush" Color="#24D85D00" />
                     <SolidColorBrush x:Key="DragonCrimsonSoftBrush" Color="#209E2330" />
+                    <SolidColorBrush x:Key="DragonPrimaryButtonTextBrush" Color="White" />
+                    <Color x:Key="DragonHeroStartColor">#FFF0E1</Color>
+                    <Color x:Key="DragonHeroMidColor">#F7F1E8</Color>
+                    <Color x:Key="DragonHeroEndColor">#EFE7DD</Color>
+                    <Color x:Key="DragonGradientStartColor">#E98318</Color>
+                    <Color x:Key="DragonGradientMidColor">#D85D00</Color>
+                    <Color x:Key="DragonGradientEndColor">#9E2330</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="DragonBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -55,24 +69,31 @@
                     <SolidColorBrush x:Key="DragonSuccessBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="DragonEmberSoftBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="DragonCrimsonSoftBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="DragonPrimaryButtonTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                    <Color x:Key="DragonHeroStartColor">{ThemeResource SystemColorWindowColor}</Color>
+                    <Color x:Key="DragonHeroMidColor">{ThemeResource SystemColorWindowColor}</Color>
+                    <Color x:Key="DragonHeroEndColor">{ThemeResource SystemColorWindowColor}</Color>
+                    <Color x:Key="DragonGradientStartColor">{ThemeResource SystemColorHighlightColor}</Color>
+                    <Color x:Key="DragonGradientMidColor">{ThemeResource SystemColorHighlightColor}</Color>
+                    <Color x:Key="DragonGradientEndColor">{ThemeResource SystemColorHighlightColor}</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
             <LinearGradientBrush x:Key="DragonHeroBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#40170D" Offset="0" />
-                <GradientStop Color="#17181D" Offset="0.46" />
-                <GradientStop Color="#111318" Offset="1" />
+                <GradientStop Color="{ThemeResource DragonHeroStartColor}" Offset="0" />
+                <GradientStop Color="{ThemeResource DragonHeroMidColor}" Offset="0.46" />
+                <GradientStop Color="{ThemeResource DragonHeroEndColor}" Offset="1" />
             </LinearGradientBrush>
 
             <LinearGradientBrush x:Key="DragonEmberGradientBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FFB02E" Offset="0" />
-                <GradientStop Color="#F47A1F" Offset="0.52" />
-                <GradientStop Color="#B92B35" Offset="1" />
+                <GradientStop Color="{ThemeResource DragonGradientStartColor}" Offset="0" />
+                <GradientStop Color="{ThemeResource DragonGradientMidColor}" Offset="0.52" />
+                <GradientStop Color="{ThemeResource DragonGradientEndColor}" Offset="1" />
             </LinearGradientBrush>
 
             <Style x:Key="DragonPrimaryButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{StaticResource DragonEmberGradientBrush}" />
-                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Foreground" Value="{ThemeResource DragonPrimaryButtonTextBrush}" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="CornerRadius" Value="10" />
                 <Setter Property="Padding" Value="20,11" />
