@@ -141,8 +141,8 @@ public sealed partial class ImagesView : UserControl
 
     private static bool PathsEqual(string left, string right)
         => string.Equals(
-            Path.GetFullPath(left),
-            Path.GetFullPath(right),
+            System.IO.Path.GetFullPath(left),
+            System.IO.Path.GetFullPath(right),
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     private static string ShortMessage(string message)
@@ -185,7 +185,7 @@ public sealed class ImageLibraryItemViewModel
         var local = entry.LastOpenedUtc.LocalDateTime;
         return new ImageLibraryItemViewModel(
             entry.Path,
-            Path.GetFileName(entry.Path),
+            System.IO.Path.GetFileName(entry.Path),
             $"{state} • opened {local:yyyy-MM-dd HH:mm}",
             entry.IsFavorite,
             exists);
