@@ -138,7 +138,9 @@ await WithTempDirectoryAsync(async root =>
 {
     var folder = Path.Combine(root, "FolderA");
     var nested = Path.Combine(folder, "Nested");
+    var empty = Path.Combine(folder, "EmptyFolder");
     Directory.CreateDirectory(nested);
+    Directory.CreateDirectory(empty);
     await File.WriteAllTextAsync(Path.Combine(root, "root.txt"), "root");
     await File.WriteAllTextAsync(Path.Combine(folder, "dragon-note.txt"), "dragon");
     await File.WriteAllTextAsync(Path.Combine(nested, "payload.bin"), "payload-data");
@@ -179,9 +181,21 @@ await WithTempDirectoryAsync(async root =>
         var copyProgress = new CaptureProgress();
         await explorer.CopyOutAsync(root, folder, exportRoot, copyProgress);
         var copiedNested = Path.Combine(exportRoot, "FolderA", "Nested", "payload.bin");
+        var copiedEmpty = Path.Combine(exportRoot, "FolderA", "EmptyFolder");
         Check(File.Exists(copiedNested), "Explorer copy-out preserves nested directory structure");
+        Check(Directory.Exists(copiedEmpty), "Explorer copy-out preserves empty directories");
         Check(await File.ReadAllTextAsync(copiedNested) == "payload-data", "Explorer copy-out preserves file content");
         Check(copyProgress.Last >= 0.999d, "Explorer copy-out reports completion progress");
+
+        try
+        {
+            await explorer.CopyOutAsync(root, folder, exportRoot);
+            Check(false, "Explorer copy-out refuses to overwrite an existing destination");
+        }
+        catch (IOException)
+        {
+            Check(true, "Explorer copy-out refuses to overwrite an existing destination");
+        }
     }
     finally
     {
