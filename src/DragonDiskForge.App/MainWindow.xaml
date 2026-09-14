@@ -7,13 +7,37 @@
     mc:Ignorable="d"
     Title="Dragon DiskForge">
 
-    <Grid>
+    <Grid Background="{ThemeResource DragonBackgroundBrush}">
         <NavigationView x:Name="ShellNav"
+                        Background="Transparent"
+                        Foreground="{ThemeResource DragonTextBrush}"
                         IsBackButtonVisible="Collapsed"
                         IsPaneToggleButtonVisible="True"
                         IsSettingsVisible="True"
                         PaneDisplayMode="Left"
-                        OpenPaneLength="250">
+                        OpenPaneLength="268">
+
+            <NavigationView.PaneHeader>
+                <Grid Margin="8,10,8,16" ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="44" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="44" Height="44" CornerRadius="13"
+                            Background="{StaticResource DragonEmberGradientBrush}">
+                        <Viewbox Margin="9">
+                            <Path Fill="White"
+                                  Data="M 48,2 C 38,12 33,22 34,33 C 27,27 20,25 11,27 C 21,34 24,41 20,50 C 16,59 19,69 28,75 C 34,79 40,79 46,76 C 40,72 36,67 36,61 C 42,65 49,67 57,66 C 67,65 76,59 82,50 C 74,53 67,52 62,48 C 70,44 76,37 79,28 C 70,32 62,33 55,31 C 58,22 56,12 48,2 Z M 50,36 C 57,35 63,37 67,42 C 61,41 56,42 51,45 C 48,43 47,40 50,36 Z" />
+                        </Viewbox>
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="DRAGON" FontSize="17" FontWeight="Bold" CharacterSpacing="90" />
+                        <TextBlock Text="DISKFORGE" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="150" />
+                    </StackPanel>
+                </Grid>
+            </NavigationView.PaneHeader>
+
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Home" Tag="home">
                     <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
@@ -35,106 +59,259 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
-            <ScrollViewer>
-                <Grid Padding="32" MaxWidth="1200" HorizontalAlignment="Stretch">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid Padding="30,24,30,34" MaxWidth="1320" HorizontalAlignment="Stretch">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="0,4,0,28">
+                    <!-- Top identity/status bar -->
+                    <Grid Grid.Row="0" Margin="0,0,0,18">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="DRAGON DISKFORGE" FontSize="34" FontWeight="SemiBold" />
-                            <TextBlock Text="Universal Disk Image Manager" FontSize="15" Foreground="{ThemeResource DragonMutedBrush}" Margin="0,4,0,0" />
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="THE FORGE" FontSize="11" FontWeight="Bold"
+                                       Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="220" />
+                            <TextBlock Text="Command your disk images"
+                                       FontFamily="Segoe UI Variable Display"
+                                       FontSize="30" FontWeight="SemiBold"
+                                       Foreground="{ThemeResource DragonTextBrush}" />
                         </StackPanel>
-                        <Border Grid.Column="1" Background="{ThemeResource DragonPanelBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="14,8" VerticalAlignment="Center">
+                        <Border Grid.Column="1" Style="{StaticResource DragonStatusPillStyle}"
+                                VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Ellipse Width="8" Height="8" Fill="{ThemeResource AccentFillColorDefaultBrush}" />
-                                <TextBlock Text="Core 0.1 • Ready" FontWeight="SemiBold" />
+                                <Ellipse Width="8" Height="8" Fill="{ThemeResource DragonSuccessBrush}" />
+                                <TextBlock Text="Core 0.1" FontWeight="SemiBold" />
+                                <TextBlock Text="•" Foreground="{ThemeResource DragonMutedBrush}" />
+                                <TextBlock Text="Ready" Foreground="{ThemeResource DragonMutedBrush}" />
                             </StackPanel>
                         </Border>
                     </Grid>
 
+                    <!-- Dragon hero / drop zone -->
                     <Border x:Name="DropZone"
                             Grid.Row="1"
                             AllowDrop="True"
                             DragOver="DropZone_DragOver"
                             Drop="DropZone_Drop"
-                            Background="{ThemeResource DragonPanelBrush}"
-                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
-                            BorderThickness="1.5"
-                            CornerRadius="28"
-                            Padding="34"
-                            MinHeight="260">
+                            Background="{StaticResource DragonHeroBrush}"
+                            BorderBrush="{ThemeResource DragonBorderHotBrush}"
+                            BorderThickness="1"
+                            CornerRadius="26"
+                            Padding="30"
+                            MinHeight="330">
                         <Grid>
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                                <Border Width="72" Height="72" CornerRadius="24" Background="{ThemeResource AccentFillColorSecondaryBrush}">
-                                    <FontIcon Glyph="&#xE898;" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <!-- Decorative dragon watermark -->
+                            <Viewbox Width="330" Height="300" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                     Margin="0,0,10,0" Opacity="0.09" IsHitTestVisible="False">
+                                <Path Fill="{ThemeResource DragonMoltenBrush}"
+                                      Data="M 48,2 C 38,12 33,22 34,33 C 27,27 20,25 11,27 C 21,34 24,41 20,50 C 16,59 19,69 28,75 C 34,79 40,79 46,76 C 40,72 36,67 36,61 C 42,65 49,67 57,66 C 67,65 76,59 82,50 C 74,53 67,52 62,48 C 70,44 76,37 79,28 C 70,32 62,33 55,31 C 58,22 56,12 48,2 Z M 50,36 C 57,35 63,37 67,42 C 61,41 56,42 51,45 C 48,43 47,40 50,36 Z" />
+                            </Viewbox>
+
+                            <Grid MaxWidth="1180" HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.2*" />
+                                    <ColumnDefinition Width="0.8*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel VerticalAlignment="Center" Spacing="13" Margin="8,4,30,4">
+                                    <Border Width="58" Height="58" CornerRadius="18"
+                                            Background="{ThemeResource DragonEmberSoftBrush}"
+                                            BorderBrush="{ThemeResource DragonBorderHotBrush}"
+                                            BorderThickness="1" HorizontalAlignment="Left">
+                                        <FontIcon Glyph="&#xE898;" FontSize="25"
+                                                  Foreground="{ThemeResource DragonMoltenBrush}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Text="DROP DISK IMAGE HERE"
+                                               FontFamily="Segoe UI Variable Display"
+                                               FontSize="29" FontWeight="Bold"
+                                               CharacterSpacing="35"
+                                               Foreground="{ThemeResource DragonTextBrush}" />
+                                    <TextBlock Text="Open, inspect and verify disk images in a safe read-only workflow. Mounting and Dragon Explorer are the next engine milestone."
+                                               MaxWidth="650" FontSize="14"
+                                               Foreground="{ThemeResource DragonMutedBrush}"
+                                               TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,7,0,0">
+                                        <Button Content="Choose image"
+                                                Click="OpenImage_Click"
+                                                Style="{StaticResource DragonPrimaryButtonStyle}" />
+                                        <Border Style="{StaticResource DragonStatusPillStyle}" VerticalAlignment="Center">
+                                            <TextBlock Text="Drag &amp; drop enabled"
+                                                       Foreground="{ThemeResource DragonMutedBrush}" FontSize="12" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Border Grid.Column="1" Margin="10,10,8,10" Padding="18"
+                                        Background="{ThemeResource DragonSurfaceBrush}"
+                                        BorderBrush="{ThemeResource DragonBorderBrush}"
+                                        BorderThickness="1" CornerRadius="18"
+                                        VerticalAlignment="Center">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="FORGE INPUT" FontSize="11" FontWeight="Bold"
+                                                   CharacterSpacing="180" Foreground="{ThemeResource DragonEmberBrush}" />
+                                        <TextBlock Text="13+ image families" FontSize="20" FontWeight="SemiBold" />
+                                        <TextBlock Text="ISO  •  IMG  •  RAW  •  VHD(X)  •  VMDK  •  QCOW2  •  DMG  •  WIM  •  BIN/CUE  •  MDF/MDS  •  NRG  •  CCD"
+                                                   Foreground="{ThemeResource DragonMutedBrush}"
+                                                   TextWrapping="Wrap" LineHeight="23" />
+                                        <Border Height="1" Background="{ThemeResource DragonBorderBrush}" Margin="0,3" />
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="SIGNATURE" FontSize="10" FontWeight="Bold"
+                                                           Foreground="{ThemeResource DragonMutedBrush}" />
+                                                <TextBlock Text="Detection engine" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="SAFETY" FontSize="10" FontWeight="Bold"
+                                                           Foreground="{ThemeResource DragonMutedBrush}" />
+                                                <TextBlock Text="Read-only first" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
                                 </Border>
-                                <TextBlock Text="Drop a disk image here" FontSize="23" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                <TextBlock Text="ISO • IMG • VHD(X) • VMDK • QCOW2 • DMG • WIM • BIN/CUE and more"
-                                           Foreground="{ThemeResource DragonMutedBrush}" TextAlignment="Center" TextWrapping="Wrap" />
-                                <Button Content="Open image" Click="OpenImage_Click" Padding="22,10" HorizontalAlignment="Center" />
-                            </StackPanel>
+                            </Grid>
                         </Grid>
                     </Border>
 
-                    <Grid Grid.Row="2" Margin="0,22,0,0" ColumnSpacing="14">
+                    <!-- Capability cards -->
+                    <Grid Grid.Row="2" Margin="0,16,0,0" ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Background="{ThemeResource DragonPanelStrongBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="13+" FontSize="27" FontWeight="SemiBold" />
-                                <TextBlock Text="Image families" Foreground="{ThemeResource DragonMutedBrush}" />
-                            </StackPanel>
+
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1"
+                                CornerRadius="18" Padding="18">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42" Height="42" CornerRadius="12"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="&#xE8B7;" FontSize="18"
+                                              Foreground="{ThemeResource DragonEmberBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="Detect" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="Extension + binary signatures"
+                                               Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
-                        <Border Grid.Column="1" Background="{ThemeResource DragonPanelStrongBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Signature engine" FontSize="20" FontWeight="SemiBold" />
-                                <TextBlock Text="ISO • VHD(X) • QCOW2 • DMG • WIM" Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
+
+                        <Border Grid.Column="1" Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1"
+                                CornerRadius="18" Padding="18">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42" Height="42" CornerRadius="12"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="&#xE9D9;" FontSize="18"
+                                              Foreground="{ThemeResource DragonMoltenBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="Verify" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="SHA-256 integrity checks"
+                                               Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
-                        <Border Grid.Column="2" Background="{ThemeResource DragonPanelStrongBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Safe by default" FontSize="20" FontWeight="SemiBold" />
-                                <TextBlock Text="Detection is read-only" Foreground="{ThemeResource DragonMutedBrush}" />
-                            </StackPanel>
+
+                        <Border Grid.Column="2" Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1"
+                                CornerRadius="18" Padding="18">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42" Height="42" CornerRadius="12"
+                                        Background="{ThemeResource DragonCrimsonSoftBrush}">
+                                    <FontIcon Glyph="&#xE72E;" FontSize="18"
+                                              Foreground="{ThemeResource DragonCrimsonBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="Mount" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock Text="Native engine • milestone 0.2"
+                                               Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
                     </Grid>
 
+                    <!-- Selected image -->
                     <Border Grid.Row="3" x:Name="ResultCard" Visibility="Collapsed"
-                            Margin="0,22,0,24" Background="{ThemeResource DragonPanelStrongBrush}"
-                            BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="22" Padding="22">
+                            Margin="0,16,0,0"
+                            Background="{ThemeResource DragonPanelStrongBrush}"
+                            BorderBrush="{ThemeResource DragonBorderHotBrush}"
+                            BorderThickness="1" CornerRadius="20" Padding="20">
                         <Grid ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="58" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Border Width="54" Height="54" CornerRadius="16" Background="{ThemeResource AccentFillColorSecondaryBrush}" VerticalAlignment="Top">
-                                <FontIcon Glyph="&#xEDA2;" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Border Width="58" Height="58" CornerRadius="16"
+                                    Background="{ThemeResource DragonEmberSoftBrush}">
+                                <FontIcon Glyph="&#xEDA2;" FontSize="25"
+                                          Foreground="{ThemeResource DragonEmberBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock x:Name="ImageNameText" Text="image.iso" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock x:Name="ImageMetaText" Text="ISO • 0 MB • Signature" Foreground="{ThemeResource DragonMutedBrush}" />
-                                <TextBlock x:Name="ImagePathText" Text="C:\..." Foreground="{ThemeResource DragonMutedBrush}" TextTrimming="CharacterEllipsis" />
+                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="IMAGE READY" FontSize="10" FontWeight="Bold"
+                                           Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="150" />
+                                <TextBlock x:Name="ImageNameText" Text="image.iso"
+                                           FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="ImageMetaText" Text="ISO • 0 MB • Signature"
+                                           Foreground="{ThemeResource DragonMutedBrush}" />
+                                <TextBlock x:Name="ImagePathText" Text="C:\..."
+                                           Foreground="{ThemeResource DragonMutedBrush}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Button Content="Explore" IsEnabled="False" ToolTipService.ToolTip="Image explorer arrives in milestone 2" />
-                                <Button x:Name="MountButton" Content="Mount" IsEnabled="False" ToolTipService.ToolTip="Native mount service arrives in milestone 2" />
-                                <Button Content="Verify" Click="Verify_Click" />
+                                <Button Content="Explore" IsEnabled="False"
+                                        Style="{StaticResource DragonSecondaryButtonStyle}"
+                                        ToolTipService.ToolTip="Dragon Explorer arrives in milestone 0.3" />
+                                <Button x:Name="MountButton" Content="Mount" IsEnabled="False"
+                                        Style="{StaticResource DragonSecondaryButtonStyle}"
+                                        ToolTipService.ToolTip="Native mount service arrives in milestone 0.2" />
+                                <Button Content="Verify" Click="Verify_Click"
+                                        Style="{StaticResource DragonPrimaryButtonStyle}" />
                             </StackPanel>
                         </Grid>
                     </Border>
+
+                    <!-- Footer status -->
+                    <Grid Grid.Row="4" Margin="2,18,2,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Dragon DiskForge • Foundation channel"
+                                   FontSize="11" Foreground="{ThemeResource DragonMutedBrush}" />
+                        <TextBlock Grid.Column="1" Text="READ-ONLY SAFE MODE"
+                                   FontSize="10" FontWeight="Bold" CharacterSpacing="120"
+                                   Foreground="{ThemeResource DragonSuccessBrush}" />
+                    </Grid>
                 </Grid>
             </ScrollViewer>
         </NavigationView>
