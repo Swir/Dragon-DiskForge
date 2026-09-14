@@ -152,7 +152,7 @@ public sealed partial class ImagesView : UserControl
     }
 }
 
-public sealed record OpenImageFromLibraryEventArgs(string ImagePath) : EventArgs;
+public sealed record OpenImageFromLibraryEventArgs(string ImagePath);
 
 public sealed class ImageLibraryItemViewModel
 {
