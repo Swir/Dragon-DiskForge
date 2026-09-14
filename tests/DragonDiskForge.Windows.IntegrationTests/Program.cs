@@ -21,6 +21,7 @@ if (!IsAdministrator())
 var tempRoot = Path.Combine(Path.GetTempPath(), $"dragon-diskforge-mount-{Guid.NewGuid():N}");
 Directory.CreateDirectory(tempRoot);
 var service = new WindowsDiskImageMountService();
+var explorer = new MountedFileSystemExplorerService();
 
 try
 {
@@ -113,9 +114,8 @@ async Task ValidateIsoAsync()
     var sourcePath = Path.Combine(tempRoot, "iso-source");
     Directory.CreateDirectory(sourcePath);
     var markerName = "dragon-ci.txt";
-    await File.WriteAllTextAsync(
-        Path.Combine(sourcePath, markerName),
-        "Dragon DiskForge native ISO integration test.");
+    var markerContent = "Dragon DiskForge native ISO integration test.";
+    await File.WriteAllTextAsync(Path.Combine(sourcePath, markerName), markerContent);
 
     var imagePath = Path.Combine(tempRoot, "integration.iso");
     Console.WriteLine("\nINFO  Creating disposable ISO test image with Windows IMAPI2FS...");
@@ -143,6 +143,23 @@ async Task ValidateIsoAsync()
     Check(Directory.Exists(driveRoot), "detected ISO drive letter is accessible");
     Check(File.Exists(Path.Combine(driveRoot, markerName)), "mounted ISO exposes its expected file");
     Console.WriteLine($"INFO  ISO mounted at {string.Join(", ", mounted.DriveLetters)}");
+
+    var entries = await explorer.ListAsync(driveRoot, driveRoot);
+    var markerEntry = entries.FirstOrDefault(x => !x.IsDirectory && x.Name.Equals(markerName, StringComparison.OrdinalIgnoreCase));
+    Check(markerEntry is not null, "Dragon Explorer lists a file from the real mounted ISO");
+    Check(markerEntry?.SizeBytes == Encoding.UTF8.GetByteCount(markerContent), "Dragon Explorer reports mounted ISO file metadata");
+
+    var searchResults = await explorer.SearchAsync(driveRoot, driveRoot, "dragon-ci");
+    Check(searchResults.Any(x => x.Name.Equals(markerName, StringComparison.OrdinalIgnoreCase)), "Dragon Explorer search finds a file on the real mounted ISO");
+
+    var exportRoot = Path.Combine(tempRoot, "explorer-export");
+    Directory.CreateDirectory(exportRoot);
+    var copyProgress = new CaptureProgress();
+    await explorer.CopyOutAsync(driveRoot, Path.Combine(driveRoot, markerName), exportRoot, copyProgress);
+    var copiedMarker = Path.Combine(exportRoot, markerName);
+    Check(File.Exists(copiedMarker), "Dragon Explorer copies a real mounted ISO file out of the image");
+    Check(await File.ReadAllTextAsync(copiedMarker) == markerContent, "Dragon Explorer copy-out preserves mounted ISO file content");
+    Check(copyProgress.Last >= 0.999d, "Dragon Explorer mounted-volume copy-out reports completion");
 
     progress.Reset();
     var detached = await service.UnmountAsync(imagePath, progress);

@@ -24,6 +24,8 @@ public sealed partial class MountedView : UserControl
         Unloaded += MountedView_Unloaded;
     }
 
+    public event EventHandler<ExploreMountedImageEventArgs>? ExploreRequested;
+
     public async Task RefreshAsync(bool showSuccess = false)
     {
         _refreshCts?.Cancel();
@@ -76,6 +78,28 @@ public sealed partial class MountedView : UserControl
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
         => await RefreshAsync(showSuccess: true);
+
+    private void Explore_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not MountedImageViewModel item)
+            return;
+
+        if (!item.HasDriveLetter || string.IsNullOrWhiteSpace(item.PrimaryDriveRoot))
+        {
+            ShowStatus("This mounted image does not currently expose a drive letter for Dragon Explorer.", InfoBarSeverity.Warning);
+            return;
+        }
+
+        if (!Directory.Exists(item.PrimaryDriveRoot))
+        {
+            ShowStatus("The mounted drive is no longer available. Refresh the Windows state first.", InfoBarSeverity.Warning);
+            return;
+        }
+
+        ExploreRequested?.Invoke(
+            this,
+            new ExploreMountedImageEventArgs(item.ImagePath, item.PrimaryDriveRoot));
+    }
 
     private async void Unmount_Click(object sender, RoutedEventArgs e)
     {
@@ -177,6 +201,8 @@ public sealed partial class MountedView : UserControl
         return text.Length <= 220 ? text : text[..217] + "...";
     }
 }
+
+public sealed record ExploreMountedImageEventArgs(string ImagePath, string DriveRoot);
 
 public sealed class MountedImageViewModel
 {

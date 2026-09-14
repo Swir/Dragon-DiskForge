@@ -21,6 +21,7 @@ public sealed partial class MainWindow : Window
     private readonly ScrollViewer _mainScroll;
     private readonly object? _homeContent;
     private readonly MountedView _mountedView;
+    private readonly ExplorerView _explorerView;
     private DiskImageInfo? _current;
     private MountState? _mountState;
     private CancellationTokenSource? _verificationCts;
@@ -35,6 +36,8 @@ public sealed partial class MainWindow : Window
             ?? throw new InvalidOperationException("Dragon shell content host is unavailable.");
         _homeContent = _mainScroll.Content;
         _mountedView = new MountedView();
+        _explorerView = new ExplorerView(WindowNative.GetWindowHandle(this));
+        _mountedView.ExploreRequested += MountedView_ExploreRequested;
         MountButton.Click += Mount_Click;
         ShellNav.SelectionChanged += ShellNav_SelectionChanged;
         LockFutureNavigation();
@@ -60,11 +63,17 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
+            if (string.Equals(tag, "explorer", StringComparison.OrdinalIgnoreCase))
+            {
+                item.IsEnabled = true;
+                ToolTipService.SetToolTip(item, "Browse files from a currently mounted ISO/VHD/VHDX volume");
+                continue;
+            }
+
             item.IsEnabled = false;
             var milestone = tag switch
             {
                 "images" => "0.3",
-                "explorer" => "0.3",
                 "convert" => "0.6",
                 "tools" => "0.8",
                 _ => "future"
@@ -73,7 +82,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    private async void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         var tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag?.ToString();
         if (string.Equals(tag, "mounted", StringComparison.OrdinalIgnoreCase))
@@ -83,10 +92,53 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (string.Equals(tag, "explorer", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!ReferenceEquals(_mainScroll.Content, _explorerView))
+                _mainScroll.Content = _explorerView;
+
+            if (!_explorerView.HasRoot)
+                await OpenFirstMountedVolumeInExplorerAsync();
+            return;
+        }
+
         if (string.Equals(tag, "home", StringComparison.OrdinalIgnoreCase)
             && !ReferenceEquals(_mainScroll.Content, _homeContent))
         {
             _mainScroll.Content = _homeContent;
+        }
+    }
+
+    private async void MountedView_ExploreRequested(object? sender, ExploreMountedImageEventArgs e)
+    {
+        await _explorerView.OpenVolumeAsync(e.DriveRoot, e.ImagePath);
+        var explorerItem = ShellNav.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), "explorer", StringComparison.OrdinalIgnoreCase));
+
+        if (explorerItem is not null)
+            ShellNav.SelectedItem = explorerItem;
+        else if (!ReferenceEquals(_mainScroll.Content, _explorerView))
+            _mainScroll.Content = _explorerView;
+    }
+
+    private async Task OpenFirstMountedVolumeInExplorerAsync()
+    {
+        try
+        {
+            var mounted = await _mountService.GetMountedAsync();
+            var state = mounted.FirstOrDefault(x => x.IsMounted && x.DriveLetters.Count > 0);
+            if (state is null)
+            {
+                _explorerView.ShowNoMountedVolume();
+                return;
+            }
+
+            await _explorerView.OpenVolumeAsync(state.DriveLetters[0] + "\\", state.ImagePath);
+        }
+        catch (Exception ex)
+        {
+            _explorerView.ShowNoMountedVolume($"Could not resolve the live mounted-volume state: {ShortMessage(ex.Message)}");
         }
     }
 

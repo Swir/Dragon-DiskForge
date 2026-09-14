@@ -31,8 +31,30 @@ async Task<string> WithTempFileAsync(string extension, byte[] content, Func<stri
     }
 }
 
+async Task WithTempDirectoryAsync(Func<string, Task> action)
+{
+    var path = Path.Combine(Path.GetTempPath(), $"dragon-diskforge-dir-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(path);
+    try
+    {
+        await action(path);
+    }
+    finally
+    {
+        try
+        {
+            Directory.Delete(path, recursive: true);
+        }
+        catch
+        {
+            // Best-effort smoke-test cleanup.
+        }
+    }
+}
+
 var detector = new ImageDetectionService();
 var verifier = new ImageVerificationService();
+var explorer = new MountedFileSystemExplorerService();
 
 Check(SupportedFormats.FromPath("sample.ISO")?.Name == "ISO", "extension lookup is case-insensitive");
 Check(SupportedFormats.FromPath("disk.qcow2")?.Name == "QCOW/QCOW2", "QCOW2 extension is catalogued");
@@ -111,6 +133,87 @@ catch (FileNotFoundException)
 {
     Check(true, "missing image throws FileNotFoundException");
 }
+
+await WithTempDirectoryAsync(async root =>
+{
+    var folder = Path.Combine(root, "FolderA");
+    var nested = Path.Combine(folder, "Nested");
+    var empty = Path.Combine(folder, "EmptyFolder");
+    Directory.CreateDirectory(nested);
+    Directory.CreateDirectory(empty);
+    await File.WriteAllTextAsync(Path.Combine(root, "root.txt"), "root");
+    await File.WriteAllTextAsync(Path.Combine(folder, "dragon-note.txt"), "dragon");
+    await File.WriteAllTextAsync(Path.Combine(nested, "payload.bin"), "payload-data");
+
+    var listed = await explorer.ListAsync(root, root);
+    Check(listed.Count == 2, "Explorer lists the current directory without recursive blocking");
+    Check(listed[0].IsDirectory && listed[0].Name == "FolderA", "Explorer sorts folders before files");
+    Check(listed.Any(x => !x.IsDirectory && x.Name == "root.txt" && x.SizeBytes == 4), "Explorer reports file metadata");
+
+    var search = await explorer.SearchAsync(root, root, "dragon");
+    Check(search.Count == 1 && search[0].Name == "dragon-note.txt", "Explorer recursive search finds nested matches");
+
+    try
+    {
+        var escaped = Path.GetFullPath(Path.Combine(root, ".."));
+        await explorer.ListAsync(root, escaped);
+        Check(false, "Explorer rejects paths that escape the mounted root");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "Explorer rejects paths that escape the mounted root");
+    }
+
+    try
+    {
+        await explorer.CopyOutAsync(root, Path.Combine(root, "root.txt"), Path.Combine(root, "inside"));
+        Check(false, "Explorer copy-out rejects destinations inside the mounted root");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "Explorer copy-out rejects destinations inside the mounted root");
+    }
+
+    var exportRoot = Path.Combine(Path.GetTempPath(), $"dragon-diskforge-export-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(exportRoot);
+    try
+    {
+        var copyProgress = new CaptureProgress();
+        await explorer.CopyOutAsync(root, folder, exportRoot, copyProgress);
+        var copiedNested = Path.Combine(exportRoot, "FolderA", "Nested", "payload.bin");
+        var copiedEmpty = Path.Combine(exportRoot, "FolderA", "EmptyFolder");
+        Check(File.Exists(copiedNested), "Explorer copy-out preserves nested directory structure");
+        Check(Directory.Exists(copiedEmpty), "Explorer copy-out preserves empty directories");
+        Check(await File.ReadAllTextAsync(copiedNested) == "payload-data", "Explorer copy-out preserves file content");
+        Check(copyProgress.Last >= 0.999d, "Explorer copy-out reports completion progress");
+
+        try
+        {
+            await explorer.CopyOutAsync(root, folder, exportRoot);
+            Check(false, "Explorer copy-out refuses to overwrite an existing destination");
+        }
+        catch (IOException)
+        {
+            Check(true, "Explorer copy-out refuses to overwrite an existing destination");
+        }
+    }
+    finally
+    {
+        Directory.Delete(exportRoot, recursive: true);
+    }
+
+    try
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        await explorer.SearchAsync(root, root, "payload", cancellationToken: cancelled.Token);
+        Check(false, "Explorer search honors cancellation");
+    }
+    catch (OperationCanceledException)
+    {
+        Check(true, "Explorer search honors cancellation");
+    }
+});
 
 if (failures.Count > 0)
 {

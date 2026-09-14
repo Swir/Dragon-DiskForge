@@ -118,6 +118,11 @@
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Content="Dragon Explorer"
+                                        Tag="{Binding}"
+                                        IsEnabled="{Binding HasDriveLetter}"
+                                        Click="Explore_Click"
+                                        Style="{StaticResource DragonSecondaryButtonStyle}" />
                                 <Button Content="Open drive"
                                         Tag="{Binding PrimaryDriveRoot}"
                                         IsEnabled="{Binding HasDriveLetter}"
