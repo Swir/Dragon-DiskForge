@@ -23,8 +23,9 @@ var service = new WindowsDiskImageMountService();
 
 try
 {
-    await ValidateImageAsync(new ImageCase("VHD", ".vhd", AssignDriveLetter: false));
-    await ValidateImageAsync(new ImageCase("VHDX", ".vhdx", AssignDriveLetter: true));
+    await ValidateVirtualDiskAsync(new ImageCase("VHD", ".vhd", AssignDriveLetter: false));
+    await ValidateVirtualDiskAsync(new ImageCase("VHDX", ".vhdx", AssignDriveLetter: true));
+    await ValidateIsoAsync();
     Console.WriteLine("\nDragon DiskForge Windows mount integration tests passed.");
 }
 catch (Exception ex)
@@ -34,7 +35,7 @@ catch (Exception ex)
 }
 finally
 {
-    foreach (var path in Directory.EnumerateFiles(tempRoot, "*.vhd*"))
+    foreach (var path in Directory.EnumerateFiles(tempRoot).Where(service.CanHandle))
     {
         try
         {
@@ -58,7 +59,7 @@ finally
     }
 }
 
-async Task ValidateImageAsync(ImageCase testCase)
+async Task ValidateVirtualDiskAsync(ImageCase testCase)
 {
     var imagePath = Path.Combine(tempRoot, $"integration{testCase.Extension}");
     Console.WriteLine($"\nINFO  Creating disposable {testCase.Name} test image with DiskPart...");
@@ -102,6 +103,46 @@ async Task ValidateImageAsync(ImageCase testCase)
     Check(progress.Last >= 0.999d, $"{testCase.Name} unmount operation reports completion");
 }
 
+async Task ValidateIsoAsync()
+{
+    var sourcePath = Path.Combine(tempRoot, "iso-source");
+    Directory.CreateDirectory(sourcePath);
+    var markerName = "dragon-ci.txt";
+    await File.WriteAllTextAsync(
+        Path.Combine(sourcePath, markerName),
+        "Dragon DiskForge native ISO integration test.");
+
+    var imagePath = Path.Combine(tempRoot, "integration.iso");
+    Console.WriteLine("\nINFO  Creating disposable ISO test image with Windows IMAPI2FS...");
+    await CreateIsoAsync(sourcePath, imagePath);
+
+    Check(File.Exists(imagePath) && new FileInfo(imagePath).Length > 0, "IMAPI produced a non-empty ISO image");
+    Check(service.CanHandle(imagePath), "Windows mount service accepts ISO");
+    Check(!service.RequiresElevation(imagePath), "ISO does not request elevation by policy");
+
+    var initial = await service.GetStateAsync(imagePath);
+    Check(!initial.IsMounted, "fresh test ISO starts detached");
+
+    var progress = new CaptureProgress();
+    var mounted = await service.MountAsync(
+        new MountRequest(imagePath, ReadOnly: true, NoDriveLetter: false),
+        progress);
+
+    Check(mounted.IsMounted, "native Windows service mounts ISO");
+    Check(progress.Last >= 0.999d, "ISO mount operation reports completion");
+    Check(mounted.DriveLetters.Count > 0, "mounted ISO exposes a drive letter");
+
+    var driveRoot = mounted.DriveLetters[0] + "\\";
+    Check(Directory.Exists(driveRoot), "detected ISO drive letter is accessible");
+    Check(File.Exists(Path.Combine(driveRoot, markerName)), "mounted ISO exposes its expected file");
+    Console.WriteLine($"INFO  ISO mounted at {string.Join(", ", mounted.DriveLetters)}");
+
+    progress.Reset();
+    var detached = await service.UnmountAsync(imagePath, progress);
+    Check(!detached.IsMounted, "native Windows service unmounts ISO");
+    Check(progress.Last >= 0.999d, "ISO unmount operation reports completion");
+}
+
 static bool IsAdministrator()
 {
     using var identity = WindowsIdentity.GetCurrent();
@@ -134,9 +175,78 @@ static async Task CreateVirtualDiskAsync(string imagePath, bool assignDriveLette
         throw new FileNotFoundException("DiskPart completed without producing the virtual disk.", imagePath);
 }
 
+static async Task CreateIsoAsync(string sourcePath, string imagePath)
+{
+    var scriptPath = Path.Combine(Path.GetDirectoryName(imagePath)!, "create-iso.ps1");
+    var sourceLiteral = ToPowerShellLiteral(sourcePath);
+    var imageLiteral = ToPowerShellLiteral(imagePath);
+    var script = $$"""
+        $ErrorActionPreference = 'Stop'
+        $source = {{sourceLiteral}}
+        $target = {{imageLiteral}}
+
+        $code = @'
+        using System;
+        using System.IO;
+        using System.Runtime.InteropServices.ComTypes;
+
+        public static class DragonIsoWriter
+        {
+            public unsafe static void Create(string path, object stream, int blockSize, int totalBlocks)
+            {
+                int bytes = 0;
+                byte[] buffer = new byte[blockSize];
+                IntPtr pointer = (IntPtr)(&bytes);
+                IStream input = stream as IStream;
+                if (input == null)
+                    throw new InvalidOperationException("IMAPI did not return an IStream.");
+
+                FileStream output = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+                try
+                {
+                    while (totalBlocks-- > 0)
+                    {
+                        input.Read(buffer, blockSize, pointer);
+                        output.Write(buffer, 0, bytes);
+                    }
+                    output.Flush();
+                }
+                finally
+                {
+                    output.Dispose();
+                }
+            }
+        }
+        '@
+
+        $compiler = New-Object System.CodeDom.Compiler.CompilerParameters
+        $compiler.CompilerOptions = '/unsafe'
+        Add-Type -CompilerParameters $compiler -TypeDefinition $code
+
+        $image = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
+        $image.FileSystemsToCreate = 3
+        $image.FreeMediaBlocks = 0
+        $image.VolumeName = 'DRAGONCI'
+        $image.Root.AddTree($source, $false)
+        $result = $image.CreateResultImage()
+        [DragonIsoWriter]::Create($target, $result.ImageStream, $result.BlockSize, $result.TotalBlocks)
+        """;
+
+    await File.WriteAllTextAsync(scriptPath, script, Encoding.UTF8);
+    var result = await RunProcessAsync(
+        "powershell.exe",
+        $"-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{scriptPath}\"");
+
+    if (result.ExitCode != 0)
+        throw new InvalidOperationException($"Windows IMAPI could not create the ISO.\n{result.Output}\n{result.Error}");
+}
+
+static string ToPowerShellLiteral(string value)
+    => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
+
 static async Task<bool> QueryReadOnlyAsync(string imagePath)
 {
-    var literal = $"'{imagePath.Replace("'", "''", StringComparison.Ordinal)}'";
+    var literal = ToPowerShellLiteral(imagePath);
     var script = $"$ErrorActionPreference='Stop'; (Get-DiskImage -ImagePath {literal} | Get-Disk -ErrorAction Stop).IsReadOnly";
     var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
     var result = await RunProcessAsync(
