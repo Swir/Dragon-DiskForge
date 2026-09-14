@@ -1,0 +1,63 @@
+# Build output
+bin/
+obj/
+out/
+publish/
+artifacts/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains
+.idea/
+*.sln.iml
+
+# NuGet / packages
+packages/
+*.nupkg
+*.snupkg
+
+# Windows / logs / temporary files
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.bak
+*.cache
+
+# Signing material and local configuration
+*.pfx
+*.p12
+*.cer
+*.key
+*.secrets.json
+appsettings.Local.json
+.env
+.env.*
+
+# Test/sample disk images - never commit large local images
+*.iso
+*.img
+*.ima
+*.raw
+*.bin
+*.cue
+*.mdf
+*.mds
+*.nrg
+*.ccd
+*.sub
+*.vhd
+*.vhdx
+*.vmdk
+*.qcow
+*.qcow2
+*.dmg
+*.wim
+*.esd
+*.ffu
