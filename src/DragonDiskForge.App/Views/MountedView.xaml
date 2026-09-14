@@ -8,7 +8,9 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid Margin="0,0,0,16">
@@ -23,7 +25,7 @@
                            FontFamily="Segoe UI Variable Display"
                            FontSize="30" FontWeight="SemiBold"
                            Foreground="{ThemeResource DragonTextBrush}" />
-                <TextBlock Text="Live ISO, VHD and VHDX state read directly from Windows — not from cached app memory."
+                <TextBlock Text="Live state comes from Windows Storage. History below is local Dragon DiskForge metadata only."
                            Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
 
@@ -46,97 +48,182 @@
                  IsClosable="True"
                  Margin="0,0,0,14" />
 
-        <Border x:Name="EmptyState"
-                Grid.Row="2"
-                Background="{ThemeResource DragonPanelStrongBrush}"
-                BorderBrush="{ThemeResource DragonBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="22"
-                Padding="28"
-                MinHeight="210">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                <Border Width="64" Height="64" CornerRadius="19"
-                        Background="{ThemeResource DragonEmberSoftBrush}">
-                    <FontIcon Glyph="&#xE72E;" FontSize="27"
-                              Foreground="{ThemeResource DragonEmberBrush}"
-                              HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <TextBlock Text="No native disk images are mounted"
-                           FontSize="20" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" />
-                <TextBlock Text="Mount an ISO, VHD or VHDX from The Forge and it will appear here automatically."
-                           Foreground="{ThemeResource DragonMutedBrush}"
-                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520" />
-            </StackPanel>
-        </Border>
+        <Grid Grid.Row="2" Margin="0,0,0,9">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="LIVE WINDOWS STATE" FontSize="11" FontWeight="Bold"
+                       Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
+            <TextBlock Grid.Column="1" Text="Read-only source of truth"
+                       Foreground="{ThemeResource DragonMutedBrush}" FontSize="11" />
+        </Grid>
 
-        <ListView x:Name="MountedList"
-                  Grid.Row="3"
-                  Visibility="Collapsed"
-                  SelectionMode="None"
-                  IsItemClickEnabled="False"
-                  Background="Transparent"
-                  HorizontalContentAlignment="Stretch">
-            <ListView.ItemContainerStyle>
-                <Style TargetType="ListViewItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                    <Setter Property="Padding" Value="0" />
-                    <Setter Property="Margin" Value="0,0,0,10" />
-                </Style>
-            </ListView.ItemContainerStyle>
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{ThemeResource DragonPanelStrongBrush}"
-                            BorderBrush="{ThemeResource DragonBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="18"
-                            Padding="18">
-                        <Grid ColumnSpacing="15">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="52" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border Width="52" Height="52" CornerRadius="15"
-                                    Background="{ThemeResource DragonEmberSoftBrush}">
-                                <FontIcon Glyph="&#xEDA2;" FontSize="23"
-                                          Foreground="{ThemeResource DragonMoltenBrush}"
-                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-
-                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding FileName}"
-                                           FontSize="18" FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{Binding Meta}"
-                                           Foreground="{ThemeResource DragonEmberBrush}"
-                                           FontWeight="SemiBold" />
-                                <TextBlock Text="{Binding ImagePath}"
-                                           Foreground="{ThemeResource DragonMutedBrush}"
-                                           TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Button Content="Dragon Explorer"
-                                        Tag="{Binding}"
-                                        IsEnabled="{Binding HasDriveLetter}"
-                                        Click="Explore_Click"
-                                        Style="{StaticResource DragonSecondaryButtonStyle}" />
-                                <Button Content="Open drive"
-                                        Tag="{Binding PrimaryDriveRoot}"
-                                        IsEnabled="{Binding HasDriveLetter}"
-                                        Click="OpenDrive_Click"
-                                        Style="{StaticResource DragonSecondaryButtonStyle}" />
-                                <Button Content="Unmount"
-                                        Tag="{Binding ImagePath}"
-                                        Click="Unmount_Click"
-                                        Style="{StaticResource DragonPrimaryButtonStyle}" />
-                            </StackPanel>
-                        </Grid>
+        <Grid Grid.Row="3" Margin="0,0,0,24">
+            <Border x:Name="EmptyState"
+                    Background="{ThemeResource DragonPanelStrongBrush}"
+                    BorderBrush="{ThemeResource DragonBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="22"
+                    Padding="28"
+                    MinHeight="210">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                    <Border Width="64" Height="64" CornerRadius="19"
+                            Background="{ThemeResource DragonEmberSoftBrush}">
+                        <FontIcon Glyph="&#xE72E;" FontSize="27"
+                                  Foreground="{ThemeResource DragonEmberBrush}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+                    <TextBlock Text="No native disk images are mounted"
+                               FontSize="20" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="Mount an ISO, VHD or VHDX from The Forge and it will appear here automatically."
+                               Foreground="{ThemeResource DragonMutedBrush}"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520" />
+                </StackPanel>
+            </Border>
+
+            <ListView x:Name="MountedList"
+                      Visibility="Collapsed"
+                      SelectionMode="None"
+                      IsItemClickEnabled="False"
+                      Background="Transparent"
+                      HorizontalContentAlignment="Stretch">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,10" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="18"
+                                Padding="18">
+                            <Grid ColumnSpacing="15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="52" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Width="52" Height="52" CornerRadius="15"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="&#xEDA2;" FontSize="23"
+                                              Foreground="{ThemeResource DragonMoltenBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}"
+                                               FontSize="18" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Meta}"
+                                               Foreground="{ThemeResource DragonEmberBrush}"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding ImagePath}"
+                                               Foreground="{ThemeResource DragonMutedBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button Content="Dragon Explorer"
+                                            Tag="{Binding}"
+                                            IsEnabled="{Binding HasDriveLetter}"
+                                            Click="Explore_Click"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                    <Button Content="Open drive"
+                                            Tag="{Binding PrimaryDriveRoot}"
+                                            IsEnabled="{Binding HasDriveLetter}"
+                                            Click="OpenDrive_Click"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                    <Button Content="Unmount"
+                                            Tag="{Binding ImagePath}"
+                                            Click="Unmount_Click"
+                                            Style="{StaticResource DragonPrimaryButtonStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+
+        <Grid Grid.Row="4" Margin="0,0,0,9">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Text="MOUNTED HISTORY" FontSize="11" FontWeight="Bold"
+                           Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
+                <TextBlock x:Name="HistoryCountText" Text="0 events"
+                           Foreground="{ThemeResource DragonMutedBrush}" FontSize="11" />
+            </StackPanel>
+            <Button x:Name="ClearHistoryButton" Grid.Column="1" Content="Clear history"
+                    Click="ClearHistory_Click" IsEnabled="False"
+                    Style="{StaticResource DragonSecondaryButtonStyle}" />
+        </Grid>
+
+        <Grid Grid.Row="5">
+            <Border x:Name="HistoryEmptyState"
+                    Background="{ThemeResource DragonPanelBrush}"
+                    BorderBrush="{ThemeResource DragonBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="18">
+                <TextBlock Text="No Dragon DiskForge mount events recorded yet. Successful Mount and Unmount operations will appear here."
+                           Foreground="{ThemeResource DragonMutedBrush}"
+                           TextWrapping="Wrap" />
+            </Border>
+
+            <ListView x:Name="HistoryList"
+                      Visibility="Collapsed"
+                      SelectionMode="None"
+                      Background="Transparent"
+                      HorizontalContentAlignment="Stretch"
+                      MaxHeight="420">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,8" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14"
+                                Padding="14">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42" Height="42" CornerRadius="12"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="{Binding Glyph}" FontSize="18"
+                                              Foreground="{ThemeResource DragonMoltenBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Meta}" Foreground="{ThemeResource DragonMutedBrush}" />
+                                    <TextBlock Text="{Binding ImagePath}" FontSize="11"
+                                               Foreground="{ThemeResource DragonMutedBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
     </Grid>
 </UserControl>
