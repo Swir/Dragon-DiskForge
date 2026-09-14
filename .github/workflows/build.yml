@@ -20,6 +20,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Core smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Core.SmokeTests/DragonDiskForge.Core.SmokeTests.csproj -c Release
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
