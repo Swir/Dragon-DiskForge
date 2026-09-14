@@ -69,7 +69,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Integration validation that mounted images appear in inventory and disappear after unmount
 - ✅ Cancellation-safety validation proving a pre-cancelled mount does not alter storage state
 - ✅ Unsupported-format friendly-error validation
-- ✅ Full Windows x64 Release CI green on current main through run #37
+- ✅ Full Windows x64 Release CI green on current main through run #46
 
 **Manual QA note:** GitHub-hosted Windows runners execute as administrators, so the visible normal-user UAC prompt cannot be faithfully exercised in CI. The implemented elevation path has a required desktop checklist in `docs/MANUAL-VALIDATION.md` before public beta packaging.
 
@@ -77,22 +77,40 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ---
 
-## 0.3 Dragon Explorer — 🚧 next
+## 0.3 Dragon Explorer — 🚧 in progress
 
-- ⬜ In-app folder/file tree
-- ⬜ Address/breadcrumb navigation
-- ⬜ Search inside opened image
-- ⬜ File details and properties
-- ⬜ Open files from mounted/provider-backed images
-- ⬜ Safe extraction of files/folders
-- ⬜ Drag files out to Explorer where technically safe
+### Mounted-volume Explorer slice — ✅ complete
+- ✅ Core Explorer models + `IExplorerService` contract
+- ✅ Safe filesystem-backed Explorer service for mounted ISO/VHD/VHDX volumes
+- ✅ In-app folder/file browser with folders-first shallow listing
+- ✅ Folder navigation + Up
+- ✅ Address/breadcrumb navigation
+- ✅ Search across the mounted volume with cancellation and result limits
+- ✅ File/folder details: name, type, size and modified time
+- ✅ Open files through the Windows shell where safe
+- ✅ Trust warning before opening executable/script content
+- ✅ Safe extraction/copy-out to a user-selected destination
+- ✅ Non-destructive copy-out: existing destination names are never silently overwritten
+- ✅ Empty-directory preservation during folder copy-out
+- ✅ Root-boundary protection against `..` path escape
+- ✅ Reparse-point/junction protection for recursive search and copy-out
+- ✅ Copy progress + cancellation
+- ✅ Mounted dashboard → Dragon Explorer routing using current Windows mount state
+- ✅ Global Explorer navigation backed by a real mounted-volume service
+- ✅ Core automated tests for listing, metadata, search, path safety, copy-out, overwrite protection and cancellation
+- ✅ Windows integration coverage on a real IMAPI-generated mounted ISO: list → search → copy-out → content verification
+- ✅ Full Windows x64 Release validation for the first Explorer slice in PR #5 / run #56
+
+### Remaining 0.3 scope
+- ⬜ Drag files out to Windows Explorer where technically safe
 - ⬜ Preview framework for images/text/PDF/media metadata
 - ⬜ Recent images
 - ⬜ Favorites
 - ⬜ Mounted history
 - ⬜ Multi-image workspace/tabs
+- ⬜ Provider-backed direct browsing without mounting where technically supported
 
-**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge.
+**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, with the remaining preview/history/workspace experience completed and tested.
 
 ---
 
