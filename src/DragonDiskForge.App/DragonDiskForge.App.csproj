@@ -19,5 +19,6 @@
     </Content>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
     <ProjectReference Include="..\DragonDiskForge.Core\DragonDiskForge.Core.csproj" />
+    <ProjectReference Include="..\DragonDiskForge.Windows\DragonDiskForge.Windows.csproj" />
   </ItemGroup>
 </Project>

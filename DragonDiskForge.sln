@@ -4,6 +4,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DragonDiskForge.Core", "src\DragonDiskForge.Core\DragonDiskForge.Core.csproj", "{2F0F4DEB-2D61-4A38-92D9-F4F8C3BBE130}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DragonDiskForge.Windows", "src\DragonDiskForge.Windows\DragonDiskForge.Windows.csproj", "{D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DragonDiskForge.App", "src\DragonDiskForge.App\DragonDiskForge.App.csproj", "{A20F44F1-51A5-4193-A1F0-C0E3050245BB}"
 EndProject
 Global
@@ -28,6 +30,18 @@ Global
         {2F0F4DEB-2D61-4A38-92D9-F4F8C3BBE130}.Debug|ARM64.Build.0 = Debug|Any CPU
         {2F0F4DEB-2D61-4A38-92D9-F4F8C3BBE130}.Release|ARM64.ActiveCfg = Release|Any CPU
         {2F0F4DEB-2D61-4A38-92D9-F4F8C3BBE130}.Release|ARM64.Build.0 = Release|Any CPU
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Release|Any CPU.Build.0 = Release|Any CPU
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Debug|x64.ActiveCfg = Debug|x64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Debug|x64.Build.0 = Debug|x64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Release|x64.ActiveCfg = Release|x64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Release|x64.Build.0 = Release|x64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Debug|ARM64.ActiveCfg = Debug|ARM64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Debug|ARM64.Build.0 = Debug|ARM64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Release|ARM64.ActiveCfg = Release|ARM64
+        {D6E61A65-0E7B-49B1-A2C7-B3B2F5FAD7F9}.Release|ARM64.Build.0 = Release|ARM64
         {A20F44F1-51A5-4193-A1F0-C0E3050245BB}.Debug|Any CPU.ActiveCfg = Debug|x64
         {A20F44F1-51A5-4193-A1F0-C0E3050245BB}.Debug|Any CPU.Build.0 = Debug|x64
         {A20F44F1-51A5-4193-A1F0-C0E3050245BB}.Release|Any CPU.ActiveCfg = Release|x64

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Services;
 
 var failures = new List<string>();
@@ -36,6 +37,13 @@ var verifier = new ImageVerificationService();
 Check(SupportedFormats.FromPath("sample.ISO")?.Name == "ISO", "extension lookup is case-insensitive");
 Check(SupportedFormats.FromPath("disk.qcow2")?.Name == "QCOW/QCOW2", "QCOW2 extension is catalogued");
 Check(SupportedFormats.FromPath("unknown.xyz") is null, "unknown extension stays unknown");
+Check(SupportedFormats.FromPath("disk.vhdx")?.NativeWindowsMount == true, "VHDX is marked for native Windows mount");
+
+var mountRequest = new MountRequest("sample.iso");
+Check(mountRequest.ReadOnly, "mount requests default to read-only");
+Check(!mountRequest.NoDriveLetter, "mount requests assign a drive letter by default");
+var detachedState = MountState.Detached("sample.iso", requiresElevation: false);
+Check(!detachedState.IsMounted && detachedState.DriveLetters.Count == 0, "detached mount state has no drive letters");
 
 var vhdx = new byte[64];
 Encoding.ASCII.GetBytes("vhdxfile").CopyTo(vhdx, 0);
