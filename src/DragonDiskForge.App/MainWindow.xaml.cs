@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Services;
 using Microsoft.UI.Xaml;
@@ -14,6 +13,7 @@ namespace DragonDiskForge.App;
 public sealed partial class MainWindow : Window
 {
     private readonly ImageDetectionService _detector = new();
+    private readonly ImageVerificationService _verification = new();
     private DiskImageInfo? _current;
 
     public MainWindow()
@@ -62,7 +62,7 @@ public sealed partial class MainWindow : Window
             ImageNameText.Text = _current.FileName;
             ImageMetaText.Text = $"{_current.Format}  •  {_current.SizeDisplay}  •  {_current.DetectionMethod}";
             ImagePathText.Text = _current.Path;
-            MountButton.IsEnabled = false; // Enabled when the milestone-2 mount service lands.
+            MountButton.IsEnabled = false; // Enabled when the milestone-0.2 mount service lands.
             ResultCard.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
@@ -78,10 +78,7 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            using var sha256 = SHA256.Create();
-            await using var stream = File.OpenRead(_current.Path);
-            var hash = await sha256.ComputeHashAsync(stream);
-            var value = Convert.ToHexString(hash);
+            var value = await _verification.ComputeSha256Async(_current.Path);
             await ShowDialogAsync("SHA-256", value);
         }
         catch (Exception ex)

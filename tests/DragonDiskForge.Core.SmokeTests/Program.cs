@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using DragonDiskForge.Core.Services;
 
@@ -30,6 +31,7 @@ async Task<string> WithTempFileAsync(string extension, byte[] content, Func<stri
 }
 
 var detector = new ImageDetectionService();
+var verifier = new ImageVerificationService();
 
 Check(SupportedFormats.FromPath("sample.ISO")?.Name == "ISO", "extension lookup is case-insensitive");
 Check(SupportedFormats.FromPath("disk.qcow2")?.Name == "QCOW/QCOW2", "QCOW2 extension is catalogued");
@@ -66,6 +68,11 @@ var extensionFallback = await WithTempFileAsync(".vmdk", new byte[32], async pat
     return info.Format;
 });
 Check(extensionFallback == "VMDK", "VMDK extension fallback is detected");
+
+var verifyPayload = Encoding.UTF8.GetBytes("Dragon DiskForge verification smoke test");
+var computedSha256 = await WithTempFileAsync(".img", verifyPayload, verifier.ComputeSha256Async);
+var expectedSha256 = Convert.ToHexString(SHA256.HashData(verifyPayload));
+Check(computedSha256 == expectedSha256, "Core SHA-256 verification returns the expected digest");
 
 try
 {
