@@ -22,23 +22,43 @@ The project follows semantic versioning while it evolves toward 1.0.
 - fallback Explorer navigation to the first currently mounted volume with a drive letter
 - Core smoke coverage for Explorer listing, metadata, path-boundary safety, search, Copy out, empty folders, overwrite protection and cancellation
 - real Windows Explorer integration against an IMAPI-generated mounted ISO: list → search → Copy out → content verification
+- bounded `FilePreviewService` in Core with cancellation
+- read-only text Preview with a hard character limit and truncation indication
+- safe image Preview rendered inside Dragon Explorer without shell execution
+- PDF metadata-only Preview
+- media metadata-only Preview with no auto-play
+- binary/unsupported metadata fallback
+- Dragon Explorer Preview pane that follows the active selection and cancels stale preview requests
+- local Recent Images history
+- local Favorites
+- atomic JSON-backed image-library persistence under the current Windows profile
+- Windows case-insensitive image-path deduplication and bounded recent-list pruning that preserves Favorites
+- real Images view with Open / Favorite / Unfavorite / Remove actions
+- missing-file library state that disables Open rather than failing silently
+- Core smoke coverage for Preview classification, bounded reads, cancellation, image-library persistence, deduplication, favorites, removal and pruning
+- real mounted-ISO integration proving Dragon Preview reads exact text directly from the mounted image
 
 ### Changed
-- milestone 0.3 is now in progress rather than only planned
+- milestone 0.3 remains in progress with the mounted-volume Explorer and Preview/Image Library slices complete
 - Explorer is enabled only when a real mounted-volume backing path can be resolved from current Windows state
-- mounted-volume browsing remains read-only; writes are limited to explicit Copy out destinations
+- mounted-volume browsing and Preview remain read-only; writes are limited to explicit Copy out destinations
 - reparse points/junctions are not traversed during recursive search or Copy out
+- successfully opened images are recorded to Recent Images best-effort; persistence failure cannot block the core image-open path
+
+### Fixed
+- qualified `System.IO.Path` inside the image-library view model to avoid property-name shadowing during WinUI compilation
+- disambiguated `System.IO.FileAttributes` from `Windows.Storage.FileAttributes` in the WinUI app
 
 ### Verified
 - PR #5 / GitHub Actions run #56 passes Core smoke tests, real ISO/VHD/VHDX integration including Explorer list/search/Copy out, restore and full WinUI `Release|x64` build
-- main GitHub Actions run #58 passes the same regression path after merge and roadmap synchronization
+- main GitHub Actions run #58 passes the same first-slice regression path after merge and roadmap synchronization
+- PR #6 / GitHub Actions run #72 passes Core Preview/Image Library tests, real ISO/VHD/VHDX integration including mounted-ISO text Preview, restore and full WinUI `Release|x64` build
+- main GitHub Actions run #73 passes the same Preview/Image Library regression path after merge
 
 ### Planned
-- preview framework for images/text/PDF/media metadata
-- recent images and favorites
 - mounted history
 - multi-image workspace/tabs
-- drag-out where technically safe
+- drag-out to Windows Explorer where technically safe
 - provider-backed direct browsing without mounting where supported
 
 ## [0.2.0] - 2026-09-14
