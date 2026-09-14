@@ -23,8 +23,8 @@ var service = new WindowsDiskImageMountService();
 
 try
 {
-    await ValidateImageAsync(new ImageCase("VHD", ".vhd", assignDriveLetter: false));
-    await ValidateImageAsync(new ImageCase("VHDX", ".vhdx", assignDriveLetter: true));
+    await ValidateImageAsync(new ImageCase("VHD", ".vhd", AssignDriveLetter: false));
+    await ValidateImageAsync(new ImageCase("VHDX", ".vhdx", AssignDriveLetter: true));
     Console.WriteLine("\nDragon DiskForge Windows mount integration tests passed.");
 }
 catch (Exception ex)
