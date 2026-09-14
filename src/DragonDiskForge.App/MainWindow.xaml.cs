@@ -23,7 +23,7 @@ public sealed partial class MainWindow : Window
     private readonly object? _homeContent;
     private readonly ImagesView _imagesView;
     private readonly MountedView _mountedView;
-    private readonly ExplorerView _explorerView;
+    private readonly ExplorerWorkspaceView _explorerWorkspace;
     private DiskImageInfo? _current;
     private MountState? _mountState;
     private CancellationTokenSource? _verificationCts;
@@ -40,12 +40,16 @@ public sealed partial class MainWindow : Window
         _imageLibrary = new JsonImageLibraryService(GetImageLibraryPath());
         _imagesView = new ImagesView(_imageLibrary);
         _mountedView = new MountedView();
-        _explorerView = new ExplorerView(WindowNative.GetWindowHandle(this));
+        _explorerWorkspace = new ExplorerWorkspaceView(WindowNative.GetWindowHandle(this));
         _imagesView.OpenRequested += ImagesView_OpenRequested;
         _mountedView.ExploreRequested += MountedView_ExploreRequested;
         MountButton.Click += Mount_Click;
         ShellNav.SelectionChanged += ShellNav_SelectionChanged;
-        Closed += (_, _) => _imageLibrary.Dispose();
+        Closed += (_, _) =>
+        {
+            _imageLibrary.Dispose();
+            _mountedView.Dispose();
+        };
         LockFutureNavigation();
     }
 
@@ -72,14 +76,14 @@ public sealed partial class MainWindow : Window
             if (string.Equals(tag, "mounted", StringComparison.OrdinalIgnoreCase))
             {
                 item.IsEnabled = true;
-                ToolTipService.SetToolTip(item, "Live ISO/VHD/VHDX state from Windows Storage");
+                ToolTipService.SetToolTip(item, "Live ISO/VHD/VHDX state from Windows Storage plus local mount history");
                 continue;
             }
 
             if (string.Equals(tag, "explorer", StringComparison.OrdinalIgnoreCase))
             {
                 item.IsEnabled = true;
-                ToolTipService.SetToolTip(item, "Browse files from a currently mounted ISO/VHD/VHDX volume");
+                ToolTipService.SetToolTip(item, "Multi-image read-only workspace for currently mounted ISO/VHD/VHDX volumes");
                 continue;
             }
 
@@ -114,10 +118,10 @@ public sealed partial class MainWindow : Window
 
         if (string.Equals(tag, "explorer", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ReferenceEquals(_mainScroll.Content, _explorerView))
-                _mainScroll.Content = _explorerView;
+            if (!ReferenceEquals(_mainScroll.Content, _explorerWorkspace))
+                _mainScroll.Content = _explorerWorkspace;
 
-            if (!_explorerView.HasRoot)
+            if (!_explorerWorkspace.HasTabs)
                 await OpenFirstMountedVolumeInExplorerAsync();
             return;
         }
@@ -145,15 +149,15 @@ public sealed partial class MainWindow : Window
 
     private async void MountedView_ExploreRequested(object? sender, ExploreMountedImageEventArgs e)
     {
-        await _explorerView.OpenVolumeAsync(e.DriveRoot, e.ImagePath);
+        await _explorerWorkspace.OpenVolumeAsync(e.DriveRoot, e.ImagePath);
         var explorerItem = ShellNav.MenuItems
             .OfType<NavigationViewItem>()
             .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), "explorer", StringComparison.OrdinalIgnoreCase));
 
         if (explorerItem is not null)
             ShellNav.SelectedItem = explorerItem;
-        else if (!ReferenceEquals(_mainScroll.Content, _explorerView))
-            _mainScroll.Content = _explorerView;
+        else if (!ReferenceEquals(_mainScroll.Content, _explorerWorkspace))
+            _mainScroll.Content = _explorerWorkspace;
     }
 
     private async Task OpenFirstMountedVolumeInExplorerAsync()
@@ -164,15 +168,15 @@ public sealed partial class MainWindow : Window
             var state = mounted.FirstOrDefault(x => x.IsMounted && x.DriveLetters.Count > 0);
             if (state is null)
             {
-                _explorerView.ShowNoMountedVolume();
+                _explorerWorkspace.ShowNoMountedVolume();
                 return;
             }
 
-            await _explorerView.OpenVolumeAsync(state.DriveLetters[0] + "\\", state.ImagePath);
+            await _explorerWorkspace.OpenVolumeAsync(state.DriveLetters[0] + "\\", state.ImagePath);
         }
         catch (Exception ex)
         {
-            _explorerView.ShowNoMountedVolume($"Could not resolve the live mounted-volume state: {ShortMessage(ex.Message)}");
+            _explorerWorkspace.ShowNoMountedVolume($"Could not resolve the live mounted-volume state: {ShortMessage(ex.Message)}");
         }
     }
 
@@ -372,6 +376,7 @@ public sealed partial class MainWindow : Window
 
         var imagePath = _current.Path;
         var unmount = _mountState?.IsMounted == true;
+        var previousTarget = _mountState?.TargetDisplay;
         var cts = new CancellationTokenSource();
         _mountCts = cts;
 
@@ -396,6 +401,16 @@ public sealed partial class MainWindow : Window
                     new MountRequest(imagePath, ReadOnly: true, NoDriveLetter: false),
                     progress,
                     cts.Token);
+
+            if (unmount && !state.IsMounted)
+            {
+                await _mountedView.RecordHistoryAsync(imagePath, MountHistoryAction.Unmounted, previousTarget);
+                _explorerWorkspace.CloseImageTabs(imagePath);
+            }
+            else if (!unmount && state.IsMounted)
+            {
+                await _mountedView.RecordHistoryAsync(imagePath, MountHistoryAction.Mounted, state.TargetDisplay);
+            }
 
             if (!IsCurrentImage(imagePath))
                 return;
