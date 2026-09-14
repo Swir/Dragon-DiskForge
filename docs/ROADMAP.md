@@ -18,11 +18,13 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Drag & drop + file picker
 - ✅ Initial image-format catalogue
 - ✅ Signature detection: ISO, VHD, VHDX, QCOW2, DMG, WIM/ESD
-- ✅ SHA-256 verification
+- ✅ SHA-256 verification through shared Core service
 - ✅ Read-only-first architecture
 - ✅ Architecture document
 - ✅ Changelog and repository hygiene
-- 🚧 Error states, cancellation and foundation testing
+- ✅ Windows x64 GitHub Actions build validation
+- ✅ Core smoke-test harness for signatures, fallback, errors and SHA-256
+- 🚧 Error states, cancellation and broader foundation testing
 
 ### Dragon visual system
 - ✅ Dragon visual language specification
@@ -31,15 +33,15 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Obsidian / charcoal base palette
 - ✅ Ember / molten-metal accent palette
 - ✅ Deep-crimson secondary accent
-- ⬜ Dragon-scale micro-pattern used subtly in selected surfaces
+- ✅ Dragon-scale micro-pattern used subtly in selected surfaces
 - 🚧 Subtle fire/ember active-state treatment
-- ⬜ Dragon-themed splash/startup screen
+- ✅ Dragon-themed startup overlay
 - ✅ Branded Forge home/drop state
 - ✅ Custom Dragon header treatment
-- ⬜ Fluent/WinUI animations with a restrained Dragon character
+- ✅ Initial Fluent/WinUI animations with a restrained Dragon character
 - 🚧 Light theme preserving the Dragon identity
 - ⬜ High-contrast/accessibility-safe variants
-- 🚧 Responsive layout for small and large windows
+- ✅ Responsive layout for compact and wide desktop windows
 
 **Exit criteria:** clean Windows build, reliable image detection, no fake actions presented as complete, documented architecture, and a recognizably Dragon DiskForge UI rather than a generic WinUI utility.
 
@@ -172,7 +174,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.9 Quality, Security + Beta Hardening — ⬜ planned
 
-- ⬜ Automated Core unit tests
+- ⬜ Comprehensive automated Core unit tests
 - ⬜ Provider tests
 - ⬜ Mount/unmount integration tests
 - ⬜ Large-image stress tests
