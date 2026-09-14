@@ -1,5 +1,6 @@
 using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Services;
+using DragonDiskForge.Windows.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -15,14 +16,18 @@ public sealed partial class MainWindow : Window
 {
     private readonly ImageDetectionService _detector = new();
     private readonly ImageVerificationService _verification = new();
+    private readonly IMountService _mountService = new WindowsDiskImageMountService();
     private DiskImageInfo? _current;
+    private MountState? _mountState;
     private CancellationTokenSource? _verificationCts;
+    private CancellationTokenSource? _mountCts;
     private bool _startupShown;
 
     public MainWindow()
     {
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
+        MountButton.Click += Mount_Click;
         LockFutureNavigation();
     }
 
@@ -166,23 +171,218 @@ public sealed partial class MainWindow : Window
     private async Task LoadImageAsync(string path)
     {
         _verificationCts?.Cancel();
+        _mountCts?.Cancel();
 
         try
         {
             _current = await _detector.InspectAsync(path);
+            _mountState = null;
             ImageNameText.Text = _current.FileName;
-            ImageMetaText.Text = $"{_current.Format}  •  {_current.SizeDisplay}  •  {_current.DetectionMethod}";
             ImagePathText.Text = _current.Path;
-            MountButton.IsEnabled = false; // Enabled when the milestone-0.2 mount service lands.
+            UpdateImageMetaText();
 
             ResultCard.Opacity = 0;
             ResultCard.Visibility = Visibility.Visible;
             AnimateOpacity(ResultCard, 0, 1, 220);
+
+            await RefreshMountStateAsync(_current);
         }
         catch (Exception ex)
         {
+            MountButton.IsEnabled = false;
+            MountButton.Content = "Mount";
             await ShowDialogAsync("Could not open image", ex.Message);
         }
+    }
+
+    private async Task RefreshMountStateAsync(DiskImageInfo image)
+    {
+        var path = image.Path;
+        _mountState = null;
+        MountButton.IsEnabled = false;
+        MountButton.Content = "Mount";
+
+        if (!IsProvenNativeMountPath(image))
+        {
+            var message = _mountService.CanHandle(path)
+                ? "Native backend exists, but this format is still waiting for integration validation."
+                : "Native mounting is not available for this format yet.";
+            ToolTipService.SetToolTip(MountButton, message);
+            return;
+        }
+
+        try
+        {
+            var state = await _mountService.GetStateAsync(path);
+            if (!IsCurrentImage(path))
+                return;
+
+            _mountState = state;
+            UpdateImageMetaText();
+            UpdateMountButton();
+        }
+        catch (Exception ex)
+        {
+            if (!IsCurrentImage(path))
+                return;
+
+            MountButton.IsEnabled = false;
+            MountButton.Content = "Mount unavailable";
+            ToolTipService.SetToolTip(MountButton, $"Could not read mount state: {ShortMessage(ex.Message)}");
+        }
+    }
+
+    private async void Mount_Click(object sender, RoutedEventArgs e)
+    {
+        if (_mountCts is not null)
+        {
+            _mountCts.Cancel();
+            return;
+        }
+
+        if (_current is null || !IsProvenNativeMountPath(_current))
+            return;
+
+        var imagePath = _current.Path;
+        var unmount = _mountState?.IsMounted == true;
+        var cts = new CancellationTokenSource();
+        _mountCts = cts;
+
+        var progress = new Progress<double>(value =>
+        {
+            if (!IsCurrentImage(imagePath))
+                return;
+
+            var percent = Math.Clamp(value, 0d, 1d);
+            MountButton.Content = $"Cancel • {percent:P0}";
+        });
+
+        MountButton.IsEnabled = true;
+        MountButton.Content = "Cancel • 0%";
+        ToolTipService.SetToolTip(MountButton, unmount ? "Cancel unmount request" : "Cancel mount request");
+
+        try
+        {
+            var state = unmount
+                ? await _mountService.UnmountAsync(imagePath, progress, cts.Token)
+                : await _mountService.MountAsync(
+                    new MountRequest(imagePath, ReadOnly: true, NoDriveLetter: false),
+                    progress,
+                    cts.Token);
+
+            if (!IsCurrentImage(imagePath))
+                return;
+
+            _mountState = state;
+            UpdateImageMetaText();
+        }
+        catch (OperationCanceledException)
+        {
+            if (IsCurrentImage(imagePath))
+                await RecoverMountStateAsync(imagePath);
+        }
+        catch (MountOperationException ex)
+        {
+            if (IsCurrentImage(imagePath))
+            {
+                await RecoverMountStateAsync(imagePath);
+                await ShowDialogAsync("Mount operation failed", ex.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (IsCurrentImage(imagePath))
+            {
+                await RecoverMountStateAsync(imagePath);
+                await ShowDialogAsync("Mount operation failed", ex.Message);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_mountCts, cts))
+                _mountCts = null;
+
+            cts.Dispose();
+            if (IsCurrentImage(imagePath))
+                UpdateMountButton();
+        }
+    }
+
+    private async Task RecoverMountStateAsync(string imagePath)
+    {
+        try
+        {
+            _mountState = await _mountService.GetStateAsync(imagePath);
+            if (IsCurrentImage(imagePath))
+                UpdateImageMetaText();
+        }
+        catch
+        {
+            _mountState = null;
+        }
+    }
+
+    private void UpdateMountButton()
+    {
+        if (_current is null || !IsProvenNativeMountPath(_current))
+        {
+            MountButton.IsEnabled = false;
+            MountButton.Content = "Mount";
+            return;
+        }
+
+        if (_mountCts is not null)
+            return;
+
+        MountButton.IsEnabled = true;
+        if (_mountState?.IsMounted == true)
+        {
+            var target = _mountState.DriveLetters.Count > 0
+                ? string.Join(", ", _mountState.DriveLetters)
+                : _mountState.TargetDisplay;
+            MountButton.Content = _mountState.DriveLetters.Count > 0
+                ? $"Unmount • {target}"
+                : "Unmount";
+            ToolTipService.SetToolTip(MountButton, $"Safely unmount {target}");
+        }
+        else
+        {
+            MountButton.Content = "Mount read-only";
+            var elevation = _mountService.RequiresElevation(_current.Path)
+                ? " Windows may request administrator approval."
+                : string.Empty;
+            ToolTipService.SetToolTip(MountButton, $"Mount this image read-only.{elevation}");
+        }
+    }
+
+    private void UpdateImageMetaText()
+    {
+        if (_current is null)
+            return;
+
+        var mount = _mountState?.IsMounted == true
+            ? $"  •  Mounted {_mountState.TargetDisplay}"
+            : string.Empty;
+        ImageMetaText.Text = $"{_current.Format}  •  {_current.SizeDisplay}  •  {_current.DetectionMethod}{mount}";
+    }
+
+    private static bool IsProvenNativeMountPath(DiskImageInfo image)
+    {
+        if (!image.CanMount)
+            return false;
+
+        var extension = Path.GetExtension(image.Path);
+        return extension.Equals(".vhd", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".vhdx", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsCurrentImage(string imagePath)
+        => string.Equals(_current?.Path, imagePath, StringComparison.OrdinalIgnoreCase);
+
+    private static string ShortMessage(string message)
+    {
+        var text = message.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return text.Length <= 180 ? text : text[..177] + "...";
     }
 
     private async void Verify_Click(object sender, RoutedEventArgs e)
