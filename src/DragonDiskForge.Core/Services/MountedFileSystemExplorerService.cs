@@ -126,6 +126,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         {
             RejectReparsePoint(source);
             var destination = Path.Combine(destinationRoot, Path.GetFileName(source));
+            EnsureDestinationFree(destination);
             var length = new FileInfo(source).Length;
             await CopyFileAsync(source, destination, 0L, Math.Max(1L, length), progress, cancellationToken);
             progress?.Report(1d);
@@ -136,13 +137,23 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
             throw new FileNotFoundException("Explorer source was not found.", source);
 
         RejectReparsePoint(source);
-        var files = CollectCopyFiles(source, cancellationToken);
-        var totalBytes = Math.Max(1L, files.Sum(x => x.Length));
-        var destinationBase = Path.Combine(destinationRoot, Path.GetFileName(source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+        var destinationBase = Path.Combine(
+            destinationRoot,
+            Path.GetFileName(source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+        EnsureDestinationFree(destinationBase);
+
+        var plan = CollectCopyPlan(source, cancellationToken);
+        var totalBytes = Math.Max(1L, plan.Files.Sum(x => x.Length));
         Directory.CreateDirectory(destinationBase);
 
+        foreach (var directory in plan.Directories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(Path.Combine(destinationBase, directory));
+        }
+
         long copiedBefore = 0;
-        foreach (var file in files)
+        foreach (var file in plan.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var relative = Path.GetRelativePath(source, file.FullName);
@@ -155,9 +166,10 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         progress?.Report(1d);
     }
 
-    private static List<FileInfo> CollectCopyFiles(string sourceDirectory, CancellationToken cancellationToken)
+    private static CopyPlan CollectCopyPlan(string sourceDirectory, CancellationToken cancellationToken)
     {
         var files = new List<FileInfo>();
+        var directories = new List<string>();
         var pending = new Stack<string>();
         pending.Push(sourceDirectory);
 
@@ -174,13 +186,18 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
                     continue;
 
                 if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    directories.Add(Path.GetRelativePath(sourceDirectory, path));
                     pending.Push(path);
+                }
                 else
+                {
                     files.Add(new FileInfo(path));
+                }
             }
         }
 
-        return files;
+        return new CopyPlan(files, directories);
     }
 
     private static async Task CopyFileAsync(
@@ -200,7 +217,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
             options: FileOptions.Asynchronous | FileOptions.SequentialScan);
         await using var output = new FileStream(
             destination,
-            FileMode.Create,
+            FileMode.CreateNew,
             FileAccess.Write,
             FileShare.None,
             bufferSize: 1024 * 128,
@@ -298,4 +315,12 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         if ((attributes & FileAttributes.ReparsePoint) != 0)
             throw new InvalidOperationException("Dragon Explorer does not follow reparse points during copy-out.");
     }
+
+    private static void EnsureDestinationFree(string destination)
+    {
+        if (File.Exists(destination) || Directory.Exists(destination))
+            throw new IOException($"Copy-out destination already contains an item named '{Path.GetFileName(destination)}'. Dragon DiskForge will not overwrite it.");
+    }
+
+    private sealed record CopyPlan(IReadOnlyList<FileInfo> Files, IReadOnlyList<string> Directories);
 }
