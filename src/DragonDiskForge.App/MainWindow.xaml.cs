@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window
     private readonly ImageDetectionService _detector = new();
     private readonly ImageVerificationService _verification = new();
     private DiskImageInfo? _current;
+    private CancellationTokenSource? _verificationCts;
     private bool _startupShown;
 
     public MainWindow()
@@ -136,6 +137,8 @@ public sealed partial class MainWindow : Window
 
     private async Task LoadImageAsync(string path)
     {
+        _verificationCts?.Cancel();
+
         try
         {
             _current = await _detector.InspectAsync(path);
@@ -156,17 +159,49 @@ public sealed partial class MainWindow : Window
 
     private async void Verify_Click(object sender, RoutedEventArgs e)
     {
-        if (_current is null)
+        if (_verificationCts is not null)
+        {
+            _verificationCts.Cancel();
             return;
+        }
+
+        if (_current is null || sender is not Button verifyButton)
+            return;
+
+        var imagePath = _current.Path;
+        var cts = new CancellationTokenSource();
+        _verificationCts = cts;
+
+        var progress = new Progress<double>(value =>
+        {
+            var percent = Math.Clamp(value, 0d, 1d);
+            verifyButton.Content = $"Cancel • {percent:P0}";
+        });
+
+        verifyButton.Content = "Cancel • 0%";
 
         try
         {
-            var value = await _verification.ComputeSha256Async(_current.Path);
+            var value = await _verification.ComputeSha256Async(imagePath, progress, cts.Token);
+            verifyButton.Content = "Verified ✓";
             await ShowDialogAsync("SHA-256", value);
+        }
+        catch (OperationCanceledException)
+        {
+            verifyButton.Content = "Cancelled";
         }
         catch (Exception ex)
         {
             await ShowDialogAsync("Verification failed", ex.Message);
+        }
+        finally
+        {
+            if (ReferenceEquals(_verificationCts, cts))
+                _verificationCts = null;
+
+            cts.Dispose();
+            await Task.Delay(450);
+            verifyButton.Content = "Verify";
         }
     }
 
