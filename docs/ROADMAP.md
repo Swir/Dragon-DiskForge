@@ -101,16 +101,35 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Windows integration coverage on a real IMAPI-generated mounted ISO: list → search → copy-out → content verification
 - ✅ Full Windows x64 Release validation for the first Explorer slice in PR #5 / run #56
 
+### Preview + Image Library slice — ✅ complete
+- ✅ Bounded `FilePreviewService` in Core with cancellation
+- ✅ Read-only text preview with a hard read limit and truncation indicator
+- ✅ Image preview rendered inside Dragon Explorer without shell execution
+- ✅ PDF metadata-only preview
+- ✅ Media metadata-only preview with no auto-play
+- ✅ Binary/unsupported metadata fallback
+- ✅ Preview pane follows the current Explorer selection
+- ✅ Stale preview cancellation prevents an older selection from replacing a newer preview
+- ✅ Folder and reparse-point metadata preview with safety messaging
+- ✅ Recent Images stored locally for the current Windows profile
+- ✅ Favorites stored locally for the current Windows profile
+- ✅ Atomic JSON persistence with Windows case-insensitive path deduplication
+- ✅ Recent-list pruning preserves Favorites
+- ✅ Real Images view with Open / Favorite / Unfavorite / Remove actions
+- ✅ Missing-file state disables Open rather than failing silently
+- ✅ Successfully opened images are recorded best-effort without blocking the core open flow
+- ✅ Core automated tests for preview classification, bounded reads, cancellation, persistence, deduplication, favorites, removal and pruning
+- ✅ Real mounted-ISO integration proving Dragon Preview reads exact text directly from the mounted image
+- ✅ PR #6 / run #72 passes Core, real Windows ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI `Release|x64` build
+- ✅ Main regression run #73 passes the same path after merge
+
 ### Remaining 0.3 scope
 - ⬜ Drag files out to Windows Explorer where technically safe
-- ⬜ Preview framework for images/text/PDF/media metadata
-- ⬜ Recent images
-- ⬜ Favorites
 - ⬜ Mounted history
 - ⬜ Multi-image workspace/tabs
 - ⬜ Provider-backed direct browsing without mounting where technically supported
 
-**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, with the remaining preview/history/workspace experience completed and tested.
+**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, with the remaining history/workspace/drag-out/direct-browsing experience completed and tested.
 
 ---
 
