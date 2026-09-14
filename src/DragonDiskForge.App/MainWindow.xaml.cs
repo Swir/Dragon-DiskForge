@@ -372,7 +372,8 @@ public sealed partial class MainWindow : Window
             return false;
 
         var extension = Path.GetExtension(image.Path);
-        return extension.Equals(".vhd", StringComparison.OrdinalIgnoreCase)
+        return extension.Equals(".iso", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".vhd", StringComparison.OrdinalIgnoreCase)
             || extension.Equals(".vhdx", StringComparison.OrdinalIgnoreCase);
     }
 
