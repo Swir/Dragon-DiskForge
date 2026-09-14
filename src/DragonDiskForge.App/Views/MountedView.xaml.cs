@@ -39,17 +39,35 @@ public sealed partial class MountedView : UserControl, IDisposable
         try
         {
             var states = await _mountService.GetMountedAsync(cts.Token);
-            var history = await _historyService.GetAsync(cts.Token);
             if (cts.IsCancellationRequested)
                 return;
 
             _items.Clear();
             foreach (var state in states.Where(x => x.IsMounted))
                 _items.Add(MountedImageViewModel.FromState(state));
-
-            ApplyHistory(history);
             UpdateEmptyState();
-            if (showSuccess)
+
+            var historyAvailable = true;
+            try
+            {
+                var history = await _historyService.GetAsync(cts.Token);
+                if (cts.IsCancellationRequested)
+                    return;
+                ApplyHistory(history);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                historyAvailable = false;
+                ShowStatus(
+                    $"Live Windows mount state refreshed, but local history could not be read: {ShortMessage(ex.Message)}",
+                    InfoBarSeverity.Warning);
+            }
+
+            if (showSuccess && historyAvailable)
                 ShowStatus("Mounted-image state refreshed from Windows Storage. Local history refreshed too.", InfoBarSeverity.Success);
         }
         catch (OperationCanceledException)
@@ -58,7 +76,7 @@ public sealed partial class MountedView : UserControl, IDisposable
         }
         catch (Exception ex)
         {
-            ShowStatus($"Could not refresh mounted images: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
+            ShowStatus($"Could not refresh live Windows mounted-image state: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
         }
         finally
         {
