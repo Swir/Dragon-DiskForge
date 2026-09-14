@@ -6,56 +6,57 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ## [Unreleased]
 
+### Planned
+- Dragon Explorer folder/file tree
+- breadcrumb navigation and search
+- safe extraction and drag-out
+- file details and preview framework
+- recent images, favorites and multi-image workspace foundations
+
+## [0.2.0] - 2026-09-14
+
 ### Added
-- Dragon visual design system with obsidian, charcoal, ember, molten and crimson design tokens
-- Custom Dragon DiskForge dragon-head/sigil in the application shell
-- Vector Dragon sigil asset under `docs/branding/dragon-sigil.svg`
-- Branded Forge dashboard and disk-image drop zone
-- Dragon-styled capability cards, status pills and image action card
-- Branded Dragon startup overlay with Forge loading state
-- Subtle dragon-scale geometry in the Forge hero surface
-- Responsive desktop layout for compact and narrow window widths
-- Animated startup fade and selected-image reveal
-- Completed Dragon light-theme surfaces and system-aware High Contrast resources
-- Final Windows application `.ico` wired into the WinExe build
-- `ImageVerificationService` in Core for shared SHA-256 verification
-- SHA-256 progress reporting and cancellation in Core
-- Verify/Cancel UI that shows live percentage while hashing large images
-- Core smoke-test harness covering signatures, extension fallback, missing files, SHA-256 progress and cancellation
-- GitHub Actions Windows x64 validation pipeline
-- x64 and ARM64 solution platform configurations
-- Testing guide under `docs/TESTING.md`
-- Milestone execution and current-status documents
-- GitHub execution Issues for 0.1 closure and 0.2 mount engine
+- `IMountService` contract in Core
+- isolated `DragonDiskForge.Windows` service layer for native Windows Storage operations
+- native ISO, VHD and VHDX mount support
+- native unmount/eject support for proven ISO/VHD/VHDX paths
+- read-only-first mount requests
+- drive-letter and attached-state detection
+- Mount/Unmount progress reporting and cancellation
+- live Mounted dashboard backed by Windows state
+- Mounted dashboard Refresh, Open drive and Unmount/Cancel actions
+- live mounted-image enumeration through the Windows Storage pipeline
+- stale-state recovery by re-querying Windows after operations/cancellation
+- friendly native-operation and unsupported-format errors
+- VHD/VHDX elevation policy isolated to native operations that require it
+- real Windows integration tests using disposable VHD/VHDX images created with DiskPart
+- real ISO integration fixture generated with Windows IMAPI2FS
+- integration validation for mount, read-only state, drive access, mounted inventory and unmount
+- cancellation-safety validation proving pre-cancelled mount requests do not alter storage state
+- manual non-admin/UAC validation checklist under `docs/MANUAL-VALIDATION.md`
 
 ### Changed
-- Reworked the generic WinUI dashboard into a recognizable Dragon DiskForge interface
-- SHA-256 verification now lives in `DragonDiskForge.Core` instead of the GUI layer
-- Capability cards and image actions adapt when the application window becomes narrow
-- Loading a different image cancels an active verification operation
-- GitHub Actions cancels superseded builds for the same branch/ref
-- Future Images/Mounted/Explorer/Convert/Tools navigation is disabled until its real engine milestone exists
-- Settings entry is hidden until a real settings experience is implemented
-- Mount and Explore remain disabled until their real engine milestones are implemented
+- ISO/VHD/VHDX Mount controls are enabled only after their real Windows integration path is proven
+- Mounted navigation is now a real working view rather than a locked future placeholder
+- native mounted state is treated as Windows-owned state instead of app-session cache
+- project version advanced from 0.1.0 to 0.2.0
 
 ### Fixed
-- Corrected solution platform mappings so `Release|x64` restores and builds in CI
-- Corrected the SHA-256 smoke-test delegate so the automated Core harness compiles cleanly
-- Corrected startup-overlay stacking after WinUI rejected `Grid.ZIndex`
-- Replaced a corrupted binary icon upload with a valid Win32 `.ico` resource accepted by the Release compiler
+- corrected the first Mounted inventory implementation after integration tests showed that direct `MSFT_DiskImage` class enumeration was not reliable
+- mounted-image enumeration now uses the Windows Storage `Get-Volume → Get-DiskImage` path
+- corrected the integration harness import for `MountOperationException`
 
 ### Verified
-- Core signature/fallback/error/SHA-256/progress/cancellation smoke tests pass
-- Dragon startup, responsive layout, dark/light/High Contrast resources and future-feature locking pass full WinUI `Release|x64` CI
-- Final Windows icon resource passes the Win32 resource compiler in the full Release build
-- Milestone 0.1 exit criteria passed on current `main`
+- ISO mount → drive detection → file access → unmount passes on Windows CI
+- VHD mount → read-only state → unmount passes on Windows CI
+- VHDX mount → drive-letter detection → read-only state → unmount passes on Windows CI
+- live Mounted inventory includes attached images and removes them after unmount
+- pre-cancelled mount operations leave images detached
+- unsupported mount formats produce a friendly capability error
+- Core smoke tests, Windows mount integration, restore and full WinUI `Release|x64` build pass on `main` through GitHub Actions run #37
 
-### Planned
-- Native ISO/VHD/VHDX mount and unmount service
-- Mounted-drive state detection
-- In-app Dragon Explorer
-- Open and extract files from supported images
-- Recent-image history
+### Manual QA note
+- GitHub-hosted Windows runners execute as administrators, so the visible UAC prompt in a normal non-admin desktop session is tracked separately in `docs/MANUAL-VALIDATION.md` before public beta packaging.
 
 ## [0.1.0] - 2026-09-14
 
@@ -66,4 +67,31 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Supported-format catalogue
 - Signature-based detection for ISO, VHD, VHDX, QCOW2, DMG and WIM/ESD
 - SHA-256 verification
-- Initial roadmap and developer scripts
+- Dragon visual design system with obsidian, charcoal, ember, molten and crimson design tokens
+- Custom Dragon DiskForge dragon-head/sigil in the application shell
+- Vector Dragon sigil asset under `docs/branding/dragon-sigil.svg`
+- Branded Forge dashboard and disk-image drop zone
+- Dragon-styled capability cards, status pills and image action card
+- Branded Dragon startup overlay with Forge loading state
+- Subtle dragon-scale geometry in the Forge hero surface
+- Responsive desktop layout for compact and narrow window widths
+- Animated startup fade and selected-image reveal
+- completed light-theme surfaces and system-aware High Contrast resources
+- final Windows application `.ico` wired into the WinExe build
+- `ImageVerificationService` in Core for shared SHA-256 verification
+- SHA-256 progress reporting and cancellation in Core
+- Verify/Cancel UI with live percentage while hashing large images
+- Core smoke-test harness
+- GitHub Actions Windows x64 validation pipeline
+- testing, roadmap, milestone and status documentation
+
+### Fixed
+- corrected solution platform mappings so `Release|x64` restores and builds in CI
+- corrected the SHA-256 smoke-test delegate
+- corrected startup-overlay stacking after WinUI rejected `Grid.ZIndex`
+- replaced a corrupted binary icon upload with a valid Win32 `.ico` resource accepted by the Release compiler
+
+### Verified
+- Core signature/fallback/error/SHA-256/progress/cancellation smoke tests pass
+- Dragon startup, responsive layout, dark/light/High Contrast resources and future-feature locking pass full WinUI `Release|x64` CI
+- milestone 0.1 exit criteria passed on `main`
