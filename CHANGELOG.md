@@ -6,12 +6,40 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ## [Unreleased]
 
+### Added
+- `ExplorerEntry` model and `IExplorerService` contract in Core
+- filesystem-backed mounted-volume Explorer service for ISO/VHD/VHDX drive roots
+- safe folders-first directory listing with file size and modified-time metadata
+- folder navigation, Up and address/breadcrumb display in the WinUI Dragon Explorer
+- recursive search with result limits and cancellation
+- safe Copy out to a user-selected destination outside the mounted-image root
+- non-destructive Copy out that refuses to overwrite existing destination names
+- preservation of empty directories during folder Copy out
+- Explorer progress/cancellation handling
+- executable/script trust warning before shell-opening potentially active content
+- live Explorer navigation item backed by the real service
+- Mounted dashboard → Dragon Explorer routing using the current Windows drive root
+- fallback Explorer navigation to the first currently mounted volume with a drive letter
+- Core smoke coverage for Explorer listing, metadata, path-boundary safety, search, Copy out, empty folders, overwrite protection and cancellation
+- real Windows Explorer integration against an IMAPI-generated mounted ISO: list → search → Copy out → content verification
+
+### Changed
+- milestone 0.3 is now in progress rather than only planned
+- Explorer is enabled only when a real mounted-volume backing path can be resolved from current Windows state
+- mounted-volume browsing remains read-only; writes are limited to explicit Copy out destinations
+- reparse points/junctions are not traversed during recursive search or Copy out
+
+### Verified
+- PR #5 / GitHub Actions run #56 passes Core smoke tests, real ISO/VHD/VHDX integration including Explorer list/search/Copy out, restore and full WinUI `Release|x64` build
+- main GitHub Actions run #58 passes the same regression path after merge and roadmap synchronization
+
 ### Planned
-- Dragon Explorer folder/file tree
-- breadcrumb navigation and search
-- safe extraction and drag-out
-- file details and preview framework
-- recent images, favorites and multi-image workspace foundations
+- preview framework for images/text/PDF/media metadata
+- recent images and favorites
+- mounted history
+- multi-image workspace/tabs
+- drag-out where technically safe
+- provider-backed direct browsing without mounting where supported
 
 ## [0.2.0] - 2026-09-14
 
@@ -53,7 +81,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - live Mounted inventory includes attached images and removes them after unmount
 - pre-cancelled mount operations leave images detached
 - unsupported mount formats produce a friendly capability error
-- Core smoke tests, Windows mount integration, restore and full WinUI `Release|x64` build pass on `main` through GitHub Actions run #37
+- Core smoke tests, Windows mount integration, restore and full WinUI `Release|x64` build pass on `main`
 
 ### Manual QA note
 - GitHub-hosted Windows runners execute as administrators, so the visible UAC prompt in a normal non-admin desktop session is tracked separately in `docs/MANUAL-VALIDATION.md` before public beta packaging.
