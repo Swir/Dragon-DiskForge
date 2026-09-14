@@ -373,7 +373,6 @@
         </NavigationView>
 
         <Border x:Name="StartupOverlay"
-                Grid.ZIndex="100"
                 Background="{ThemeResource DragonBackgroundBrush}">
             <Grid>
                 <StackPanel HorizontalAlignment="Center"
