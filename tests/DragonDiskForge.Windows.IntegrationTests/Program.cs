@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Principal;
 using System.Text;
 using DragonDiskForge.Core.Models;
+using DragonDiskForge.Core.Services;
 using DragonDiskForge.Windows.Services;
 
 if (!OperatingSystem.IsWindows())
@@ -26,6 +27,7 @@ try
     await ValidateVirtualDiskAsync(new ImageCase("VHD", ".vhd", AssignDriveLetter: false));
     await ValidateVirtualDiskAsync(new ImageCase("VHDX", ".vhdx", AssignDriveLetter: true));
     await ValidateIsoAsync();
+    await ValidateUnsupportedFormatErrorAsync();
     Console.WriteLine("\nDragon DiskForge Windows mount integration tests passed.");
 }
 catch (Exception ex)
@@ -70,6 +72,7 @@ async Task ValidateVirtualDiskAsync(ImageCase testCase)
 
     var initial = await service.GetStateAsync(imagePath);
     Check(!initial.IsMounted, $"fresh test {testCase.Name} starts detached");
+    await ValidatePreCancelledMountAsync(imagePath, testCase.Name);
 
     var progress = new CaptureProgress();
     var mounted = await service.MountAsync(
@@ -81,6 +84,7 @@ async Task ValidateVirtualDiskAsync(ImageCase testCase)
 
     Check(mounted.IsMounted, $"native Windows service mounts {testCase.Name}");
     Check(progress.Last >= 0.999d, $"{testCase.Name} mount operation reports completion");
+    await ValidateMountedInventoryContainsAsync(imagePath, testCase.Name);
 
     var isReadOnly = await QueryReadOnlyAsync(imagePath);
     Check(isReadOnly, $"mounted {testCase.Name} is read-only");
@@ -101,6 +105,7 @@ async Task ValidateVirtualDiskAsync(ImageCase testCase)
     var detached = await service.UnmountAsync(imagePath, progress);
     Check(!detached.IsMounted, $"native Windows service unmounts {testCase.Name}");
     Check(progress.Last >= 0.999d, $"{testCase.Name} unmount operation reports completion");
+    await ValidateMountedInventoryExcludesAsync(imagePath, testCase.Name);
 }
 
 async Task ValidateIsoAsync()
@@ -122,6 +127,7 @@ async Task ValidateIsoAsync()
 
     var initial = await service.GetStateAsync(imagePath);
     Check(!initial.IsMounted, "fresh test ISO starts detached");
+    await ValidatePreCancelledMountAsync(imagePath, "ISO");
 
     var progress = new CaptureProgress();
     var mounted = await service.MountAsync(
@@ -131,6 +137,7 @@ async Task ValidateIsoAsync()
     Check(mounted.IsMounted, "native Windows service mounts ISO");
     Check(progress.Last >= 0.999d, "ISO mount operation reports completion");
     Check(mounted.DriveLetters.Count > 0, "mounted ISO exposes a drive letter");
+    await ValidateMountedInventoryContainsAsync(imagePath, "ISO");
 
     var driveRoot = mounted.DriveLetters[0] + "\\";
     Check(Directory.Exists(driveRoot), "detected ISO drive letter is accessible");
@@ -141,6 +148,60 @@ async Task ValidateIsoAsync()
     var detached = await service.UnmountAsync(imagePath, progress);
     Check(!detached.IsMounted, "native Windows service unmounts ISO");
     Check(progress.Last >= 0.999d, "ISO unmount operation reports completion");
+    await ValidateMountedInventoryExcludesAsync(imagePath, "ISO");
+}
+
+async Task ValidatePreCancelledMountAsync(string imagePath, string name)
+{
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+
+    try
+    {
+        await service.MountAsync(
+            new MountRequest(imagePath, ReadOnly: true),
+            cancellationToken: cancelled.Token);
+        throw new InvalidOperationException($"pre-cancelled {name} mount unexpectedly completed");
+    }
+    catch (OperationCanceledException)
+    {
+        Check(true, $"pre-cancelled {name} mount is rejected before changing storage state");
+    }
+
+    var state = await service.GetStateAsync(imagePath);
+    Check(!state.IsMounted, $"pre-cancelled {name} mount leaves image detached");
+}
+
+async Task ValidateMountedInventoryContainsAsync(string imagePath, string name)
+{
+    var mounted = await service.GetMountedAsync();
+    var entry = mounted.FirstOrDefault(x =>
+        string.Equals(x.ImagePath, Path.GetFullPath(imagePath), StringComparison.OrdinalIgnoreCase));
+    Check(entry is not null && entry.IsMounted, $"mounted inventory contains {name}");
+}
+
+async Task ValidateMountedInventoryExcludesAsync(string imagePath, string name)
+{
+    var mounted = await service.GetMountedAsync();
+    Check(!mounted.Any(x => string.Equals(x.ImagePath, Path.GetFullPath(imagePath), StringComparison.OrdinalIgnoreCase)),
+        $"mounted inventory removes {name} after unmount");
+}
+
+async Task ValidateUnsupportedFormatErrorAsync()
+{
+    var unsupportedPath = Path.Combine(tempRoot, "unsupported.img");
+    await File.WriteAllBytesAsync(unsupportedPath, new byte[32]);
+
+    try
+    {
+        await service.MountAsync(new MountRequest(unsupportedPath));
+        throw new InvalidOperationException("unsupported mount unexpectedly completed");
+    }
+    catch (MountOperationException ex)
+    {
+        Check(ex.Message.Contains("ISO, VHD and VHDX", StringComparison.OrdinalIgnoreCase),
+            "unsupported-format mount returns a friendly capability error");
+    }
 }
 
 static bool IsAdministrator()
