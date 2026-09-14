@@ -19,12 +19,13 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Initial image-format catalogue
 - ✅ Signature detection: ISO, VHD, VHDX, QCOW2, DMG, WIM/ESD
 - ✅ SHA-256 verification through shared Core service
+- ✅ SHA-256 progress reporting and user cancellation
 - ✅ Read-only-first architecture
 - ✅ Architecture document
 - ✅ Changelog and repository hygiene
 - ✅ Windows x64 GitHub Actions build validation
-- ✅ Core smoke-test harness for signatures, fallback, errors and SHA-256
-- 🚧 Error states, cancellation and broader foundation testing
+- ✅ Core smoke-test harness for signatures, fallback, errors, SHA-256 progress and cancellation
+- 🚧 Broader error states and foundation testing
 
 ### Dragon visual system
 - ✅ Dragon visual language specification
