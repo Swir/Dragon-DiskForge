@@ -22,6 +22,7 @@ var tempRoot = Path.Combine(Path.GetTempPath(), $"dragon-diskforge-mount-{Guid.N
 Directory.CreateDirectory(tempRoot);
 var service = new WindowsDiskImageMountService();
 var explorer = new MountedFileSystemExplorerService();
+var previewer = new FilePreviewService();
 
 try
 {
@@ -141,7 +142,8 @@ async Task ValidateIsoAsync()
 
     var driveRoot = mounted.DriveLetters[0] + "\\";
     Check(Directory.Exists(driveRoot), "detected ISO drive letter is accessible");
-    Check(File.Exists(Path.Combine(driveRoot, markerName)), "mounted ISO exposes its expected file");
+    var markerPath = Path.Combine(driveRoot, markerName);
+    Check(File.Exists(markerPath), "mounted ISO exposes its expected file");
     Console.WriteLine($"INFO  ISO mounted at {string.Join(", ", mounted.DriveLetters)}");
 
     var entries = await explorer.ListAsync(driveRoot, driveRoot);
@@ -149,13 +151,17 @@ async Task ValidateIsoAsync()
     Check(markerEntry is not null, "Dragon Explorer lists a file from the real mounted ISO");
     Check(markerEntry?.SizeBytes == Encoding.UTF8.GetByteCount(markerContent), "Dragon Explorer reports mounted ISO file metadata");
 
+    var preview = await previewer.GetPreviewAsync(markerPath, maxTextCharacters: 512);
+    Check(preview.Kind == PreviewKind.Text, "Dragon Preview classifies text from the real mounted ISO");
+    Check(preview.Text == markerContent && !preview.IsTruncated, "Dragon Preview reads exact bounded text from the real mounted ISO");
+
     var searchResults = await explorer.SearchAsync(driveRoot, driveRoot, "dragon-ci");
     Check(searchResults.Any(x => x.Name.Equals(markerName, StringComparison.OrdinalIgnoreCase)), "Dragon Explorer search finds a file on the real mounted ISO");
 
     var exportRoot = Path.Combine(tempRoot, "explorer-export");
     Directory.CreateDirectory(exportRoot);
     var copyProgress = new CaptureProgress();
-    await explorer.CopyOutAsync(driveRoot, Path.Combine(driveRoot, markerName), exportRoot, copyProgress);
+    await explorer.CopyOutAsync(driveRoot, markerPath, exportRoot, copyProgress);
     var copiedMarker = Path.Combine(exportRoot, markerName);
     Check(File.Exists(copiedMarker), "Dragon Explorer copies a real mounted ISO file out of the image");
     Check(await File.ReadAllTextAsync(copiedMarker) == markerContent, "Dragon Explorer copy-out preserves mounted ISO file content");
