@@ -3,6 +3,7 @@ using DragonDiskForge.Core.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Animation;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -15,11 +16,90 @@ public sealed partial class MainWindow : Window
     private readonly ImageDetectionService _detector = new();
     private readonly ImageVerificationService _verification = new();
     private DiskImageInfo? _current;
+    private bool _startupShown;
 
     public MainWindow()
     {
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
+    }
+
+    private async void RootLayout_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_startupShown)
+            return;
+
+        _startupShown = true;
+        ApplyResponsiveLayout(RootLayout.ActualWidth);
+        await Task.Delay(320);
+        AnimateOpacity(StartupOverlay, 1, 0, 340, () => StartupOverlay.Visibility = Visibility.Collapsed);
+    }
+
+    private void RootLayout_SizeChanged(object sender, SizeChangedEventArgs e)
+        => ApplyResponsiveLayout(e.NewSize.Width);
+
+    private void ApplyResponsiveLayout(double width)
+    {
+        var compact = width < 980;
+        var narrow = width < 700;
+
+        MainContentGrid.Padding = compact
+            ? new Thickness(18, 20, 18, 28)
+            : new Thickness(30, 24, 30, 34);
+
+        ShellNav.OpenPaneLength = compact ? 238 : 268;
+        HeaderStatusPill.Visibility = width < 760 ? Visibility.Collapsed : Visibility.Visible;
+        HeroInputPanel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        DragDropPill.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+        SafeModeText.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+
+        Grid.SetColumnSpan(HeroCopyPanel, compact ? 2 : 1);
+        HeroCopyPanel.Margin = compact
+            ? new Thickness(2, 4, 2, 4)
+            : new Thickness(8, 4, 30, 4);
+
+        HeroWatermark.Width = compact ? 235 : 330;
+        HeroWatermark.Height = compact ? 215 : 300;
+        DropZone.Padding = compact ? new Thickness(22) : new Thickness(30);
+        DropZone.MinHeight = compact ? 285 : 330;
+
+        if (compact)
+        {
+            SetCapabilityCardLayout(DetectCard, 0);
+            SetCapabilityCardLayout(VerifyCard, 1);
+            SetCapabilityCardLayout(MountCard, 2);
+
+            Grid.SetRow(ResultActions, 1);
+            Grid.SetColumn(ResultActions, 0);
+            Grid.SetColumnSpan(ResultActions, 3);
+            ResultActions.Margin = new Thickness(0, 4, 0, 0);
+        }
+        else
+        {
+            Grid.SetRow(DetectCard, 0);
+            Grid.SetColumn(DetectCard, 0);
+            Grid.SetColumnSpan(DetectCard, 1);
+            Grid.SetRow(VerifyCard, 0);
+            Grid.SetColumn(VerifyCard, 1);
+            Grid.SetColumnSpan(VerifyCard, 1);
+            Grid.SetRow(MountCard, 0);
+            Grid.SetColumn(MountCard, 2);
+            Grid.SetColumnSpan(MountCard, 1);
+
+            Grid.SetRow(ResultActions, 0);
+            Grid.SetColumn(ResultActions, 2);
+            Grid.SetColumnSpan(ResultActions, 1);
+            ResultActions.Margin = new Thickness(0);
+        }
+
+        ResultActions.Orientation = narrow ? Orientation.Vertical : Orientation.Horizontal;
+    }
+
+    private static void SetCapabilityCardLayout(FrameworkElement card, int row)
+    {
+        Grid.SetRow(card, row);
+        Grid.SetColumn(card, 0);
+        Grid.SetColumnSpan(card, 3);
     }
 
     private async void OpenImage_Click(object sender, RoutedEventArgs e)
@@ -63,7 +143,10 @@ public sealed partial class MainWindow : Window
             ImageMetaText.Text = $"{_current.Format}  •  {_current.SizeDisplay}  •  {_current.DetectionMethod}";
             ImagePathText.Text = _current.Path;
             MountButton.IsEnabled = false; // Enabled when the milestone-0.2 mount service lands.
+
+            ResultCard.Opacity = 0;
             ResultCard.Visibility = Visibility.Visible;
+            AnimateOpacity(ResultCard, 0, 1, 220);
         }
         catch (Exception ex)
         {
@@ -85,6 +168,26 @@ public sealed partial class MainWindow : Window
         {
             await ShowDialogAsync("Verification failed", ex.Message);
         }
+    }
+
+    private static void AnimateOpacity(UIElement target, double from, double to, int durationMs, Action? completed = null)
+    {
+        var animation = new DoubleAnimation
+        {
+            From = from,
+            To = to,
+            Duration = new Duration(TimeSpan.FromMilliseconds(durationMs)),
+            EnableDependentAnimation = true
+        };
+
+        Storyboard.SetTarget(animation, target);
+        Storyboard.SetTargetProperty(animation, "Opacity");
+
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        if (completed is not null)
+            storyboard.Completed += (_, _) => completed();
+        storyboard.Begin();
     }
 
     private async Task ShowDialogAsync(string title, string content)

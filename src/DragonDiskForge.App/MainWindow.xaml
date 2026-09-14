@@ -7,7 +7,10 @@
     mc:Ignorable="d"
     Title="Dragon DiskForge">
 
-    <Grid Background="{ThemeResource DragonBackgroundBrush}">
+    <Grid x:Name="RootLayout"
+          Background="{ThemeResource DragonBackgroundBrush}"
+          Loaded="RootLayout_Loaded"
+          SizeChanged="RootLayout_SizeChanged">
         <NavigationView x:Name="ShellNav"
                         Background="Transparent"
                         Foreground="{ThemeResource DragonTextBrush}"
@@ -60,7 +63,10 @@
             </NavigationView.MenuItems>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <Grid Padding="30,24,30,34" MaxWidth="1320" HorizontalAlignment="Stretch">
+                <Grid x:Name="MainContentGrid"
+                      Padding="30,24,30,34"
+                      MaxWidth="1320"
+                      HorizontalAlignment="Stretch">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -69,7 +75,6 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Top identity/status bar -->
                     <Grid Grid.Row="0" Margin="0,0,0,18">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -83,7 +88,9 @@
                                        FontSize="30" FontWeight="SemiBold"
                                        Foreground="{ThemeResource DragonTextBrush}" />
                         </StackPanel>
-                        <Border Grid.Column="1" Style="{StaticResource DragonStatusPillStyle}"
+                        <Border x:Name="HeaderStatusPill"
+                                Grid.Column="1"
+                                Style="{StaticResource DragonStatusPillStyle}"
                                 VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Ellipse Width="8" Height="8" Fill="{ThemeResource DragonSuccessBrush}" />
@@ -94,7 +101,6 @@
                         </Border>
                     </Grid>
 
-                    <!-- Dragon hero / drop zone -->
                     <Border x:Name="DropZone"
                             Grid.Row="1"
                             AllowDrop="True"
@@ -107,9 +113,28 @@
                             Padding="30"
                             MinHeight="330">
                         <Grid>
-                            <!-- Decorative dragon watermark -->
-                            <Viewbox Width="330" Height="300" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                     Margin="0,0,10,0" Opacity="0.09" IsHitTestVisible="False">
+                            <Canvas Width="270" Height="150"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Margin="0,0,22,16"
+                                    Opacity="0.045"
+                                    IsHitTestVisible="False">
+                                <Path Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                                <Path Canvas.Left="54" Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                                <Path Canvas.Left="108" Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                                <Path Canvas.Left="162" Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                                <Path Canvas.Left="27" Canvas.Top="39" Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                                <Path Canvas.Left="81" Canvas.Top="39" Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                                <Path Canvas.Left="135" Canvas.Top="39" Fill="{ThemeResource DragonMoltenBrush}" Data="M 0,22 Q 28,0 56,22 Q 28,44 0,22 Z" />
+                            </Canvas>
+
+                            <Viewbox x:Name="HeroWatermark"
+                                     Width="330" Height="300"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,10,0"
+                                     Opacity="0.09"
+                                     IsHitTestVisible="False">
                                 <Path Fill="{ThemeResource DragonMoltenBrush}"
                                       Data="M 48,2 C 38,12 33,22 34,33 C 27,27 20,25 11,27 C 21,34 24,41 20,50 C 16,59 19,69 28,75 C 34,79 40,79 46,76 C 40,72 36,67 36,61 C 42,65 49,67 57,66 C 67,65 76,59 82,50 C 74,53 67,52 62,48 C 70,44 76,37 79,28 C 70,32 62,33 55,31 C 58,22 56,12 48,2 Z M 50,36 C 57,35 63,37 67,42 C 61,41 56,42 51,45 C 48,43 47,40 50,36 Z" />
                             </Viewbox>
@@ -120,11 +145,15 @@
                                     <ColumnDefinition Width="0.8*" />
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel VerticalAlignment="Center" Spacing="13" Margin="8,4,30,4">
+                                <StackPanel x:Name="HeroCopyPanel"
+                                            VerticalAlignment="Center"
+                                            Spacing="13"
+                                            Margin="8,4,30,4">
                                     <Border Width="58" Height="58" CornerRadius="18"
                                             Background="{ThemeResource DragonEmberSoftBrush}"
                                             BorderBrush="{ThemeResource DragonBorderHotBrush}"
-                                            BorderThickness="1" HorizontalAlignment="Left">
+                                            BorderThickness="1"
+                                            HorizontalAlignment="Left">
                                         <FontIcon Glyph="&#xE898;" FontSize="25"
                                                   Foreground="{ThemeResource DragonMoltenBrush}"
                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -133,7 +162,8 @@
                                                FontFamily="Segoe UI Variable Display"
                                                FontSize="29" FontWeight="Bold"
                                                CharacterSpacing="35"
-                                               Foreground="{ThemeResource DragonTextBrush}" />
+                                               Foreground="{ThemeResource DragonTextBrush}"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Text="Open, inspect and verify disk images in a safe read-only workflow. Mounting and Dragon Explorer are the next engine milestone."
                                                MaxWidth="650" FontSize="14"
                                                Foreground="{ThemeResource DragonMutedBrush}"
@@ -142,17 +172,23 @@
                                         <Button Content="Choose image"
                                                 Click="OpenImage_Click"
                                                 Style="{StaticResource DragonPrimaryButtonStyle}" />
-                                        <Border Style="{StaticResource DragonStatusPillStyle}" VerticalAlignment="Center">
+                                        <Border x:Name="DragDropPill"
+                                                Style="{StaticResource DragonStatusPillStyle}"
+                                                VerticalAlignment="Center">
                                             <TextBlock Text="Drag &amp; drop enabled"
                                                        Foreground="{ThemeResource DragonMutedBrush}" FontSize="12" />
                                         </Border>
                                     </StackPanel>
                                 </StackPanel>
 
-                                <Border Grid.Column="1" Margin="10,10,8,10" Padding="18"
+                                <Border x:Name="HeroInputPanel"
+                                        Grid.Column="1"
+                                        Margin="10,10,8,10"
+                                        Padding="18"
                                         Background="{ThemeResource DragonSurfaceBrush}"
                                         BorderBrush="{ThemeResource DragonBorderBrush}"
-                                        BorderThickness="1" CornerRadius="18"
+                                        BorderThickness="1"
+                                        CornerRadius="18"
                                         VerticalAlignment="Center">
                                     <StackPanel Spacing="12">
                                         <TextBlock Text="FORGE INPUT" FontSize="11" FontWeight="Bold"
@@ -184,15 +220,24 @@
                         </Grid>
                     </Border>
 
-                    <!-- Capability cards -->
-                    <Grid Grid.Row="2" Margin="0,16,0,0" ColumnSpacing="12">
+                    <Grid x:Name="CapabilityGrid"
+                          Grid.Row="2"
+                          Margin="0,16,0,0"
+                          ColumnSpacing="12"
+                          RowSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                        <Border x:Name="DetectCard"
+                                Background="{ThemeResource DragonPanelStrongBrush}"
                                 BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1"
                                 CornerRadius="18" Padding="18">
                             <Grid ColumnSpacing="14">
@@ -214,7 +259,9 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="1" Background="{ThemeResource DragonPanelStrongBrush}"
+                        <Border x:Name="VerifyCard"
+                                Grid.Column="1"
+                                Background="{ThemeResource DragonPanelStrongBrush}"
                                 BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1"
                                 CornerRadius="18" Padding="18">
                             <Grid ColumnSpacing="14">
@@ -236,7 +283,9 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="2" Background="{ThemeResource DragonPanelStrongBrush}"
+                        <Border x:Name="MountCard"
+                                Grid.Column="2"
+                                Background="{ThemeResource DragonPanelStrongBrush}"
                                 BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1"
                                 CornerRadius="18" Padding="18">
                             <Grid ColumnSpacing="14">
@@ -259,13 +308,16 @@
                         </Border>
                     </Grid>
 
-                    <!-- Selected image -->
                     <Border Grid.Row="3" x:Name="ResultCard" Visibility="Collapsed"
                             Margin="0,16,0,0"
                             Background="{ThemeResource DragonPanelStrongBrush}"
                             BorderBrush="{ThemeResource DragonBorderHotBrush}"
                             BorderThickness="1" CornerRadius="20" Padding="20">
-                        <Grid ColumnSpacing="16">
+                        <Grid x:Name="ResultGrid" ColumnSpacing="16" RowSpacing="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="58" />
                                 <ColumnDefinition Width="*" />
@@ -283,11 +335,15 @@
                                 <TextBlock x:Name="ImageNameText" Text="image.iso"
                                            FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                 <TextBlock x:Name="ImageMetaText" Text="ISO • 0 MB • Signature"
-                                           Foreground="{ThemeResource DragonMutedBrush}" />
+                                           Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
                                 <TextBlock x:Name="ImagePathText" Text="C:\..."
                                            Foreground="{ThemeResource DragonMutedBrush}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <StackPanel x:Name="ResultActions"
+                                        Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
                                 <Button Content="Explore" IsEnabled="False"
                                         Style="{StaticResource DragonSecondaryButtonStyle}"
                                         ToolTipService.ToolTip="Dragon Explorer arrives in milestone 0.3" />
@@ -300,7 +356,6 @@
                         </Grid>
                     </Border>
 
-                    <!-- Footer status -->
                     <Grid Grid.Row="4" Margin="2,18,2,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -308,12 +363,45 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Dragon DiskForge • Foundation channel"
                                    FontSize="11" Foreground="{ThemeResource DragonMutedBrush}" />
-                        <TextBlock Grid.Column="1" Text="READ-ONLY SAFE MODE"
+                        <TextBlock x:Name="SafeModeText"
+                                   Grid.Column="1" Text="READ-ONLY SAFE MODE"
                                    FontSize="10" FontWeight="Bold" CharacterSpacing="120"
                                    Foreground="{ThemeResource DragonSuccessBrush}" />
                     </Grid>
                 </Grid>
             </ScrollViewer>
         </NavigationView>
+
+        <Border x:Name="StartupOverlay"
+                Grid.ZIndex="100"
+                Background="{ThemeResource DragonBackgroundBrush}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="18">
+                    <Border Width="104" Height="104" CornerRadius="30"
+                            Background="{StaticResource DragonEmberGradientBrush}"
+                            HorizontalAlignment="Center">
+                        <Viewbox Margin="21">
+                            <Path Fill="White"
+                                  Data="M 48,2 C 38,12 33,22 34,33 C 27,27 20,25 11,27 C 21,34 24,41 20,50 C 16,59 19,69 28,75 C 34,79 40,79 46,76 C 40,72 36,67 36,61 C 42,65 49,67 57,66 C 67,65 76,59 82,50 C 74,53 67,52 62,48 C 70,44 76,37 79,28 C 70,32 62,33 55,31 C 58,22 56,12 48,2 Z M 50,36 C 57,35 63,37 67,42 C 61,41 56,42 51,45 C 48,43 47,40 50,36 Z" />
+                        </Viewbox>
+                    </Border>
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <TextBlock Text="DRAGON DISKFORGE"
+                                   FontFamily="Segoe UI Variable Display"
+                                   FontSize="25" FontWeight="Bold"
+                                   CharacterSpacing="90"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="IGNITING THE FORGE"
+                                   FontSize="10" FontWeight="Bold"
+                                   CharacterSpacing="230"
+                                   Foreground="{ThemeResource DragonEmberBrush}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                    <ProgressBar Width="210" Height="3" IsIndeterminate="True" />
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
