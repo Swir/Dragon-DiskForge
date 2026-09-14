@@ -1,0 +1,168 @@
+<UserControl
+    x:Class="DragonDiskForge.App.Views.ImagesView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="Transparent" Padding="30,24,30,34" MaxWidth="1320" HorizontalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock Text="IMAGE LIBRARY" FontSize="11" FontWeight="Bold"
+                           Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="220" />
+                <TextBlock Text="Recent images &amp; favorites"
+                           FontFamily="Segoe UI Variable Display"
+                           FontSize="30" FontWeight="SemiBold"
+                           Foreground="{ThemeResource DragonTextBrush}" />
+                <TextBlock Text="A local, private history of disk images opened in Dragon DiskForge."
+                           Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                <ProgressRing x:Name="BusyRing" Width="22" Height="22" IsActive="False" />
+                <Button Content="Refresh" Click="Refresh_Click"
+                        Style="{StaticResource DragonSecondaryButtonStyle}" />
+            </StackPanel>
+        </Grid>
+
+        <InfoBar x:Name="StatusBar" Grid.Row="1" IsOpen="False" IsClosable="True" Margin="0,0,0,14" />
+
+        <Grid Grid.Row="2" Margin="0,0,0,9">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="FAVORITES" FontSize="11" FontWeight="Bold"
+                       Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
+            <TextBlock x:Name="FavoriteCountText" Grid.Column="1" Text="0 favorites"
+                       Foreground="{ThemeResource DragonMutedBrush}" />
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,0,0,22">
+            <TextBlock x:Name="FavoritesEmpty"
+                       Text="No favorites yet. Mark a recent image as favorite to keep it pinned here."
+                       Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap"
+                       Padding="4,12" />
+            <ListView x:Name="FavoritesList" Visibility="Collapsed" SelectionMode="None"
+                      Background="Transparent" HorizontalContentAlignment="Stretch">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,8" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderHotBrush}"
+                                BorderThickness="1" CornerRadius="16" Padding="15">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="46" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="46" Height="46" CornerRadius="13"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="&#xE735;" FontSize="19"
+                                              Foreground="{ThemeResource DragonMoltenBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" FontSize="16" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Meta}" Foreground="{ThemeResource DragonMutedBrush}" />
+                                    <TextBlock Text="{Binding Path}" Foreground="{ThemeResource DragonMutedBrush}"
+                                               FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                                    <Button Content="Open" Tag="{Binding Path}" IsEnabled="{Binding CanOpen}"
+                                            Click="Open_Click" Style="{StaticResource DragonPrimaryButtonStyle}" />
+                                    <Button Content="Unfavorite" Tag="{Binding Path}"
+                                            Click="ToggleFavorite_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                    <Button Content="Remove" Tag="{Binding Path}"
+                                            Click="Remove_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+
+        <Grid Grid.Row="4" Margin="0,0,0,9">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="RECENT IMAGES" FontSize="11" FontWeight="Bold"
+                       Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
+            <TextBlock x:Name="RecentCountText" Grid.Column="1" Text="0 recent"
+                       Foreground="{ThemeResource DragonMutedBrush}" />
+        </Grid>
+
+        <Grid Grid.Row="5">
+            <TextBlock x:Name="RecentsEmpty"
+                       Text="Images you open successfully will appear here automatically."
+                       Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap"
+                       Padding="4,12" />
+            <ListView x:Name="RecentsList" Visibility="Collapsed" SelectionMode="None"
+                      Background="Transparent" HorizontalContentAlignment="Stretch">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,8" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}"
+                                BorderThickness="1" CornerRadius="16" Padding="15">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="46" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="46" Height="46" CornerRadius="13"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="&#xEDA2;" FontSize="19"
+                                              Foreground="{ThemeResource DragonMoltenBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" FontSize="16" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Meta}" Foreground="{ThemeResource DragonMutedBrush}" />
+                                    <TextBlock Text="{Binding Path}" Foreground="{ThemeResource DragonMutedBrush}"
+                                               FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                                    <Button Content="Open" Tag="{Binding Path}" IsEnabled="{Binding CanOpen}"
+                                            Click="Open_Click" Style="{StaticResource DragonPrimaryButtonStyle}" />
+                                    <Button Content="{Binding FavoriteActionText}" Tag="{Binding Path}"
+                                            Click="ToggleFavorite_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                    <Button Content="Remove" Tag="{Binding Path}"
+                                            Click="Remove_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
+</UserControl>
