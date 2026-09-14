@@ -37,9 +37,24 @@ The project follows semantic versioning while it evolves toward 1.0.
 - missing-file library state that disables Open rather than failing silently
 - Core smoke coverage for Preview classification, bounded reads, cancellation, image-library persistence, deduplication, favorites, removal and pruning
 - real mounted-ISO integration proving Dragon Preview reads exact text directly from the mounted image
+- `MountHistoryEntry`, `MountHistoryAction` and `IMountHistoryService` for local mounted-image history
+- atomic JSON-backed mounted-history persistence with bounded newest-first retention
+- dedicated mounted-history smoke-test project and CI gate
+- separate LIVE WINDOWS STATE and MOUNTED HISTORY sections in the Mounted dashboard
+- safe Clear History workflow that never changes live Windows mount state
+- multi-image `ExplorerWorkspaceView` using WinUI `TabView`
+- one independent `ExplorerView` per mounted image/root
+- duplicate-tab prevention by activating an existing image/root tab
+- stale Explorer-tab pruning when a mounted Windows drive root disappears
 
 ### Changed
-- milestone 0.3 remains in progress with the mounted-volume Explorer and Preview/Image Library slices complete
+- project development version advanced to `0.3.0-alpha.1`
+- milestone 0.3 remains in progress with mounted-volume Explorer, Preview/Image Library, mounted-history and multi-image workspace slices complete
+- Explorer navigation now opens the multi-image workspace rather than a single global Explorer instance
+- closing an Explorer tab never unmounts the image
+- successful Forge unmount closes Explorer tabs backed by that image
+- successful native Mount/Unmount operations record local history only after Windows confirms the state transition
+- live mount state remains authoritative; history metadata never substitutes for Windows Storage state
 - Explorer is enabled only when a real mounted-volume backing path can be resolved from current Windows state
 - mounted-volume browsing and Preview remain read-only; writes are limited to explicit Copy out destinations
 - reparse points/junctions are not traversed during recursive search or Copy out
@@ -48,16 +63,16 @@ The project follows semantic versioning while it evolves toward 1.0.
 ### Fixed
 - qualified `System.IO.Path` inside the image-library view model to avoid property-name shadowing during WinUI compilation
 - disambiguated `System.IO.FileAttributes` from `Windows.Storage.FileAttributes` in the WinUI app
+- kept live Mounted inventory independent from mounted-history persistence so metadata failure cannot hide or misreport actual Windows mount state
 
 ### Verified
 - PR #5 / GitHub Actions run #56 passes Core smoke tests, real ISO/VHD/VHDX integration including Explorer list/search/Copy out, restore and full WinUI `Release|x64` build
 - main GitHub Actions run #58 passes the same first-slice regression path after merge and roadmap synchronization
 - PR #6 / GitHub Actions run #72 passes Core Preview/Image Library tests, real ISO/VHD/VHDX integration including mounted-ISO text Preview, restore and full WinUI `Release|x64` build
 - main GitHub Actions run #73 passes the same Preview/Image Library regression path after merge
+- PR #7 / GitHub Actions run #86 passes Core smoke tests, dedicated mounted-history tests, real ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI `Release|x64` build before the documentation/version pass
 
 ### Planned
-- mounted history
-- multi-image workspace/tabs
 - drag-out to Windows Explorer where technically safe
 - provider-backed direct browsing without mounting where supported
 

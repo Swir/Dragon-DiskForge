@@ -6,15 +6,14 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current version — 0.2.0
+## Current version — 0.3.0-alpha.1
 
 ### 0.1 Foundation + Dragon Visual Identity ✅
 
 - WinUI 3 / .NET 10 desktop shell
 - `DragonDiskForge.Core` separated from the GUI
 - drag & drop and file picker
-- broad image-format catalogue
-- signature detection for ISO, VHD, VHDX, QCOW2, DMG and WIM/ESD
+- broad image-format catalogue and signature detection
 - shared Core SHA-256 verification with live progress and cancellation
 - Dragon Forge dashboard, startup overlay, responsive layout, light/dark/High Contrast resources and final Windows icon
 - Core smoke tests and Windows x64 CI
@@ -29,31 +28,54 @@ Implemented and proven on Windows CI:
 - drive-letter and attached-state detection
 - Mount/Unmount progress and cancellation
 - live **Mounted** dashboard backed by Windows state
-- Refresh, Open drive and Unmount/Cancel actions in the Mounted view
 - stale-state recovery by re-querying Windows
 - friendly unsupported-format/native-operation error translation
-- elevation policy for VHD/VHDX isolated to the native operation that needs it
 - real Windows integration tests using disposable VHD/VHDX and IMAPI-generated ISO images
-- cancellation-safety validation
 
 ### 0.3 Dragon Explorer 🚧
 
-The first mounted-volume Explorer slice is already implemented and proven:
+The current 0.3 alpha contains three proven slices.
+
+**Mounted-volume Explorer**
 
 - real `IExplorerService` contract in Core
 - in-app browsing of mounted ISO/VHD/VHDX volumes
-- folders-first file listing with size and modified-time metadata
-- Up navigation and address/breadcrumb display
+- folders-first listing, Up navigation and breadcrumb/address display
 - recursive search with cancellation and result limits
 - safe **Copy out** to a user-selected destination
-- non-destructive extraction behavior: existing destination names are never silently overwritten
-- reparse-point/junction traversal blocked for recursive search and Copy out
-- warning before opening executable/script content from an image
-- Mounted dashboard → Dragon Explorer routing using current Windows state
-- real Windows integration test: mounted ISO → list → search → Copy out → verify content
-- full Windows x64 Release CI green on `main` through run #58
+- overwrite protection and reparse-point/junction safety
+- trust warning before opening executable/script content
+- real Windows integration: mounted ISO → list → search → Copy out → content verification
 
-Remaining 0.3 work includes previews, recent images, favorites, mounted history, multi-image workspace/tabs, drag-out where technically safe and provider-backed direct browsing where supported.
+**Preview + Image Library**
+
+- bounded read-only text preview with truncation indication
+- image preview rendered inside Dragon Explorer without shell execution
+- PDF and media metadata-only preview modes
+- binary/unsupported metadata fallback
+- preview cancellation so stale selections cannot replace the newest selection
+- local Recent Images + Favorites with atomic JSON persistence
+- real Images view with Open / Favorite / Unfavorite / Remove actions
+
+**Mounted history + multi-image workspace**
+
+- local mounted-history service with atomic persistence
+- distinct Mount / Unmount events and bounded newest-first retention
+- live Windows mounted state kept separate from local history metadata
+- Mounted dashboard with a dedicated history section and safe Clear History behavior
+- multi-image Dragon Explorer workspace using WinUI tabs
+- each mounted image opens in an independent read-only Explorer tab
+- reopening the same image/root activates the existing tab instead of duplicating it
+- closing a tab never unmounts the image
+- successful unmount closes tabs backed by that image
+- stale Explorer tabs are pruned if their Windows drive root disappears
+- dedicated mounted-history smoke tests
+- PR #7 / GitHub Actions run #86 passed Core, history, real Windows mount/Explorer/Preview integration, restore and full WinUI `Release|x64` build before the documentation/version pass
+
+Remaining 0.3 scope:
+
+- drag files out to Windows Explorer where technically safe
+- provider-backed direct browsing without mounting where technically supported
 
 The interactive UAC prompt itself cannot be faithfully exercised on GitHub-hosted administrator runners. A normal-user desktop checklist is maintained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md) and remains a manual QA gate before public beta packaging.
 
@@ -83,11 +105,11 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, real Windows ISO/VHD/VHDX mount integration tests, Explorer integration against a mounted ISO and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, mounted-history smoke tests, real Windows ISO/VHD/VHDX mount integration, Explorer/Preview integration against a mounted ISO and a full Windows x64 Release build in GitHub Actions.
 
 ## Safety design
 
-Inspection, hashing and mounted-volume browsing never write to the image. Native mount defaults to read-only. Copy out writes only to an explicit user-selected destination and refuses silent overwrite conflicts. Create/convert and future destructive physical-media operations are isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview and mounted-volume browsing never write to the image. Native mount defaults to read-only. Copy out writes only to an explicit user-selected destination and refuses silent overwrite conflicts. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 
