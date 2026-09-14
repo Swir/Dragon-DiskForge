@@ -33,26 +33,37 @@
 - Mounted dashboard → Dragon Explorer routing using current Windows state
 - path-boundary protection against `..` escape
 - no recursive traversal through reparse points/junctions
-- Core Explorer smoke tests for listing, search, path safety, Copy out, overwrite protection and cancellation
-- real Windows integration test against a mounted IMAPI ISO: list → search → Copy out → verify content
-- Windows x64 Release CI green on `main` through run #58
+- bounded read-only text Preview with cancellation and truncation indication
+- safe image Preview rendered inside Dragon Explorer without shell execution
+- PDF metadata-only Preview
+- media metadata-only Preview with no auto-play
+- binary/unsupported metadata fallback
+- Preview pane follows the active Explorer selection and cancels stale requests
+- local Recent Images history
+- local Favorites
+- atomic JSON persistence for Recents/Favorites with Windows path deduplication
+- real Images view with Open / Favorite / Unfavorite / Remove actions
+- missing image paths remain visible while Open is safely disabled
+- Core Explorer and Preview/Image Library smoke coverage
+- real Windows integration against a mounted IMAPI ISO: list → preview → search → Copy out → verify content
+- PR #6 / run #72 green through Core, real ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI Release x64 build
+- main regression run #73 green after PR #6 merge
 
 ### Current safety state
 
-Inspection, hashing, mounted-volume browsing and default native mounts are read-only-first. Explorer never writes into the mounted image during normal browsing. Copy out writes only to an explicit destination chosen by the user and refuses silent overwrite conflicts.
+Inspection, hashing, mounted-volume browsing, Preview and default native mounts are read-only-first. Explorer never writes into the mounted image during normal browsing. Copy out writes only to an explicit destination chosen by the user and refuses silent overwrite conflicts.
 
-Executable/script content from a mounted image requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during search or Copy out.
+Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only and never auto-run or auto-play. Executable/script content from a mounted image still requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during search or Copy out.
+
+Recents and Favorites are stored locally for the current Windows profile. Image-library persistence is best-effort and cannot block the core image-open path.
 
 The interactive UAC prompt cannot be faithfully exercised on GitHub-hosted administrator runners. Its non-admin desktop validation remains documented in `docs/MANUAL-VALIDATION.md` as a manual QA gate before public beta packaging.
 
 ## Remaining 0.3 scope
 
-- preview framework for images/text/PDF/media metadata
-- recent images
-- favorites
 - mounted history
 - multi-image workspace/tabs
-- drag-out where technically safe
+- drag-out to Windows Explorer where technically safe
 - provider-backed direct browsing without mounting where technically supported
 
 Milestone 0.3 remains open until these remaining user-facing Explorer/workspace capabilities are implemented and tested.
