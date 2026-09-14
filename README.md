@@ -33,21 +33,35 @@ Implemented and proven on Windows CI:
 - stale-state recovery by re-querying Windows
 - friendly unsupported-format/native-operation error translation
 - elevation policy for VHD/VHDX isolated to the native operation that needs it
-- real Windows integration tests that generate disposable VHD/VHDX and ISO images, mount them, validate state/read-only/drive access/live inventory, then unmount them
+- real Windows integration tests using disposable VHD/VHDX and IMAPI-generated ISO images
 - cancellation-safety validation
-- full Windows x64 Release CI green on `main` through run #37
+
+### 0.3 Dragon Explorer 🚧
+
+The first mounted-volume Explorer slice is already implemented and proven:
+
+- real `IExplorerService` contract in Core
+- in-app browsing of mounted ISO/VHD/VHDX volumes
+- folders-first file listing with size and modified-time metadata
+- Up navigation and address/breadcrumb display
+- recursive search with cancellation and result limits
+- safe **Copy out** to a user-selected destination
+- non-destructive extraction behavior: existing destination names are never silently overwritten
+- reparse-point/junction traversal blocked for recursive search and Copy out
+- warning before opening executable/script content from an image
+- Mounted dashboard → Dragon Explorer routing using current Windows state
+- real Windows integration test: mounted ISO → list → search → Copy out → verify content
+- full Windows x64 Release CI green on `main` through run #58
+
+Remaining 0.3 work includes previews, recent images, favorites, mounted history, multi-image workspace/tabs, drag-out where technically safe and provider-backed direct browsing where supported.
 
 The interactive UAC prompt itself cannot be faithfully exercised on GitHub-hosted administrator runners. A normal-user desktop checklist is maintained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md) and remains a manual QA gate before public beta packaging.
-
-## Next milestone — 0.3 Dragon Explorer
-
-The next development stage adds the in-app Explorer workflow for mounted/provider-backed images: folder/file tree, breadcrumbs, search, file details, safe extraction, drag-out where safe, previews, recent images, favorites and multi-image workspace foundations.
 
 Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md). Execution work is tracked with GitHub Issues.
 
 Major milestones:
 
-`0.1 Foundation + Dragon UI ✅` → `0.2 Native Mount ✅` → `0.3 Dragon Explorer` → `0.4 Extended Providers` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
+`0.1 Foundation + Dragon UI ✅` → `0.2 Native Mount ✅` → `0.3 Dragon Explorer 🚧` → `0.4 Extended Providers` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
 
 The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.md), and the vector sigil is stored under [`docs/branding/dragon-sigil.svg`](docs/branding/dragon-sigil.svg).
 
@@ -69,11 +83,11 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, real Windows ISO/VHD/VHDX mount integration tests and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, real Windows ISO/VHD/VHDX mount integration tests, Explorer integration against a mounted ISO and a full Windows x64 Release build in GitHub Actions.
 
 ## Safety design
 
-Inspection and hashing never write to the image. Native mount defaults to read-only. Create/convert and future destructive physical-media operations are isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing and mounted-volume browsing never write to the image. Native mount defaults to read-only. Copy out writes only to an explicit user-selected destination and refuses silent overwrite conflicts. Create/convert and future destructive physical-media operations are isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 
