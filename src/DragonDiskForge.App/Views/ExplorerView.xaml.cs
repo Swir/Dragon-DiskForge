@@ -4,6 +4,8 @@ using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Storage;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -17,10 +19,12 @@ public sealed partial class ExplorerView : UserControl
     };
 
     private readonly IExplorerService _explorer = new MountedFileSystemExplorerService();
+    private readonly IFilePreviewService _previewer = new FilePreviewService();
     private readonly ObservableCollection<ExplorerEntryViewModel> _items = new();
     private readonly nint _windowHandle;
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _copyCts;
+    private CancellationTokenSource? _previewCts;
     private string? _rootPath;
     private string? _currentPath;
     private string? _imagePath;
@@ -33,6 +37,7 @@ public sealed partial class ExplorerView : UserControl
         ExplorerList.ItemsSource = _items;
         Unloaded += ExplorerView_Unloaded;
         UpdateActionButtons();
+        ResetPreview(showPane: false);
     }
 
     public bool HasRoot => !string.IsNullOrWhiteSpace(_rootPath);
@@ -41,6 +46,7 @@ public sealed partial class ExplorerView : UserControl
     {
         _loadCts?.Cancel();
         _copyCts?.Cancel();
+        _previewCts?.Cancel();
 
         var root = Path.GetFullPath(rootPath);
         if (!Directory.Exists(root))
@@ -57,6 +63,7 @@ public sealed partial class ExplorerView : UserControl
         SearchBox.IsEnabled = true;
         SearchButton.IsEnabled = true;
         RefreshButton.IsEnabled = true;
+        ResetPreview(showPane: true);
         await LoadDirectoryAsync(root);
     }
 
@@ -64,6 +71,7 @@ public sealed partial class ExplorerView : UserControl
     {
         _loadCts?.Cancel();
         _copyCts?.Cancel();
+        _previewCts?.Cancel();
         _rootPath = null;
         _currentPath = null;
         _imagePath = null;
@@ -83,6 +91,7 @@ public sealed partial class ExplorerView : UserControl
         EmptyDescriptionText.Text = message ?? "Mount an ISO, VHD or VHDX and open it from the Mounted dashboard.";
         EmptyState.Visibility = Visibility.Visible;
         ExplorerList.Visibility = Visibility.Collapsed;
+        ResetPreview(showPane: false);
         UpdateActionButtons();
     }
 
@@ -223,8 +232,147 @@ public sealed partial class ExplorerView : UserControl
             await OpenEntryAsync(item);
     }
 
-    private void ExplorerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        => UpdateActionButtons();
+    private async void ExplorerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateActionButtons();
+        await ShowPreviewForSelectionAsync();
+    }
+
+    private async Task ShowPreviewForSelectionAsync()
+    {
+        _previewCts?.Cancel();
+        var selected = ExplorerList.SelectedItem as ExplorerEntryViewModel;
+        if (selected is null)
+        {
+            ResetPreview(showPane: HasRoot);
+            return;
+        }
+
+        PreviewPane.Visibility = Visibility.Visible;
+        PreviewNameText.Text = selected.Name;
+        PreviewKindText.Text = selected.SecondaryText;
+        HidePreviewContent();
+
+        if (selected.IsDirectory || selected.IsReparsePoint)
+        {
+            PreviewMetadataPanel.Visibility = Visibility.Visible;
+            PreviewMetadataIcon.Glyph = selected.IsDirectory ? "\uE8B7" : "\uE71B";
+            PreviewDescriptionText.Text = selected.IsReparsePoint
+                ? "Reparse point / junction • traversal blocked by Dragon Explorer safety rules"
+                : "Folder • mounted image • read-only browsing";
+            PreviewModifiedText.Text = selected.Meta;
+            return;
+        }
+
+        var selectedPath = selected.FullPath;
+        var cts = new CancellationTokenSource();
+        _previewCts = cts;
+        PreviewBusyRing.IsActive = true;
+
+        try
+        {
+            var preview = await _previewer.GetPreviewAsync(selectedPath, cancellationToken: cts.Token);
+            if (cts.IsCancellationRequested || ExplorerList.SelectedItem is not ExplorerEntryViewModel current || !PathsEqual(current.FullPath, selectedPath))
+                return;
+
+            await ApplyPreviewAsync(preview, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Selection moved; no status noise required.
+        }
+        catch (Exception ex)
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                PreviewMetadataPanel.Visibility = Visibility.Visible;
+                PreviewMetadataIcon.Glyph = "\uE783";
+                PreviewDescriptionText.Text = $"Preview unavailable: {ShortMessage(ex.Message)}";
+                PreviewModifiedText.Text = selected.Meta;
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_previewCts, cts))
+            {
+                _previewCts = null;
+                PreviewBusyRing.IsActive = false;
+            }
+            cts.Dispose();
+        }
+    }
+
+    private async Task ApplyPreviewAsync(PreviewInfo preview, CancellationToken cancellationToken)
+    {
+        HidePreviewContent();
+        PreviewNameText.Text = preview.Name;
+        PreviewKindText.Text = $"{preview.Description} • {preview.SizeDisplay}";
+        PreviewTruncatedText.Visibility = preview.IsTruncated ? Visibility.Visible : Visibility.Collapsed;
+
+        switch (preview.Kind)
+        {
+            case PreviewKind.Text:
+                PreviewTextBlock.Text = preview.Text ?? string.Empty;
+                PreviewTextScroll.Visibility = Visibility.Visible;
+                break;
+
+            case PreviewKind.Image:
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var file = await StorageFile.GetFileFromPathAsync(preview.Path);
+                using var stream = await file.OpenReadAsync();
+                cancellationToken.ThrowIfCancellationRequested();
+                var bitmap = new BitmapImage();
+                await bitmap.SetSourceAsync(stream);
+                cancellationToken.ThrowIfCancellationRequested();
+                PreviewImage.Source = bitmap;
+                PreviewImage.Visibility = Visibility.Visible;
+                break;
+            }
+
+            case PreviewKind.PdfMetadata:
+                ShowMetadataPreview(preview, "\uEA90", "PDF document • metadata-only preview; Dragon DiskForge does not execute embedded PDF content here.");
+                break;
+
+            case PreviewKind.MediaMetadata:
+                ShowMetadataPreview(preview, "\uE8D6", "Media file • metadata-only preview; no auto-play.");
+                break;
+
+            default:
+                ShowMetadataPreview(preview, "\uE7C3", preview.Description);
+                break;
+        }
+    }
+
+    private void ShowMetadataPreview(PreviewInfo preview, string glyph, string description)
+    {
+        PreviewMetadataPanel.Visibility = Visibility.Visible;
+        PreviewMetadataIcon.Glyph = glyph;
+        PreviewDescriptionText.Text = description;
+        PreviewModifiedText.Text = $"{preview.SizeDisplay} • modified {preview.LastWriteTimeUtc.LocalDateTime:yyyy-MM-dd HH:mm}";
+    }
+
+    private void HidePreviewContent()
+    {
+        PreviewPlaceholder.Visibility = Visibility.Collapsed;
+        PreviewImage.Visibility = Visibility.Collapsed;
+        PreviewImage.Source = null;
+        PreviewTextScroll.Visibility = Visibility.Collapsed;
+        PreviewTextBlock.Text = string.Empty;
+        PreviewMetadataPanel.Visibility = Visibility.Collapsed;
+        PreviewTruncatedText.Visibility = Visibility.Collapsed;
+    }
+
+    private void ResetPreview(bool showPane)
+    {
+        _previewCts?.Cancel();
+        PreviewPane.Visibility = showPane ? Visibility.Visible : Visibility.Collapsed;
+        PreviewBusyRing.IsActive = false;
+        PreviewNameText.Text = "Select a file";
+        PreviewKindText.Text = "Read-only preview";
+        HidePreviewContent();
+        PreviewPlaceholder.Visibility = showPane ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     private async void Open_Click(object sender, RoutedEventArgs e)
     {
@@ -367,6 +515,7 @@ public sealed partial class ExplorerView : UserControl
             _items.Add(ExplorerEntryViewModel.FromEntry(entry, _rootPath, searchMode));
 
         ExplorerList.SelectedItem = null;
+        ResetPreview(showPane: true);
         ItemCountText.Text = _items.Count == 1 ? "1 item" : $"{_items.Count} items";
         EmptyTitleText.Text = _items.Count == 0 ? "This location is empty" : EmptyTitleText.Text;
         EmptyDescriptionText.Text = _items.Count == 0
@@ -400,6 +549,7 @@ public sealed partial class ExplorerView : UserControl
     {
         _loadCts?.Cancel();
         _copyCts?.Cancel();
+        _previewCts?.Cancel();
     }
 
     private void ShowStatus(string message, InfoBarSeverity severity)

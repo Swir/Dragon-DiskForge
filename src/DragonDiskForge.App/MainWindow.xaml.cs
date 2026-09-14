@@ -18,8 +18,10 @@ public sealed partial class MainWindow : Window
     private readonly ImageDetectionService _detector = new();
     private readonly ImageVerificationService _verification = new();
     private readonly IMountService _mountService = new WindowsDiskImageMountService();
+    private readonly JsonImageLibraryService _imageLibrary;
     private readonly ScrollViewer _mainScroll;
     private readonly object? _homeContent;
+    private readonly ImagesView _imagesView;
     private readonly MountedView _mountedView;
     private readonly ExplorerView _explorerView;
     private DiskImageInfo? _current;
@@ -35,11 +37,15 @@ public sealed partial class MainWindow : Window
         _mainScroll = ShellNav.Content as ScrollViewer
             ?? throw new InvalidOperationException("Dragon shell content host is unavailable.");
         _homeContent = _mainScroll.Content;
+        _imageLibrary = new JsonImageLibraryService(GetImageLibraryPath());
+        _imagesView = new ImagesView(_imageLibrary);
         _mountedView = new MountedView();
         _explorerView = new ExplorerView(WindowNative.GetWindowHandle(this));
+        _imagesView.OpenRequested += ImagesView_OpenRequested;
         _mountedView.ExploreRequested += MountedView_ExploreRequested;
         MountButton.Click += Mount_Click;
         ShellNav.SelectionChanged += ShellNav_SelectionChanged;
+        Closed += (_, _) => _imageLibrary.Dispose();
         LockFutureNavigation();
     }
 
@@ -53,6 +59,13 @@ public sealed partial class MainWindow : Window
             if (string.Equals(tag, "home", StringComparison.OrdinalIgnoreCase))
             {
                 ShellNav.SelectedItem = item;
+                continue;
+            }
+
+            if (string.Equals(tag, "images", StringComparison.OrdinalIgnoreCase))
+            {
+                item.IsEnabled = true;
+                ToolTipService.SetToolTip(item, "Recent images and favorites stored locally on this PC");
                 continue;
             }
 
@@ -73,7 +86,6 @@ public sealed partial class MainWindow : Window
             item.IsEnabled = false;
             var milestone = tag switch
             {
-                "images" => "0.3",
                 "convert" => "0.6",
                 "tools" => "0.8",
                 _ => "future"
@@ -85,6 +97,14 @@ public sealed partial class MainWindow : Window
     private async void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         var tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag?.ToString();
+        if (string.Equals(tag, "images", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!ReferenceEquals(_mainScroll.Content, _imagesView))
+                _mainScroll.Content = _imagesView;
+            await _imagesView.RefreshAsync();
+            return;
+        }
+
         if (string.Equals(tag, "mounted", StringComparison.OrdinalIgnoreCase))
         {
             if (!ReferenceEquals(_mainScroll.Content, _mountedView))
@@ -107,6 +127,20 @@ public sealed partial class MainWindow : Window
         {
             _mainScroll.Content = _homeContent;
         }
+    }
+
+    private async void ImagesView_OpenRequested(object? sender, OpenImageFromLibraryEventArgs e)
+    {
+        var homeItem = ShellNav.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), "home", StringComparison.OrdinalIgnoreCase));
+
+        if (homeItem is not null)
+            ShellNav.SelectedItem = homeItem;
+        else if (!ReferenceEquals(_mainScroll.Content, _homeContent))
+            _mainScroll.Content = _homeContent;
+
+        await LoadImageAsync(e.ImagePath);
     }
 
     private async void MountedView_ExploreRequested(object? sender, ExploreMountedImageEventArgs e)
@@ -268,6 +302,15 @@ public sealed partial class MainWindow : Window
             ResultCard.Opacity = 0;
             ResultCard.Visibility = Visibility.Visible;
             AnimateOpacity(ResultCard, 0, 1, 220);
+
+            try
+            {
+                await _imageLibrary.RecordOpenedAsync(_current.Path);
+            }
+            catch
+            {
+                // Library persistence must never prevent an image from opening.
+            }
 
             await RefreshMountStateAsync(_current);
         }
@@ -516,6 +559,12 @@ public sealed partial class MainWindow : Window
             await Task.Delay(450);
             verifyButton.Content = "Verify";
         }
+    }
+
+    private static string GetImageLibraryPath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "DragonDiskForge", "image-library.json");
     }
 
     private static void AnimateOpacity(UIElement target, double from, double to, int durationMs, Action? completed = null)
