@@ -1,0 +1,23 @@
+<Application
+    x:Class="DragonDiskForge.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="DragonPanelBrush" Color="#151821" />
+                    <SolidColorBrush x:Key="DragonPanelStrongBrush" Color="#1B1F2B" />
+                    <SolidColorBrush x:Key="DragonBorderBrush" Color="#363B4C" />
+                    <SolidColorBrush x:Key="DragonMutedBrush" Color="#AAB1C4" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="DragonPanelBrush" Color="#F5F6FA" />
+                    <SolidColorBrush x:Key="DragonPanelStrongBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="DragonBorderBrush" Color="#D9DCE5" />
+                    <SolidColorBrush x:Key="DragonMutedBrush" Color="#5B6274" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

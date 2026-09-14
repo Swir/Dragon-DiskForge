@@ -1,0 +1,142 @@
+<Window
+    x:Class="DragonDiskForge.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Dragon DiskForge">
+
+    <Grid>
+        <NavigationView x:Name="ShellNav"
+                        IsBackButtonVisible="Collapsed"
+                        IsPaneToggleButtonVisible="True"
+                        IsSettingsVisible="True"
+                        PaneDisplayMode="Left"
+                        OpenPaneLength="250">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Home" Tag="home">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Images" Tag="images">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Mounted" Tag="mounted">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="MapDrive" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Explorer" Tag="explorer">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Folder" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Convert" Tag="convert">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Sync" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Tools" Tag="tools">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Repair" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <ScrollViewer>
+                <Grid Padding="32" MaxWidth="1200" HorizontalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,4,0,28">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="DRAGON DISKFORGE" FontSize="34" FontWeight="SemiBold" />
+                            <TextBlock Text="Universal Disk Image Manager" FontSize="15" Foreground="{ThemeResource DragonMutedBrush}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="{ThemeResource DragonPanelBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="14,8" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="8" Height="8" Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Core 0.1 • Ready" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border x:Name="DropZone"
+                            Grid.Row="1"
+                            AllowDrop="True"
+                            DragOver="DropZone_DragOver"
+                            Drop="DropZone_Drop"
+                            Background="{ThemeResource DragonPanelBrush}"
+                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                            BorderThickness="1.5"
+                            CornerRadius="28"
+                            Padding="34"
+                            MinHeight="260">
+                        <Grid>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                                <Border Width="72" Height="72" CornerRadius="24" Background="{ThemeResource AccentFillColorSecondaryBrush}">
+                                    <FontIcon Glyph="&#xE898;" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="Drop a disk image here" FontSize="23" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="ISO • IMG • VHD(X) • VMDK • QCOW2 • DMG • WIM • BIN/CUE and more"
+                                           Foreground="{ThemeResource DragonMutedBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                                <Button Content="Open image" Click="OpenImage_Click" Padding="22,10" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="2" Margin="0,22,0,0" ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="13+" FontSize="27" FontWeight="SemiBold" />
+                                <TextBlock Text="Image families" Foreground="{ThemeResource DragonMutedBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{ThemeResource DragonPanelStrongBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Signature engine" FontSize="20" FontWeight="SemiBold" />
+                                <TextBlock Text="ISO • VHD(X) • QCOW2 • DMG • WIM" Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{ThemeResource DragonPanelStrongBrush}" BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="18" Padding="18">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Safe by default" FontSize="20" FontWeight="SemiBold" />
+                                <TextBlock Text="Detection is read-only" Foreground="{ThemeResource DragonMutedBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Grid.Row="3" x:Name="ResultCard" Visibility="Collapsed"
+                            Margin="0,22,0,24" Background="{ThemeResource DragonPanelStrongBrush}"
+                            BorderBrush="{ThemeResource DragonBorderBrush}" BorderThickness="1" CornerRadius="22" Padding="22">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Width="54" Height="54" CornerRadius="16" Background="{ThemeResource AccentFillColorSecondaryBrush}" VerticalAlignment="Top">
+                                <FontIcon Glyph="&#xEDA2;" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock x:Name="ImageNameText" Text="image.iso" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="ImageMetaText" Text="ISO • 0 MB • Signature" Foreground="{ThemeResource DragonMutedBrush}" />
+                                <TextBlock x:Name="ImagePathText" Text="C:\..." Foreground="{ThemeResource DragonMutedBrush}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Button Content="Explore" IsEnabled="False" ToolTipService.ToolTip="Image explorer arrives in milestone 2" />
+                                <Button x:Name="MountButton" Content="Mount" IsEnabled="False" ToolTipService.ToolTip="Native mount service arrives in milestone 2" />
+                                <Button Content="Verify" Click="Verify_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+        </NavigationView>
+    </Grid>
+</Window>
