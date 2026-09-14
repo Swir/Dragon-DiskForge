@@ -13,12 +13,36 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Branded Forge dashboard and disk-image drop zone
 - Dragon-styled capability cards, status pills and image action card
 - Light-theme translation of the core Dragon color tokens
+- Branded Dragon startup overlay with Forge loading state
+- Subtle dragon-scale geometry in the Forge hero surface
+- Responsive desktop layout for compact and narrow window widths
+- Animated startup fade and selected-image reveal
+- `ImageVerificationService` in Core for shared SHA-256 verification
+- Core smoke-test harness covering signatures, extension fallback, missing files and SHA-256
+- GitHub Actions Windows x64 validation pipeline
+- x64 and ARM64 solution platform configurations
+- Testing guide under `docs/TESTING.md`
+- Milestone execution and current-status documents
+- GitHub execution Issues for 0.1 closure and 0.2 mount engine
 
 ### Changed
 - Reworked the generic WinUI dashboard into the first recognizable Dragon DiskForge interface
+- SHA-256 verification now lives in `DragonDiskForge.Core` instead of the GUI layer
+- Capability cards and image actions adapt when the application window becomes narrow
+- GitHub Actions now cancels superseded builds for the same branch/ref
 - Kept Mount and Explore disabled until their real engine milestones are implemented
 
+### Fixed
+- Corrected solution platform mappings so `Release|x64` restores and builds in CI
+- Corrected the SHA-256 smoke-test delegate so the automated Core harness compiles cleanly
+- Corrected startup-overlay stacking after WinUI rejected `Grid.ZIndex`
+
+### Verified
+- Current Dragon startup/responsive UI passes Core smoke tests, NuGet restore and full WinUI `Release|x64` build on GitHub Actions
+
 ### Planned
+- Verification progress and cancellation
+- Final Windows application icon set
 - Native ISO/VHD/VHDX mount and unmount service
 - Mounted-drive state detection
 - In-app Dragon Explorer
