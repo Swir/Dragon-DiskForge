@@ -55,6 +55,7 @@ async Task WithTempDirectoryAsync(Func<string, Task> action)
 var detector = new ImageDetectionService();
 var verifier = new ImageVerificationService();
 var explorer = new MountedFileSystemExplorerService();
+var previewer = new FilePreviewService();
 
 Check(SupportedFormats.FromPath("sample.ISO")?.Name == "ISO", "extension lookup is case-insensitive");
 Check(SupportedFormats.FromPath("disk.qcow2")?.Name == "QCOW/QCOW2", "QCOW2 extension is catalogued");
@@ -212,6 +213,73 @@ await WithTempDirectoryAsync(async root =>
     catch (OperationCanceledException)
     {
         Check(true, "Explorer search honors cancellation");
+    }
+});
+
+await WithTempDirectoryAsync(async root =>
+{
+    var textPath = Path.Combine(root, "preview.txt");
+    await File.WriteAllTextAsync(textPath, new string('D', 80));
+    var textPreview = await previewer.GetPreviewAsync(textPath, maxTextCharacters: 32);
+    Check(textPreview.Kind == PreviewKind.Text, "Preview service classifies text files");
+    Check(textPreview.Text?.Length == 32 && textPreview.IsTruncated, "Preview service enforces bounded text reads");
+
+    var imagePath = Path.Combine(root, "cover.png");
+    await File.WriteAllBytesAsync(imagePath, new byte[] { 1, 2, 3, 4 });
+    Check((await previewer.GetPreviewAsync(imagePath)).Kind == PreviewKind.Image, "Preview service classifies images without executing them");
+
+    var pdfPath = Path.Combine(root, "manual.pdf");
+    await File.WriteAllTextAsync(pdfPath, "%PDF-1.7");
+    Check((await previewer.GetPreviewAsync(pdfPath)).Kind == PreviewKind.PdfMetadata, "Preview service exposes PDF metadata mode");
+
+    var mediaPath = Path.Combine(root, "audio.mp3");
+    await File.WriteAllBytesAsync(mediaPath, new byte[16]);
+    Check((await previewer.GetPreviewAsync(mediaPath)).Kind == PreviewKind.MediaMetadata, "Preview service exposes media metadata mode without auto-play");
+
+    try
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        await previewer.GetPreviewAsync(textPath, cancellationToken: cancelled.Token);
+        Check(false, "Preview service honors cancellation");
+    }
+    catch (OperationCanceledException)
+    {
+        Check(true, "Preview service honors cancellation");
+    }
+
+    var libraryPath = Path.Combine(root, "library", "images.json");
+    var imageA = Path.Combine(root, "A.iso");
+    var imageB = Path.Combine(root, "B.vhdx");
+    var imageC = Path.Combine(root, "C.iso");
+    await File.WriteAllBytesAsync(imageA, new byte[1]);
+    await File.WriteAllBytesAsync(imageB, new byte[1]);
+    await File.WriteAllBytesAsync(imageC, new byte[1]);
+
+    using (var library = new JsonImageLibraryService(libraryPath, maxRecents: 2))
+    {
+        await library.RecordOpenedAsync(imageA);
+        await Task.Delay(5);
+        await library.RecordOpenedAsync(imageB);
+        var favoriteSnapshot = await library.SetFavoriteAsync(imageA, true);
+        Check(favoriteSnapshot.Favorites.Count == 1 && favoriteSnapshot.Favorites[0].Path == Path.GetFullPath(imageA), "Image library persists favorite state");
+
+        await Task.Delay(5);
+        var pruned = await library.RecordOpenedAsync(imageC);
+        Check(pruned.Recents.Count == 2 && pruned.Recents[0].Path == Path.GetFullPath(imageC), "Image library keeps bounded recents in newest-first order");
+        Check(pruned.Favorites.Any(x => x.Path == Path.GetFullPath(imageA)), "Favorite survives recent-list pruning");
+
+        await library.RecordOpenedAsync(imageC);
+        var deduplicated = await library.GetAsync();
+        Check(deduplicated.Recents.Count(x => x.Path == Path.GetFullPath(imageC)) == 1, "Image library deduplicates repeated opens");
+    }
+
+    using (var reloaded = new JsonImageLibraryService(libraryPath, maxRecents: 2))
+    {
+        var persisted = await reloaded.GetAsync();
+        Check(persisted.Favorites.Any(x => x.Path == Path.GetFullPath(imageA)), "Image library survives process-style reload from JSON");
+        var removed = await reloaded.RemoveAsync(imageA);
+        Check(!removed.Favorites.Any(x => x.Path == Path.GetFullPath(imageA)), "Image library removes entries cleanly");
     }
 });
 
