@@ -23,6 +23,34 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         ExtendsContentIntoTitleBar = true;
+        LockFutureNavigation();
+    }
+
+    private void LockFutureNavigation()
+    {
+        ShellNav.IsSettingsVisible = false;
+
+        foreach (var item in ShellNav.MenuItems.OfType<NavigationViewItem>())
+        {
+            var tag = item.Tag?.ToString();
+            if (string.Equals(tag, "home", StringComparison.OrdinalIgnoreCase))
+            {
+                ShellNav.SelectedItem = item;
+                continue;
+            }
+
+            item.IsEnabled = false;
+            var milestone = tag switch
+            {
+                "images" => "0.3",
+                "mounted" => "0.2",
+                "explorer" => "0.3",
+                "convert" => "0.6",
+                "tools" => "0.8",
+                _ => "future"
+            };
+            ToolTipService.SetToolTip(item, $"Planned for milestone {milestone}");
+        }
     }
 
     private async void RootLayout_Loaded(object sender, RoutedEventArgs e)
