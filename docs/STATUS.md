@@ -1,33 +1,29 @@
 # Dragon DiskForge — Current Status
 
-## Current milestone
+## Completed milestone
 
-**0.1 Foundation + Dragon Visual Identity**
+**0.1 Foundation + Dragon Visual Identity — COMPLETE ✅**
 
-### Proven
+### Proven on current main
 
 - Core/app separation
 - disk-image catalogue and signature detection
-- SHA-256 verification in Core
+- shared Core SHA-256 verification
+- live SHA-256 progress and user cancellation
 - automated Core smoke-test harness
-- Windows x64 CI pipeline
-- first Dragon Forge interface
+- Windows x64 Release CI pipeline
+- Dragon Forge interface, startup overlay and responsive behavior
+- dark, light and system High Contrast Dragon resources
+- final Windows application icon resource accepted by the Win32 compiler
+- future navigation/actions locked until their underlying services exist
+- full 0.1 regression build green
 
-### Under validation
+### Current safety state
 
-- branded startup overlay
-- responsive compact-window behavior
-- selected-image reveal animation
+Inspection and verification are read-only. Mount, Explorer, Convert, Tools and Settings are not presented as working capabilities before their engine milestones are implemented and tested.
 
-### Remaining before 0.1 exit
+## Next milestone
 
-- current main branch must pass full WinUI x64 build
-- verification cancellation/progress state
-- final application icon set
-- high-contrast/accessibility-safe variants
-- finish light-theme Dragon treatment
-- final 0.1 regression pass
+**0.2 Native Mount + Unmount** — real ISO/VHD/VHDX mount engine, unmount/eject, mount-state detection, read-only behavior, UAC only when required, progress/cancellation and recovery-safe error handling.
 
-### Next milestone
-
-**0.2 Native Mount + Unmount** — real ISO/VHD/VHDX mount engine, not placeholders.
+0.2 has not been started by this 0.1 closure pass.

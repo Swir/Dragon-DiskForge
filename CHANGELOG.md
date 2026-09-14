@@ -12,11 +12,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Vector Dragon sigil asset under `docs/branding/dragon-sigil.svg`
 - Branded Forge dashboard and disk-image drop zone
 - Dragon-styled capability cards, status pills and image action card
-- Light-theme translation of the core Dragon color tokens
 - Branded Dragon startup overlay with Forge loading state
 - Subtle dragon-scale geometry in the Forge hero surface
 - Responsive desktop layout for compact and narrow window widths
 - Animated startup fade and selected-image reveal
+- Completed Dragon light-theme surfaces and system-aware High Contrast resources
+- Final Windows application `.ico` wired into the WinExe build
 - `ImageVerificationService` in Core for shared SHA-256 verification
 - SHA-256 progress reporting and cancellation in Core
 - Verify/Cancel UI that shows live percentage while hashing large images
@@ -28,25 +29,28 @@ The project follows semantic versioning while it evolves toward 1.0.
 - GitHub execution Issues for 0.1 closure and 0.2 mount engine
 
 ### Changed
-- Reworked the generic WinUI dashboard into the first recognizable Dragon DiskForge interface
+- Reworked the generic WinUI dashboard into a recognizable Dragon DiskForge interface
 - SHA-256 verification now lives in `DragonDiskForge.Core` instead of the GUI layer
 - Capability cards and image actions adapt when the application window becomes narrow
 - Loading a different image cancels an active verification operation
-- GitHub Actions now cancels superseded builds for the same branch/ref
-- Kept Mount and Explore disabled until their real engine milestones are implemented
+- GitHub Actions cancels superseded builds for the same branch/ref
+- Future Images/Mounted/Explorer/Convert/Tools navigation is disabled until its real engine milestone exists
+- Settings entry is hidden until a real settings experience is implemented
+- Mount and Explore remain disabled until their real engine milestones are implemented
 
 ### Fixed
 - Corrected solution platform mappings so `Release|x64` restores and builds in CI
 - Corrected the SHA-256 smoke-test delegate so the automated Core harness compiles cleanly
 - Corrected startup-overlay stacking after WinUI rejected `Grid.ZIndex`
+- Replaced a corrupted binary icon upload with a valid Win32 `.ico` resource accepted by the Release compiler
 
 ### Verified
-- Current Dragon startup/responsive UI passes Core smoke tests, NuGet restore and full WinUI `Release|x64` build on GitHub Actions
-- SHA-256 progress/cancellation implementation passes the Core harness and full WinUI `Release|x64` build
+- Core signature/fallback/error/SHA-256/progress/cancellation smoke tests pass
+- Dragon startup, responsive layout, dark/light/High Contrast resources and future-feature locking pass full WinUI `Release|x64` CI
+- Final Windows icon resource passes the Win32 resource compiler in the full Release build
+- Milestone 0.1 exit criteria passed on current `main`
 
 ### Planned
-- Final Windows application icon set
-- Finish light/high-contrast Dragon theming
 - Native ISO/VHD/VHDX mount and unmount service
 - Mounted-drive state detection
 - In-app Dragon Explorer

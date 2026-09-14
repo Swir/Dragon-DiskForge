@@ -2,21 +2,22 @@
 
 `docs/ROADMAP.md` defines the product direction. GitHub Issues track concrete execution and validation work.
 
-## 0.1 Foundation + Dragon Visual Identity
+## 0.1 Foundation + Dragon Visual Identity — COMPLETE ✅
 
-Before 0.1 can be closed:
+0.1 exit criteria were satisfied on the current main branch:
 
-- Windows x64 CI must be green on the current main branch
-- Core smoke tests must pass
-- Dragon startup/responsive UI must compile cleanly
-- verification must stay in Core and support cancellation/progress states
-- high-contrast/accessibility-safe states must be reviewed
-- final application icon assets must be prepared
-- light-theme Dragon identity must be completed
-- roadmap and changelog must match the tested implementation
+- Windows x64 CI is green
+- Core smoke tests pass
+- Dragon startup/responsive UI compiles cleanly
+- verification remains in Core and supports progress/cancellation
+- system-aware High Contrast resources are implemented
+- completed light-theme Dragon surfaces are implemented
+- final Windows application icon resource compiles as a Win32 icon
+- future navigation/actions are locked instead of behaving like fake features
+- roadmap, changelog, README and status documents match the tested implementation
 
-## 0.2 Native Mount + Unmount
+## 0.2 Native Mount + Unmount — NEXT
 
-0.2 starts only after 0.1 exit criteria are met. It will deliver real ISO/VHD/VHDX mounting, unmount/eject, mount-state detection, read-only behavior, UAC handling, progress/cancellation, errors and stale-state recovery.
+0.2 starts after the completed 0.1 checkpoint. It will deliver real ISO/VHD/VHDX mounting, unmount/eject, mount-state detection, read-only behavior, UAC handling, progress/cancellation, errors and stale-state recovery.
 
 No Mount button becomes active before the underlying service is proven by integration tests.

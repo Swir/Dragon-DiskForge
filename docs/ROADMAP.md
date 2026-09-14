@@ -10,7 +10,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ---
 
-## 0.1 Foundation + Dragon Visual Identity — 🚧 current
+## 0.1 Foundation + Dragon Visual Identity — ✅ complete
 
 ### Core foundation
 - ✅ WinUI 3 / .NET 10 desktop shell
@@ -25,26 +25,26 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Changelog and repository hygiene
 - ✅ Windows x64 GitHub Actions build validation
 - ✅ Core smoke-test harness for signatures, fallback, errors, SHA-256 progress and cancellation
-- 🚧 Broader error states and foundation testing
+- ✅ Foundation regression pass and future-feature locking
 
 ### Dragon visual system
 - ✅ Dragon visual language specification
-- ✅ Initial custom Dragon DiskForge dragon-head/sigil
-- ⬜ Final Windows application icon set
+- ✅ Custom Dragon DiskForge dragon-head/sigil
+- ✅ Final Windows application icon resource
 - ✅ Obsidian / charcoal base palette
 - ✅ Ember / molten-metal accent palette
 - ✅ Deep-crimson secondary accent
 - ✅ Dragon-scale micro-pattern used subtly in selected surfaces
-- 🚧 Subtle fire/ember active-state treatment
+- ✅ Subtle fire/ember active-state treatment
 - ✅ Dragon-themed startup overlay
 - ✅ Branded Forge home/drop state
 - ✅ Custom Dragon header treatment
-- ✅ Initial Fluent/WinUI animations with a restrained Dragon character
-- 🚧 Light theme preserving the Dragon identity
-- ⬜ High-contrast/accessibility-safe variants
+- ✅ Fluent/WinUI animations with a restrained Dragon character
+- ✅ Light theme preserving the Dragon identity
+- ✅ System-aware High Contrast resources
 - ✅ Responsive layout for compact and wide desktop windows
 
-**Exit criteria:** clean Windows build, reliable image detection, no fake actions presented as complete, documented architecture, and a recognizably Dragon DiskForge UI rather than a generic WinUI utility.
+**Exit criteria — passed:** clean Windows x64 Release build, reliable image detection smoke tests, no fake actions presented as complete, documented architecture, and a recognizably Dragon DiskForge UI rather than a generic WinUI utility.
 
 ---
 
