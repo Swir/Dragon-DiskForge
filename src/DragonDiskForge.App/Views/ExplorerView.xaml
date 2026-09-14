@@ -95,8 +95,14 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="4" ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
             <Border x:Name="EmptyState"
+                    Grid.Column="0"
                     Background="{ThemeResource DragonPanelStrongBrush}"
                     BorderBrush="{ThemeResource DragonBorderBrush}"
                     BorderThickness="1" CornerRadius="22" Padding="28"
@@ -119,6 +125,7 @@
             </Border>
 
             <ListView x:Name="ExplorerList"
+                      Grid.Column="0"
                       Visibility="Collapsed"
                       SelectionMode="Single"
                       IsItemClickEnabled="True"
@@ -165,6 +172,87 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
+
+            <Border x:Name="PreviewPane"
+                    Grid.Column="1"
+                    Width="360"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource DragonPanelStrongBrush}"
+                    BorderBrush="{ThemeResource DragonBorderHotBrush}"
+                    BorderThickness="1"
+                    CornerRadius="18"
+                    Padding="18">
+                <StackPanel Spacing="11">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="PREVIEW" FontSize="10" FontWeight="Bold"
+                                   CharacterSpacing="180" Foreground="{ThemeResource DragonEmberBrush}" />
+                        <ProgressRing x:Name="PreviewBusyRing" Grid.Column="1"
+                                      Width="18" Height="18" IsActive="False" />
+                    </Grid>
+
+                    <TextBlock x:Name="PreviewNameText" Text="Select a file"
+                               FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="PreviewKindText" Text="Read-only preview"
+                               Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+
+                    <Border Height="1" Background="{ThemeResource DragonBorderBrush}" />
+
+                    <StackPanel x:Name="PreviewPlaceholder" Spacing="9" MinHeight="220"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8A5;" FontSize="34"
+                                  Foreground="{ThemeResource DragonMutedBrush}"
+                                  HorizontalAlignment="Center" />
+                        <TextBlock Text="Select a file to inspect it without changing the mounted image."
+                                   Foreground="{ThemeResource DragonMutedBrush}"
+                                   TextAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Image x:Name="PreviewImage"
+                           Visibility="Collapsed"
+                           MaxHeight="340"
+                           Stretch="Uniform" />
+
+                    <ScrollViewer x:Name="PreviewTextScroll"
+                                  Visibility="Collapsed"
+                                  MaxHeight="340"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="PreviewTextBlock"
+                                   IsTextSelectionEnabled="True"
+                                   TextWrapping="NoWrap"
+                                   FontFamily="Consolas"
+                                   FontSize="12" />
+                    </ScrollViewer>
+
+                    <StackPanel x:Name="PreviewMetadataPanel"
+                                Visibility="Collapsed"
+                                Spacing="8" MinHeight="170">
+                        <Border Width="58" Height="58" CornerRadius="16"
+                                Background="{ThemeResource DragonEmberSoftBrush}"
+                                HorizontalAlignment="Left">
+                            <FontIcon x:Name="PreviewMetadataIcon" Glyph="&#xE7C3;" FontSize="24"
+                                      Foreground="{ThemeResource DragonMoltenBrush}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock x:Name="PreviewDescriptionText"
+                                   Foreground="{ThemeResource DragonTextBrush}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock x:Name="PreviewModifiedText"
+                                   Foreground="{ThemeResource DragonMutedBrush}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <TextBlock x:Name="PreviewTruncatedText"
+                               Visibility="Collapsed"
+                               Text="Preview truncated for safety/performance."
+                               Foreground="{ThemeResource DragonEmberBrush}"
+                               FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>
