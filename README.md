@@ -4,52 +4,34 @@
 
 Dragon DiskForge is a modern Windows application for inspecting, mounting, exploring, extracting, verifying, creating and converting disk-image formats from one interface.
 
-The goal is not a generic disk utility. Dragon DiskForge has its own **Dragon visual identity**: obsidian/forged-metal surfaces, ember accents, subtle scale geometry and a custom dragon sigil, while retaining Windows-native usability and accessibility.
+The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
 ## Current milestone — 0.1 Foundation + Dragon Visual Identity
 
-Already present:
+Already implemented in the current foundation:
 
 - WinUI 3 / .NET 10 desktop shell
 - `DragonDiskForge.Core` separated from the GUI
 - drag & drop and file picker
-- initial format catalogue for ISO, IMG/IMA/RAW, BIN/CUE, MDF/MDS, NRG, CCD/SUB, VHD, VHDX, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- image-format catalogue for ISO, IMG/IMA/RAW, BIN/CUE, MDF/MDS, NRG, CCD/SUB, VHD, VHDX, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU families
 - signature detection for ISO, VHD, VHDX, QCOW2, DMG and WIM/ESD
 - SHA-256 verification
-- read-only-first architecture
-- GitHub roadmap and architecture documentation
+- read-only-first inspection architecture
+- first Dragon visual system: obsidian/charcoal surfaces, ember/molten accents, crimson secondary accent and custom Dragon sigil
+- branded Forge dashboard and disk-image drop zone
+- light-theme design-token foundation
 
-In progress:
+Mount and Explore are intentionally disabled until their real services land. Dragon DiskForge does not present placeholder buttons as finished features.
 
-- complete Dragon visual system
-- UI polish and responsive states
-- error/cancellation states
-- foundation testing
+## Roadmap
 
-Mounting and the internal image explorer are intentionally implemented as real milestone features rather than fake enabled buttons.
+Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-## Product plan
+Major milestones:
 
-The complete development plan is maintained in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+`0.1 Foundation + Dragon UI` → `0.2 Native Mount` → `0.3 Dragon Explorer` → `0.4 Extended Providers` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
 
-Major stages:
-
-1. Foundation + Dragon visual identity
-2. Native ISO/VHD/VHDX mount/unmount
-3. Dragon Explorer
-4. Extended image providers
-5. Partition/filesystem intelligence
-6. Create/convert/verify
-7. Bootable USB and physical-media tools
-8. Windows integration + CLI
-9. Quality/security/beta hardening
-10. Production 1.0
-
-## Dragon design
-
-The visual language is documented in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.md).
-
-Core direction: **obsidian + forged metal + controlled ember heat**. Dragon styling must remain distinctive without reducing clarity, performance or accessibility.
+The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.md), and the vector sigil is stored under [`docs/branding/dragon-sigil.svg`](docs/branding/dragon-sigil.svg).
 
 ## Tech
 
@@ -57,12 +39,21 @@ Core direction: **obsidian + forged metal + controlled ember heat**. Dragon styl
 - .NET 10
 - WinUI 3
 - Windows App SDK
+- x64 + ARM64 targets
 - shared Core engine for GUI and future CLI
+
+## Build on Windows
+
+Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or use:
+
+```powershell
+.\scripts\build.ps1
+```
 
 ## Safety design
 
-Inspection and hashing never write to the image. Destructive media operations will require explicit target identification and confirmation. Read-only inspection is the default wherever possible.
+Inspection and hashing never write to the image. Mount/create/convert operations are isolated behind explicit services. Destructive physical-media operations will require target validation and clear confirmation before execution.
 
 ## Project rule
 
-A feature is marked complete only after the underlying operation actually works, failure paths are handled, and the roadmap/changelog are updated.
+**No fake features.** A capability becomes enabled in the UI only after the underlying engine path exists and is testable.
