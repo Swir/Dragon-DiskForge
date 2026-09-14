@@ -159,7 +159,7 @@ public sealed partial class MountedView : UserControl, IDisposable
             var state = await _mountService.UnmountAsync(imagePath, progress, cts.Token);
             if (!state.IsMounted)
             {
-                await RecordHistoryAsync(imagePath, MountHistoryAction.Unmounted, historyTarget, cts.Token);
+                await RecordHistoryAsync(imagePath, MountHistoryAction.Unmounted, historyTarget);
                 ShowStatus($"Unmounted {Path.GetFileName(imagePath)}.", InfoBarSeverity.Success);
             }
 
