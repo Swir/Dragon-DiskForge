@@ -27,6 +27,9 @@ jobs:
       - name: Core smoke tests
         run: dotnet run --project tests/DragonDiskForge.Core.SmokeTests/DragonDiskForge.Core.SmokeTests.csproj -c Release
 
+      - name: Native Windows mount integration
+        run: dotnet run --project tests/DragonDiskForge.Windows.IntegrationTests/DragonDiskForge.Windows.IntegrationTests.csproj -c Release
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 

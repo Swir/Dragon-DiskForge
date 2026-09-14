@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using DragonDiskForge.Core.Models;
@@ -71,7 +72,8 @@ public sealed class WindowsDiskImageMountService : IMountService
         progress?.Report(0.2d);
         var readOnly = request.ReadOnly || Path.GetExtension(path).Equals(".iso", StringComparison.OrdinalIgnoreCase);
         var script = BuildMountScript(path, readOnly, request.NoDriveLetter);
-        await RunPowerShellActionAsync(script, RequiresElevation(path), cancellationToken);
+        var requestElevation = RequiresElevation(path) && !IsCurrentProcessElevated();
+        await RunPowerShellActionAsync(script, requestElevation, cancellationToken);
 
         progress?.Report(0.75d);
         var mounted = await WaitForStateAsync(path, true, cancellationToken);
@@ -98,7 +100,8 @@ public sealed class WindowsDiskImageMountService : IMountService
         }
 
         progress?.Report(0.25d);
-        await RunPowerShellActionAsync(BuildUnmountScript(path), RequiresElevation(path), cancellationToken);
+        var requestElevation = RequiresElevation(path) && !IsCurrentProcessElevated();
+        await RunPowerShellActionAsync(BuildUnmountScript(path), requestElevation, cancellationToken);
 
         progress?.Report(0.75d);
         var detached = await WaitForStateAsync(path, false, cancellationToken);
@@ -111,13 +114,12 @@ public sealed class WindowsDiskImageMountService : IMountService
         bool mounted,
         CancellationToken cancellationToken)
     {
-        MountState? last = null;
         for (var attempt = 0; attempt < 20; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            last = await GetStateAsync(path, cancellationToken);
-            if (last.IsMounted == mounted)
-                return last;
+            var state = await GetStateAsync(path, cancellationToken);
+            if (state.IsMounted == mounted)
+                return state;
 
             await Task.Delay(150, cancellationToken);
         }
@@ -150,6 +152,12 @@ public sealed class WindowsDiskImageMountService : IMountService
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Native disk-image mounting is available only on Windows.");
+    }
+
+    private static bool IsCurrentProcessElevated()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private static string BuildStateScript(string path)
@@ -257,14 +265,14 @@ public sealed class WindowsDiskImageMountService : IMountService
 
     private static async Task RunPowerShellActionAsync(
         string script,
-        bool requireElevation,
+        bool requestElevation,
         CancellationToken cancellationToken)
     {
         using var process = new Process();
         process.StartInfo.FileName = "powershell.exe";
         process.StartInfo.Arguments = $"-NoLogo -NoProfile -NonInteractive -EncodedCommand {EncodePowerShell(script)}";
 
-        if (requireElevation)
+        if (requestElevation)
         {
             process.StartInfo.UseShellExecute = true;
             process.StartInfo.Verb = "runas";
@@ -282,14 +290,14 @@ public sealed class WindowsDiskImageMountService : IMountService
         {
             process.Start();
             Task<string>? errorTask = null;
-            if (!requireElevation)
+            if (!requestElevation)
                 errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
             await process.WaitForExitAsync(cancellationToken);
             var error = errorTask is null ? string.Empty : (await errorTask).Trim();
 
             if (process.ExitCode != 0)
-                throw BuildOperationException(error, process.ExitCode, requireElevation);
+                throw BuildOperationException(error, process.ExitCode, requestElevation);
         }
         catch (OperationCanceledException)
         {
@@ -300,7 +308,7 @@ public sealed class WindowsDiskImageMountService : IMountService
         {
             throw new MountOperationException(
                 "Administrator approval was cancelled. The disk image was not changed.",
-                requiresElevation: requireElevation,
+                requiresElevation: requestElevation,
                 nativeExitCode: ex.NativeErrorCode,
                 innerException: ex);
         }
@@ -308,7 +316,7 @@ public sealed class WindowsDiskImageMountService : IMountService
         {
             throw new MountOperationException(
                 "Windows could not start the native disk-image operation.",
-                requiresElevation: requireElevation,
+                requiresElevation: requestElevation,
                 nativeExitCode: ex.NativeErrorCode,
                 innerException: ex);
         }
