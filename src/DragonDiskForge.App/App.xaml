@@ -6,18 +6,79 @@
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="DragonPanelBrush" Color="#151821" />
-                    <SolidColorBrush x:Key="DragonPanelStrongBrush" Color="#1B1F2B" />
-                    <SolidColorBrush x:Key="DragonBorderBrush" Color="#363B4C" />
-                    <SolidColorBrush x:Key="DragonMutedBrush" Color="#AAB1C4" />
+                    <SolidColorBrush x:Key="DragonBackgroundBrush" Color="#090A0D" />
+                    <SolidColorBrush x:Key="DragonSurfaceBrush" Color="#101217" />
+                    <SolidColorBrush x:Key="DragonPanelBrush" Color="#151820" />
+                    <SolidColorBrush x:Key="DragonPanelStrongBrush" Color="#1B1F28" />
+                    <SolidColorBrush x:Key="DragonPanelHoverBrush" Color="#242934" />
+                    <SolidColorBrush x:Key="DragonBorderBrush" Color="#343A47" />
+                    <SolidColorBrush x:Key="DragonBorderHotBrush" Color="#8A4A1E" />
+                    <SolidColorBrush x:Key="DragonMutedBrush" Color="#A6ADBA" />
+                    <SolidColorBrush x:Key="DragonTextBrush" Color="#F5F1EA" />
+                    <SolidColorBrush x:Key="DragonEmberBrush" Color="#F47A1F" />
+                    <SolidColorBrush x:Key="DragonMoltenBrush" Color="#FFB02E" />
+                    <SolidColorBrush x:Key="DragonCrimsonBrush" Color="#B92B35" />
+                    <SolidColorBrush x:Key="DragonSuccessBrush" Color="#41C982" />
+                    <SolidColorBrush x:Key="DragonEmberSoftBrush" Color="#33F47A1F" />
+                    <SolidColorBrush x:Key="DragonCrimsonSoftBrush" Color="#26B92B35" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="DragonPanelBrush" Color="#F5F6FA" />
+                    <SolidColorBrush x:Key="DragonBackgroundBrush" Color="#EEE9E1" />
+                    <SolidColorBrush x:Key="DragonSurfaceBrush" Color="#F7F3EC" />
+                    <SolidColorBrush x:Key="DragonPanelBrush" Color="#FBF8F3" />
                     <SolidColorBrush x:Key="DragonPanelStrongBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="DragonBorderBrush" Color="#D9DCE5" />
-                    <SolidColorBrush x:Key="DragonMutedBrush" Color="#5B6274" />
+                    <SolidColorBrush x:Key="DragonPanelHoverBrush" Color="#F0E8DC" />
+                    <SolidColorBrush x:Key="DragonBorderBrush" Color="#D5C9BA" />
+                    <SolidColorBrush x:Key="DragonBorderHotBrush" Color="#C15E1A" />
+                    <SolidColorBrush x:Key="DragonMutedBrush" Color="#665E55" />
+                    <SolidColorBrush x:Key="DragonTextBrush" Color="#211D19" />
+                    <SolidColorBrush x:Key="DragonEmberBrush" Color="#D85D00" />
+                    <SolidColorBrush x:Key="DragonMoltenBrush" Color="#A94400" />
+                    <SolidColorBrush x:Key="DragonCrimsonBrush" Color="#9E2330" />
+                    <SolidColorBrush x:Key="DragonSuccessBrush" Color="#16734B" />
+                    <SolidColorBrush x:Key="DragonEmberSoftBrush" Color="#24D85D00" />
+                    <SolidColorBrush x:Key="DragonCrimsonSoftBrush" Color="#209E2330" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
+
+            <LinearGradientBrush x:Key="DragonHeroBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#40170D" Offset="0" />
+                <GradientStop Color="#17181D" Offset="0.46" />
+                <GradientStop Color="#111318" Offset="1" />
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="DragonEmberGradientBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FFB02E" Offset="0" />
+                <GradientStop Color="#F47A1F" Offset="0.52" />
+                <GradientStop Color="#B92B35" Offset="1" />
+            </LinearGradientBrush>
+
+            <Style x:Key="DragonPrimaryButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource DragonEmberGradientBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="20,11" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="DragonSecondaryButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{ThemeResource DragonPanelHoverBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource DragonTextBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource DragonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="16,10" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="DragonStatusPillStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource DragonPanelBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource DragonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="999" />
+                <Setter Property="Padding" Value="12,7" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
