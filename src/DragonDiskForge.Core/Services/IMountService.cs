@@ -11,6 +11,9 @@ public interface IMountService
         string imagePath,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<MountState>> GetMountedAsync(
+        CancellationToken cancellationToken = default);
+
     Task<MountState> MountAsync(
         MountRequest request,
         IProgress<double>? progress = null,
