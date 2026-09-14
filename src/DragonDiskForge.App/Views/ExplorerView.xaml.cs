@@ -252,6 +252,20 @@ public sealed partial class ExplorerView : UserControl
             return;
         }
 
+        try
+        {
+            if ((File.GetAttributes(item.FullPath) & FileAttributes.ReparsePoint) != 0)
+            {
+                ShowStatus("Dragon Explorer will not open a file that became a reparse point after listing.", InfoBarSeverity.Warning);
+                return;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ShowStatus($"Could not validate file safety: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
+            return;
+        }
+
         if (ExecutableExtensions.Contains(Path.GetExtension(item.FullPath)))
         {
             var dialog = new ContentDialog
@@ -369,7 +383,8 @@ public sealed partial class ExplorerView : UserControl
             return;
 
         var relative = Path.GetRelativePath(_rootPath, _currentPath);
-        AddressText.Text = relative == "." ? _rootPath : $"{_rootPath}  ›  {relative.Replace(Path.DirectorySeparatorChar, ' › ')}";
+        var breadcrumb = relative.Replace(Path.DirectorySeparatorChar.ToString(), " › ", StringComparison.Ordinal);
+        AddressText.Text = relative == "." ? _rootPath : $"{_rootPath}  ›  {breadcrumb}";
         UpButton.IsEnabled = !PathsEqual(_rootPath, _currentPath);
     }
 
