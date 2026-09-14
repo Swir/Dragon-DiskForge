@@ -48,24 +48,36 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ---
 
-## 0.2 Native Mount + Unmount — ⬜ next
+## 0.2 Native Mount + Unmount — ✅ complete
 
-- ⬜ Native Windows mount service for ISO
-- ⬜ Native Windows mount service for VHD/VHDX
-- ⬜ Unmount / eject
-- ⬜ Drive-letter and mount-state detection
-- ⬜ Read-only mount mode where supported
-- ⬜ Elevation/UAC flow only when required
-- ⬜ Mount operation progress + cancellation
-- ⬜ Mount error translation into user-friendly messages
-- ⬜ Mounted-image dashboard
-- ⬜ Safe recovery from stale mount state
+- ✅ `IMountService` contract in Core
+- ✅ Native Windows service layer isolated in `DragonDiskForge.Windows`
+- ✅ Native Windows mount service for ISO
+- ✅ Native Windows mount service for VHD/VHDX
+- ✅ Unmount / eject
+- ✅ Drive-letter and mount-state detection
+- ✅ Read-only mount mode where supported
+- ✅ Elevation policy only when required by the VHD/VHDX native path
+- ✅ Mount operation progress + cancellation
+- ✅ Mount error translation into user-friendly messages
+- ✅ Live Mounted-image dashboard
+- ✅ Refresh / Open drive / Unmount + Cancel from Mounted view
+- ✅ Safe recovery from stale mount state by re-querying Windows
+- ✅ Live mounted inventory derived from Windows Storage state
+- ✅ Integration tests for real VHD/VHDX creation, mount, read-only state, drive detection and unmount
+- ✅ Integration test for a real IMAPI-generated ISO, mounted file access and unmount
+- ✅ Integration validation that mounted images appear in inventory and disappear after unmount
+- ✅ Cancellation-safety validation proving a pre-cancelled mount does not alter storage state
+- ✅ Unsupported-format friendly-error validation
+- ✅ Full Windows x64 Release CI green on current main through run #37
 
-**Exit criteria:** supported images can be mounted and unmounted reliably without external manual commands.
+**Manual QA note:** GitHub-hosted Windows runners execute as administrators, so the visible normal-user UAC prompt cannot be faithfully exercised in CI. The implemented elevation path has a required desktop checklist in `docs/MANUAL-VALIDATION.md` before public beta packaging.
+
+**Exit criteria — passed:** supported ISO/VHD/VHDX images can be mounted and unmounted reliably from Dragon DiskForge without external manual commands, and the app refreshes from real Windows state rather than trusting stale session state.
 
 ---
 
-## 0.3 Dragon Explorer — ⬜ planned
+## 0.3 Dragon Explorer — 🚧 next
 
 - ⬜ In-app folder/file tree
 - ⬜ Address/breadcrumb navigation
@@ -177,7 +189,8 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 - ⬜ Comprehensive automated Core unit tests
 - ⬜ Provider tests
-- ⬜ Mount/unmount integration tests
+- ⬜ Mount/unmount integration tests expansion
+- ⬜ Non-admin UAC desktop validation matrix
 - ⬜ Large-image stress tests
 - ⬜ Multi-terabyte sparse-image tests where feasible
 - ⬜ Corrupt/truncated image tests
