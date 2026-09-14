@@ -41,13 +41,26 @@ public sealed class WindowsDiskImageMountService : IMountService
         var payload = JsonSerializer.Deserialize<DiskImageStatePayload>(output, JsonOptions)
             ?? throw new MountOperationException("Windows returned an empty disk-image state.");
 
-        return new MountState(
-            path,
-            payload.Attached,
-            string.IsNullOrWhiteSpace(payload.DevicePath) ? null : payload.DevicePath,
-            payload.DriveLetters?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-                ?? Array.Empty<string>(),
-            RequiresElevation(path));
+        return CreateMountState(path, payload);
+    }
+
+    public async Task<IReadOnlyList<MountState>> GetMountedAsync(
+        CancellationToken cancellationToken = default)
+    {
+        EnsureWindows();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var output = await RunPowerShellCaptureAsync(BuildMountedImagesScript(), cancellationToken);
+        var payloads = JsonSerializer.Deserialize<DiskImageStatePayload[]>(output, JsonOptions)
+            ?? Array.Empty<DiskImageStatePayload>();
+
+        return payloads
+            .Where(payload => payload.Attached
+                && !string.IsNullOrWhiteSpace(payload.ImagePath)
+                && CanHandle(payload.ImagePath))
+            .Select(payload => CreateMountState(Path.GetFullPath(payload.ImagePath!), payload))
+            .OrderBy(state => state.ImagePath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public async Task<MountState> MountAsync(
@@ -108,6 +121,15 @@ public sealed class WindowsDiskImageMountService : IMountService
         progress?.Report(1d);
         return detached;
     }
+
+    private MountState CreateMountState(string path, DiskImageStatePayload payload)
+        => new(
+            path,
+            payload.Attached,
+            string.IsNullOrWhiteSpace(payload.DevicePath) ? null : payload.DevicePath,
+            payload.DriveLetters?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                ?? Array.Empty<string>(),
+            RequiresElevation(path));
 
     private async Task<MountState> WaitForStateAsync(
         string path,
@@ -181,12 +203,46 @@ public sealed class WindowsDiskImageMountService : IMountService
                 }
             }
             [pscustomobject]@{
+                ImagePath = [string]$img.ImagePath
                 Attached = [bool]$img.Attached
                 DevicePath = [string]$img.DevicePath
                 DriveLetters = @($letters)
             } | ConvertTo-Json -Compress -Depth 3
             """;
     }
+
+    private static string BuildMountedImagesScript()
+        => """
+            $ErrorActionPreference = 'Stop'
+            $ProgressPreference = 'SilentlyContinue'
+            $WarningPreference = 'SilentlyContinue'
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            $images = @(Get-CimInstance -Namespace 'root/Microsoft/Windows/Storage' -ClassName MSFT_DiskImage -ErrorAction Stop |
+                Where-Object { $_.Attached -and $_.ImagePath })
+            $result = @()
+            foreach ($candidate in $images) {
+                $letters = @()
+                try {
+                    $img = Get-DiskImage -ImagePath $candidate.ImagePath -ErrorAction Stop
+                    try {
+                        $letters = @($img | Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" })
+                    } catch {}
+                    if ($letters.Count -eq 0) {
+                        try {
+                            $letters = @($img | Get-Disk -ErrorAction Stop | Get-Partition -ErrorAction Stop | Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" })
+                        } catch {}
+                    }
+                } catch {}
+
+                $result += [pscustomobject]@{
+                    ImagePath = [string]$candidate.ImagePath
+                    Attached = [bool]$candidate.Attached
+                    DevicePath = [string]$candidate.DevicePath
+                    DriveLetters = @($letters)
+                }
+            }
+            ConvertTo-Json -InputObject @($result) -Compress -Depth 4
+            """;
 
     private static string BuildMountScript(string path, bool readOnly, bool noDriveLetter)
     {
@@ -359,6 +415,7 @@ public sealed class WindowsDiskImageMountService : IMountService
 
     private sealed class DiskImageStatePayload
     {
+        public string? ImagePath { get; init; }
         public bool Attached { get; init; }
         public string? DevicePath { get; init; }
         public string[]? DriveLetters { get; init; }
