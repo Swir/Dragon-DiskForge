@@ -6,10 +6,22 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ## [Unreleased]
 
+### Added
+- Dragon visual design system with obsidian, charcoal, ember, molten and crimson design tokens
+- Custom Dragon DiskForge dragon-head/sigil in the application shell
+- Vector Dragon sigil asset under `docs/branding/dragon-sigil.svg`
+- Branded Forge dashboard and disk-image drop zone
+- Dragon-styled capability cards, status pills and image action card
+- Light-theme translation of the core Dragon color tokens
+
+### Changed
+- Reworked the generic WinUI dashboard into the first recognizable Dragon DiskForge interface
+- Kept Mount and Explore disabled until their real engine milestones are implemented
+
 ### Planned
 - Native ISO/VHD/VHDX mount and unmount service
 - Mounted-drive state detection
-- In-app image explorer
+- In-app Dragon Explorer
 - Open and extract files from supported images
 - Recent-image history
 
