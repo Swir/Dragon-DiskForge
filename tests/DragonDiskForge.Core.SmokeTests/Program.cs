@@ -70,9 +70,29 @@ var extensionFallback = await WithTempFileAsync(".vmdk", new byte[32], async pat
 Check(extensionFallback == "VMDK", "VMDK extension fallback is detected");
 
 var verifyPayload = Encoding.UTF8.GetBytes("Dragon DiskForge verification smoke test");
-var computedSha256 = await WithTempFileAsync(".img", verifyPayload, path => verifier.ComputeSha256Async(path));
+var progress = new CaptureProgress();
+var computedSha256 = await WithTempFileAsync(
+    ".img",
+    verifyPayload,
+    path => verifier.ComputeSha256Async(path, progress));
 var expectedSha256 = Convert.ToHexString(SHA256.HashData(verifyPayload));
 Check(computedSha256 == expectedSha256, "Core SHA-256 verification returns the expected digest");
+Check(progress.Last >= 0.999d, "Core verification reports completion progress");
+
+try
+{
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+    await WithTempFileAsync(
+        ".img",
+        verifyPayload,
+        path => verifier.ComputeSha256Async(path, null, cancelled.Token));
+    Check(false, "Core verification honors cancellation");
+}
+catch (OperationCanceledException)
+{
+    Check(true, "Core verification honors cancellation");
+}
 
 try
 {
@@ -92,3 +112,11 @@ if (failures.Count > 0)
 }
 
 Console.WriteLine("\nDragon DiskForge Core smoke tests passed.");
+
+sealed class CaptureProgress : IProgress<double>
+{
+    public double Last { get; private set; }
+
+    public void Report(double value)
+        => Last = value;
+}
