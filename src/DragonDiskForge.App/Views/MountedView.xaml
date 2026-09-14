@@ -8,7 +8,9 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid Margin="0,0,0,16">
@@ -53,7 +55,7 @@
                 BorderThickness="1"
                 CornerRadius="22"
                 Padding="28"
-                MinHeight="210">
+                MinHeight="180">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                 <Border Width="64" Height="64" CornerRadius="19"
                         Background="{ThemeResource DragonEmberSoftBrush}">
@@ -138,5 +140,101 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <Grid Grid.Row="4" Margin="0,22,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="3">
+                <TextBlock Text="RECENT MOUNTS" FontSize="11" FontWeight="Bold"
+                           Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="180" />
+                <TextBlock Text="Mounted history" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="Local history of images observed mounted by Dragon DiskForge. Missing files stay visible until removed."
+                           Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                <Border Style="{StaticResource DragonStatusPillStyle}">
+                    <TextBlock x:Name="HistoryCountText" Text="0 history" FontWeight="SemiBold" />
+                </Border>
+                <Button x:Name="ClearHistoryButton"
+                        Content="Clear history"
+                        Click="ClearHistory_Click"
+                        IsEnabled="False"
+                        Style="{StaticResource DragonSecondaryButtonStyle}" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="5">
+            <Border x:Name="HistoryEmpty"
+                    Background="{ThemeResource DragonPanelStrongBrush}"
+                    BorderBrush="{ThemeResource DragonBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="18"
+                    Padding="22">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="No mounted history yet" FontSize="17" FontWeight="SemiBold" />
+                    <TextBlock Text="Mount an ISO, VHD or VHDX and the image will be remembered here locally."
+                               Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <ListView x:Name="HistoryList"
+                      Visibility="Collapsed"
+                      SelectionMode="None"
+                      IsItemClickEnabled="False"
+                      Background="Transparent"
+                      HorizontalContentAlignment="Stretch">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,8" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="16"
+                                Padding="15">
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42" Height="42" CornerRadius="12"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="&#xE81C;" FontSize="18"
+                                              Foreground="{ThemeResource DragonEmberBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" FontSize="16"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Meta}" Foreground="{ThemeResource DragonMutedBrush}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Path}" Foreground="{ThemeResource DragonMutedBrush}"
+                                               FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button Content="Open image"
+                                            Tag="{Binding Path}"
+                                            IsEnabled="{Binding CanOpen}"
+                                            Click="OpenHistory_Click"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                    <Button Content="Remove"
+                                            Tag="{Binding Path}"
+                                            Click="RemoveHistory_Click"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
     </Grid>
 </UserControl>
