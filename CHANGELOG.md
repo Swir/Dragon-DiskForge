@@ -18,7 +18,9 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Responsive desktop layout for compact and narrow window widths
 - Animated startup fade and selected-image reveal
 - `ImageVerificationService` in Core for shared SHA-256 verification
-- Core smoke-test harness covering signatures, extension fallback, missing files and SHA-256
+- SHA-256 progress reporting and cancellation in Core
+- Verify/Cancel UI that shows live percentage while hashing large images
+- Core smoke-test harness covering signatures, extension fallback, missing files, SHA-256 progress and cancellation
 - GitHub Actions Windows x64 validation pipeline
 - x64 and ARM64 solution platform configurations
 - Testing guide under `docs/TESTING.md`
@@ -29,6 +31,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Reworked the generic WinUI dashboard into the first recognizable Dragon DiskForge interface
 - SHA-256 verification now lives in `DragonDiskForge.Core` instead of the GUI layer
 - Capability cards and image actions adapt when the application window becomes narrow
+- Loading a different image cancels an active verification operation
 - GitHub Actions now cancels superseded builds for the same branch/ref
 - Kept Mount and Explore disabled until their real engine milestones are implemented
 
@@ -39,10 +42,11 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ### Verified
 - Current Dragon startup/responsive UI passes Core smoke tests, NuGet restore and full WinUI `Release|x64` build on GitHub Actions
+- SHA-256 progress/cancellation implementation passes the Core harness and full WinUI `Release|x64` build
 
 ### Planned
-- Verification progress and cancellation
 - Final Windows application icon set
+- Finish light/high-contrast Dragon theming
 - Native ISO/VHD/VHDX mount and unmount service
 - Mounted-drive state detection
 - In-app Dragon Explorer
