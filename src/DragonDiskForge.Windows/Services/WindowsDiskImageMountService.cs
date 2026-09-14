@@ -217,27 +217,34 @@ public sealed class WindowsDiskImageMountService : IMountService
             $ProgressPreference = 'SilentlyContinue'
             $WarningPreference = 'SilentlyContinue'
             [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-            $images = @(Get-CimInstance -Namespace 'root/Microsoft/Windows/Storage' -ClassName MSFT_DiskImage -ErrorAction Stop |
-                Where-Object { $_.Attached -and $_.ImagePath })
-            $result = @()
-            foreach ($candidate in $images) {
-                $letters = @()
+
+            $images = @()
+            foreach ($volume in @(Get-Volume -ErrorAction SilentlyContinue)) {
                 try {
-                    $img = Get-DiskImage -ImagePath $candidate.ImagePath -ErrorAction Stop
-                    try {
-                        $letters = @($img | Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" })
-                    } catch {}
-                    if ($letters.Count -eq 0) {
-                        try {
-                            $letters = @($img | Get-Disk -ErrorAction Stop | Get-Partition -ErrorAction Stop | Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" })
-                        } catch {}
+                    $candidate = Get-DiskImage -Volume $volume -ErrorAction Stop
+                    if ($candidate -and $candidate.Attached -and $candidate.ImagePath) {
+                        $images += $candidate
                     }
                 } catch {}
+            }
+
+            $images = @($images | Sort-Object ImagePath -Unique)
+            $result = @()
+            foreach ($img in $images) {
+                $letters = @()
+                try {
+                    $letters = @($img | Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" })
+                } catch {}
+                if ($letters.Count -eq 0) {
+                    try {
+                        $letters = @($img | Get-Disk -ErrorAction Stop | Get-Partition -ErrorAction Stop | Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter } | ForEach-Object { "$($_.DriveLetter):" })
+                    } catch {}
+                }
 
                 $result += [pscustomobject]@{
-                    ImagePath = [string]$candidate.ImagePath
-                    Attached = [bool]$candidate.Attached
-                    DevicePath = [string]$candidate.DevicePath
+                    ImagePath = [string]$img.ImagePath
+                    Attached = [bool]$img.Attached
+                    DevicePath = [string]$img.DevicePath
                     DriveLetters = @($letters)
                 }
             }
