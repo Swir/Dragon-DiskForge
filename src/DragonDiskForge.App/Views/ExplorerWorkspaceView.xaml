@@ -21,7 +21,7 @@
                            FontFamily="Segoe UI Variable Display"
                            FontSize="28" FontWeight="SemiBold"
                            Foreground="{ThemeResource DragonTextBrush}" />
-                <TextBlock Text="Each tab is an independent read-only browsing session. Closing a tab never unmounts the image."
+                <TextBlock Text="Each tab is an independent read-only session: live mounted volumes and supported direct providers can coexist. Closing a tab never unmounts an image."
                            Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
             <Border Grid.Column="1" Style="{StaticResource DragonStatusPillStyle}" VerticalAlignment="Center">
@@ -55,7 +55,7 @@
                                FontSize="21" FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                     <TextBlock x:Name="EmptyDescriptionText"
-                               Text="Open a mounted ISO, VHD or VHDX from the Mounted dashboard. Each image opens in its own tab."
+                               Text="Open a mounted ISO/VHD/VHDX from Mounted, or open a supported image directly from the Forge without mounting."
                                Foreground="{ThemeResource DragonMutedBrush}"
                                TextWrapping="Wrap" TextAlignment="Center" MaxWidth="620" />
                 </StackPanel>
