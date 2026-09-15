@@ -12,9 +12,9 @@
 
 The visible normal-user UAC prompt remains a manual desktop QA case in `docs/MANUAL-VALIDATION.md` because GitHub-hosted Windows runners execute elevated.
 
-## 0.3 Dragon Explorer — IN PROGRESS 🚧
+## 0.3 Dragon Explorer — COMPLETE ✅
 
-Current development version: **0.3.0-alpha.2**.
+Released version: **0.3.0**.
 
 ### Completed execution slices
 
@@ -48,11 +48,28 @@ Current development version: **0.3.0-alpha.2**.
    - listed/runtime reparse points and junctions are rejected
    - async StorageItem resolution uses the WinUI DragStarting deferral
    - dedicated drag-out safety smoke tests are part of CI
-   - PR #10 / run #103 passed all automated gates including the x64 artifact publication before this docs/version pass
 
-### Remaining before 0.3 closure
+5. **Provider-backed direct ISO browsing** ✅
+   - `IDirectBrowseProvider` provider contract
+   - managed read-only ISO9660/Joliet parser
+   - virtual-path list/navigation/search directly from image extents
+   - safe Copy out without mounting
+   - overwrite, path-traversal, filename and extent-boundary validation
+   - dedicated `Direct ISO` WinUI tabs marked `NO MOUNT`
+   - provider capability is checked before `Explore directly` becomes active
+   - real IMAPI integration proves list/search/Copy out while the ISO stays detached
 
-- provider-backed direct browsing without mounting where technically supported
-- final 0.3 regression pass and documentation/version closure
+### 0.3 validation checkpoints
+
+- PR #5 / run #56 — first mounted Explorer slice
+- PR #6 / run #72 — Preview + Image Library
+- PR #7 / run #86 — Mounted history + multi-image workspace
+- PR #10 / run #103 — safe drag-out and artifact publication
+- PR #12 / run #128 — direct ISO integration, native mount regression, WinUI Release and artifact
+- PR #12 / run #131 — same full path remains green after README progress synchronization
 
 The same project rule continues: no Explorer control becomes active before its backing operation exists and is tested. Human cross-process drag and normal-user UAC prompts remain explicit manual desktop QA cases rather than fabricated CI claims.
+
+## 0.4 Extended Image Providers — NEXT 🚧
+
+Next execution focuses on expanding the provider architecture beyond ISO while keeping capability reporting, isolation and read-only safety explicit. `docs/ROADMAP.md` remains the source of truth for the exact provider order and completion state.
