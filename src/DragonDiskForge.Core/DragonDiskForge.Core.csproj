@@ -3,4 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>DragonDiskForge.Core</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.88" />
+  </ItemGroup>
 </Project>
