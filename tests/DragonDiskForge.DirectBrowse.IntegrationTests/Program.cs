@@ -147,13 +147,20 @@ static async Task CreateIsoAsync(string sourcePath, string imagePath)
                 if (input == null)
                     throw new InvalidOperationException("IMAPI did not return an IStream.");
 
-                using FileStream output = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
-                while (totalBlocks-- > 0)
+                FileStream output = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+                try
                 {
-                    input.Read(buffer, blockSize, pointer);
-                    output.Write(buffer, 0, bytes);
+                    while (totalBlocks-- > 0)
+                    {
+                        input.Read(buffer, blockSize, pointer);
+                        output.Write(buffer, 0, bytes);
+                    }
+                    output.Flush();
                 }
-                output.Flush();
+                finally
+                {
+                    output.Dispose();
+                }
             }
         }
         '@
