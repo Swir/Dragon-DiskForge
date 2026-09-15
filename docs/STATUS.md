@@ -8,7 +8,7 @@
 
 ## Current development version
 
-**0.3.0-alpha.1**
+**0.3.0-alpha.2**
 
 ## Current milestone
 
@@ -50,21 +50,31 @@
 - closing a tab never unmounts the image
 - successful unmount closes tabs backed by the image
 - stale tabs are pruned when the backing Windows drive root disappears
-- PR #7 / run #86 green before the docs/version synchronization pass
+
+**Safe drag-out to Windows Explorer**
+
+- mounted Explorer rows expose native WinUI drag-out
+- drag payload uses Windows Storage items and advertises Copy only
+- root containment is revalidated immediately before transfer
+- stale/missing sources are blocked
+- listed and runtime reparse points/junctions are blocked
+- asynchronous StorageItem resolution uses a `DragStarting` deferral
+- dedicated drag-out safety smoke tests are green
+- PR #10 / run #103 passed Core, history, drag-out, real Windows integration, restore, WinUI build and artifact publishing before this docs/version pass
 
 ### Current safety state
 
-Inspection, hashing, mounted-volume browsing, Preview and default native mounts are read-only-first. Explorer never writes into the mounted image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts.
+Inspection, hashing, mounted-volume browsing, Preview and default native mounts are read-only-first. Explorer never writes into the mounted image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
 
-Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during search or Copy out.
+Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during search, Copy out or drag-out.
 
 Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state. A persistence failure must not roll back or hide a successful native storage operation.
 
-The interactive UAC prompt cannot be faithfully exercised on GitHub-hosted administrator runners. Its non-admin desktop validation remains documented in `docs/MANUAL-VALIDATION.md` as a manual QA gate before public beta packaging.
+The interactive UAC prompt cannot be faithfully exercised on GitHub-hosted administrator runners. Its non-admin desktop validation remains documented in `docs/MANUAL-VALIDATION.md` as a manual QA gate before public beta packaging. The real cross-process drag gesture is also a manual desktop QA case even though its validator, WinUI build path and storage integration are automated.
 
 ## Remaining 0.3 scope
 
-- drag files out to Windows Explorer where technically safe
 - provider-backed direct browsing without mounting where technically supported
+- final 0.3 regression/documentation closure
 
-Milestone 0.3 remains open until these remaining capabilities are implemented and tested.
+Milestone 0.3 remains open until the remaining direct-browsing capability is implemented and tested.

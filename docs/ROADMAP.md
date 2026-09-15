@@ -139,11 +139,25 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Stale tabs are pruned when their Windows drive root disappears
 - ✅ PR #7 / run #86 passes Core, mounted-history tests, real Windows mount/Explorer/Preview integration, restore and full WinUI `Release|x64` build
 
-### Remaining 0.3 scope
-- ⬜ Drag files out to Windows Explorer where technically safe
-- ⬜ Provider-backed direct browsing without mounting where technically supported
+### Safe drag-out slice — ✅ complete
+- ✅ Native drag-out from mounted Explorer files/folders to Windows Explorer/Desktop
+- ✅ WinUI `DragStarting` deferral used for asynchronous StorageItem resolution
+- ✅ Windows transfer payload uses `StorageFile` / `StorageFolder`
+- ✅ `DataPackageOperation.Copy` is the only requested/allowed operation; Dragon never advertises Move
+- ✅ Dedicated Core `ExplorerDragOutValidator`
+- ✅ Mounted-root containment revalidated immediately before transfer
+- ✅ Stale or missing sources rejected before transfer
+- ✅ Listed reparse points/junctions rejected
+- ✅ Runtime filesystem reparse attributes rechecked before transfer
+- ✅ Dedicated drag-out safety smoke tests
+- ✅ Cross-process human gesture retained as an explicit manual desktop QA case
+- ✅ PR #10 / run #103 passes Core, mounted-history, drag-out safety, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows x64 artifact publishing before the docs/version pass
 
-**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, with the remaining drag-out/direct-browsing experience completed and tested.
+### Remaining 0.3 scope
+- ⬜ Provider-backed direct browsing without mounting where technically supported
+- ⬜ Final 0.3 regression pass and documentation/version closure
+
+**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, including direct provider-backed browsing where technically supported, with the full 0.3 regression path green.
 
 ---
 
@@ -242,6 +256,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ Provider tests
 - ⬜ Mount/unmount integration tests expansion
 - ⬜ Non-admin UAC desktop validation matrix
+- ⬜ Cross-process Explorer drag-out desktop validation matrix
 - ⬜ Large-image stress tests
 - ⬜ Multi-terabyte sparse-image tests where feasible
 - ⬜ Corrupt/truncated image tests

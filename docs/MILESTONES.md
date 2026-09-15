@@ -1,6 +1,6 @@
 # Dragon DiskForge — Milestone Execution
 
-`docs/ROADMAP.md` defines the product direction. GitHub Issues track concrete execution and validation work.
+`docs/ROADMAP.md` defines the product direction. GitHub Issues and pull requests track concrete execution and validation work.
 
 ## 0.1 Foundation + Dragon Visual Identity — COMPLETE ✅
 
@@ -14,7 +14,7 @@ The visible normal-user UAC prompt remains a manual desktop QA case in `docs/MAN
 
 ## 0.3 Dragon Explorer — IN PROGRESS 🚧
 
-Current development version: **0.3.0-alpha.1**.
+Current development version: **0.3.0-alpha.2**.
 
 ### Completed execution slices
 
@@ -39,12 +39,20 @@ Current development version: **0.3.0-alpha.1**.
    - WinUI TabView workspace with one Explorer session per mounted image/root
    - duplicate-tab prevention, stale-tab pruning and safe tab close semantics
    - successful unmount closes only workspace tabs backed by that image
-   - PR #7 / run #86 green before the documentation/version synchronization pass
+
+4. **Safe drag-out to Windows Explorer** ✅
+   - mounted files/folders expose native WinUI drag-out
+   - `DataPackage` advertises Copy only; Dragon never requests Move
+   - source path is revalidated against the mounted root before transfer
+   - stale sources and path escapes are rejected
+   - listed/runtime reparse points and junctions are rejected
+   - async StorageItem resolution uses the WinUI DragStarting deferral
+   - dedicated drag-out safety smoke tests are part of CI
+   - PR #10 / run #103 passed all automated gates including the x64 artifact publication before this docs/version pass
 
 ### Remaining before 0.3 closure
 
-- drag files out to Windows Explorer where technically safe
 - provider-backed direct browsing without mounting where technically supported
 - final 0.3 regression pass and documentation/version closure
 
-The same project rule continues: no Explorer control becomes active before its backing operation exists and is tested.
+The same project rule continues: no Explorer control becomes active before its backing operation exists and is tested. Human cross-process drag and normal-user UAC prompts remain explicit manual desktop QA cases rather than fabricated CI claims.

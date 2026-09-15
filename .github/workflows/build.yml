@@ -30,6 +30,9 @@ jobs:
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 
+      - name: Drag-out safety smoke tests
+        run: dotnet run --project tests/DragonDiskForge.DragOut.SmokeTests/DragonDiskForge.DragOut.SmokeTests.csproj -c Release
+
       - name: Native Windows mount integration
         run: dotnet run --project tests/DragonDiskForge.Windows.IntegrationTests/DragonDiskForge.Windows.IntegrationTests.csproj -c Release
 

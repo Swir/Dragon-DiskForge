@@ -3,7 +3,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.3.0-alpha.1</Version>
+    <Version>0.3.0-alpha.2</Version>
     <Authors>Dragon DiskForge</Authors>
     <Product>Dragon DiskForge</Product>
   </PropertyGroup>

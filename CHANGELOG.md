@@ -46,24 +46,35 @@ The project follows semantic versioning while it evolves toward 1.0.
 - one independent `ExplorerView` per mounted image/root
 - duplicate-tab prevention by activating an existing image/root tab
 - stale Explorer-tab pruning when a mounted Windows drive root disappears
+- safe native drag-out from mounted Explorer files/folders to Windows Explorer/Desktop
+- `ExplorerDragOutValidator` in Core for last-moment mounted-root, existence and reparse-point validation
+- Copy-only WinUI `DataPackage` transfer using `StorageFile` / `StorageFolder`
+- asynchronous `DragStarting` deferral for safe StorageItem resolution
+- dedicated drag-out safety smoke-test project and CI gate
+- `docs/DRAG-OUT.md` safety notes and a desktop gesture QA matrix
+- Windows x64 workflow artifact publishing as `DragonDiskForge-win-x64`
 
 ### Changed
-- project development version advanced to `0.3.0-alpha.1`
-- milestone 0.3 remains in progress with mounted-volume Explorer, Preview/Image Library, mounted-history and multi-image workspace slices complete
-- Explorer navigation now opens the multi-image workspace rather than a single global Explorer instance
+- project development version advanced to `0.3.0-alpha.2`
+- milestone 0.3 remains in progress with mounted-volume Explorer, Preview/Image Library, mounted-history, multi-image workspace and safe drag-out slices complete
+- Explorer navigation opens the multi-image workspace rather than a single global Explorer instance
 - closing an Explorer tab never unmounts the image
 - successful Forge unmount closes Explorer tabs backed by that image
 - successful native Mount/Unmount operations record local history only after Windows confirms the state transition
 - live mount state remains authoritative; history metadata never substitutes for Windows Storage state
 - Explorer is enabled only when a real mounted-volume backing path can be resolved from current Windows state
 - mounted-volume browsing and Preview remain read-only; writes are limited to explicit Copy out destinations
-- reparse points/junctions are not traversed during recursive search or Copy out
+- drag-out explicitly advertises Copy only and never requests Move
+- drag-out rechecks root containment, source existence and runtime reparse attributes immediately before populating the Windows transfer payload
+- reparse points/junctions are not traversed during recursive search, Copy out or drag-out
 - successfully opened images are recorded to Recent Images best-effort; persistence failure cannot block the core image-open path
+- green CI runs publish a Windows x64 artifact for manual desktop validation
 
 ### Fixed
 - qualified `System.IO.Path` inside the image-library view model to avoid property-name shadowing during WinUI compilation
 - disambiguated `System.IO.FileAttributes` from `Windows.Storage.FileAttributes` in the WinUI app
 - kept live Mounted inventory independent from mounted-history persistence so metadata failure cannot hide or misreport actual Windows mount state
+- replaced the older drag-out branch/PR with a clean branch based on the latest `main`, preserving the x64 artifact pipeline and removing temporary branch-only markers
 
 ### Verified
 - PR #5 / GitHub Actions run #56 passes Core smoke tests, real ISO/VHD/VHDX integration including Explorer list/search/Copy out, restore and full WinUI `Release|x64` build
@@ -71,10 +82,11 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #6 / GitHub Actions run #72 passes Core Preview/Image Library tests, real ISO/VHD/VHDX integration including mounted-ISO text Preview, restore and full WinUI `Release|x64` build
 - main GitHub Actions run #73 passes the same Preview/Image Library regression path after merge
 - PR #7 / GitHub Actions run #86 passes Core smoke tests, dedicated mounted-history tests, real ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI `Release|x64` build before the documentation/version pass
+- PR #10 / GitHub Actions run #103 passes Core smoke tests, mounted-history tests, dedicated drag-out safety tests, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows x64 artifact publishing before this documentation/version pass
 
 ### Planned
-- drag-out to Windows Explorer where technically safe
-- provider-backed direct browsing without mounting where supported
+- provider-backed direct browsing without mounting where technically supported
+- final 0.3 regression/documentation closure
 
 ## [0.2.0] - 2026-09-14
 
