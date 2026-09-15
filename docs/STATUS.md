@@ -6,15 +6,21 @@
 
 **0.2 Native Mount + Unmount — COMPLETE ✅**
 
-## Current development version
+**0.3 Dragon Explorer — COMPLETE ✅**
 
-**0.3.0-alpha.2**
+## Current version
 
-## Current milestone
+**0.3.0**
 
-**0.3 Dragon Explorer — IN PROGRESS 🚧**
+## Overall project progress
 
-### Proven slices
+**30% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven. The visible README progress bar must be updated whenever real roadmap progress changes.
+
+## Next milestone
+
+**0.4 Extended Image Providers — NEXT 🚧**
+
+### Proven 0.3 slices
 
 **Mounted-volume Explorer**
 
@@ -46,10 +52,9 @@
 - dedicated mounted-history smoke tests in CI
 - multi-image Dragon Explorer workspace using WinUI tabs
 - one independent Explorer session per mounted image/root
-- reopening the same image/root activates the existing tab
+- duplicate-tab prevention and stale-tab pruning
 - closing a tab never unmounts the image
 - successful unmount closes tabs backed by the image
-- stale tabs are pruned when the backing Windows drive root disappears
 
 **Safe drag-out to Windows Explorer**
 
@@ -60,21 +65,35 @@
 - listed and runtime reparse points/junctions are blocked
 - asynchronous StorageItem resolution uses a `DragStarting` deferral
 - dedicated drag-out safety smoke tests are green
-- PR #10 / run #103 passed Core, history, drag-out, real Windows integration, restore, WinUI build and artifact publishing before this docs/version pass
+
+**Provider-backed direct ISO browsing**
+
+- `IDirectBrowseProvider` provider contract
+- managed ISO9660/Joliet parser
+- list, nested navigation and recursive search directly from ISO extents
+- file/folder Copy out without mounting
+- cancellation, overwrite, path traversal, filename and extent-boundary safety
+- dedicated **Direct ISO** workspace tab marked **NO MOUNT**
+- direct capability button enabled only after positive provider detection
+- real IMAPI integration proves the image stays detached through browse/search/Copy out
+
+### Proven checkpoints
+
+- PR #5 / run #56 — first mounted Explorer slice
+- PR #6 / run #72 — Preview + Image Library
+- PR #7 / run #86 — Mounted history + multi-image workspace
+- PR #10 / run #103 — safe drag-out + x64 artifact
+- PR #12 / run #128 — provider-backed ISO direct browse + native mount regression + WinUI build + artifact
+- PR #12 / run #131 — full regression remained green after README project-progress synchronization
 
 ### Current safety state
 
-Inspection, hashing, mounted-volume browsing, Preview and default native mounts are read-only-first. Explorer never writes into the mounted image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
+Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
 
-Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during search, Copy out or drag-out.
+Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during mounted-volume search, Copy out or drag-out.
 
-Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state. A persistence failure must not roll back or hide a successful native storage operation.
+Direct ISO browsing uses virtual `/` paths and validates metadata extents against the image bounds. Direct mode does not expose Open/Preview/drag-out until provider-backed implementations exist for those actions.
 
-The interactive UAC prompt cannot be faithfully exercised on GitHub-hosted administrator runners. Its non-admin desktop validation remains documented in `docs/MANUAL-VALIDATION.md` as a manual QA gate before public beta packaging. The real cross-process drag gesture is also a manual desktop QA case even though its validator, WinUI build path and storage integration are automated.
+Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state.
 
-## Remaining 0.3 scope
-
-- provider-backed direct browsing without mounting where technically supported
-- final 0.3 regression/documentation closure
-
-Milestone 0.3 remains open until the remaining direct-browsing capability is implemented and tested.
+The interactive UAC prompt and the real cross-process Windows Explorer drag gesture remain documented manual desktop QA cases in `docs/MANUAL-VALIDATION.md`; CI does not fabricate those human-interaction results.

@@ -6,7 +6,20 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current version — 0.3.0-alpha.2
+## Current version — 0.3.0
+
+## Project progress — 30% toward 1.0
+
+`██████░░░░░░░░░░░░░░ 30%`
+
+**Overall completion:** **30%**
+
+- `0.1 Foundation + Dragon UI` — **100%** ✅
+- `0.2 Native Mount + Unmount` — **100%** ✅
+- `0.3 Dragon Explorer` — **100%** ✅
+- `0.4 → 1.0` — planned / future milestones
+
+> This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
 
 ## Project progress — 30% toward 1.0
 
@@ -45,9 +58,9 @@ Implemented and proven on Windows CI:
 - friendly unsupported-format/native-operation error translation
 - real Windows integration tests using disposable VHD/VHDX and IMAPI-generated ISO images
 
-### 0.3 Dragon Explorer 🚧
+### 0.3 Dragon Explorer ✅
 
-The current 0.3 alpha contains four proven slices.
+Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
 
 **Mounted-volume Explorer**
 
@@ -82,7 +95,6 @@ The current 0.3 alpha contains four proven slices.
 - closing a tab never unmounts the image
 - successful unmount closes tabs backed by that image
 - stale Explorer tabs are pruned if their Windows drive root disappears
-- dedicated mounted-history smoke tests
 
 **Safe drag-out to Windows Explorer**
 
@@ -92,14 +104,19 @@ The current 0.3 alpha contains four proven slices.
 - runtime filesystem attributes are rechecked so stale UI state cannot bypass the safety gate
 - drag data is prepared asynchronously through the WinUI `DragStarting` deferral
 - dedicated drag-out safety smoke tests run in CI
-- PR #10 / GitHub Actions run #103 passed Core, mounted-history, drag-out safety, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows artifact publishing before this documentation pass
 
-Remaining 0.3 scope:
+**Provider-backed ISO direct browsing**
 
-- provider-backed direct browsing without mounting where technically supported
-- final 0.3 regression/documentation closure
+- managed read-only ISO9660/Joliet provider
+- list folders/files directly from ISO extents without `Mount-DiskImage`
+- navigate nested folders and search recursively
+- safe file/folder Copy out with progress and cancellation
+- overwrite, path-traversal, extent-boundary and Windows filename safety checks
+- dedicated WinUI **Direct ISO** tabs marked **NO MOUNT**
+- `Explore directly` is enabled only after the provider positively recognizes the current ISO
+- real IMAPI-generated ISO integration proves list/search/Copy out while the image remains detached
 
-The cross-process human drag gesture itself is also retained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
+The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
 The interactive UAC prompt itself cannot be faithfully exercised on GitHub-hosted administrator runners. A normal-user desktop checklist is maintained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md) and remains a manual QA gate before public beta packaging.
 
@@ -107,7 +124,7 @@ Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md). Execution work i
 
 Major milestones:
 
-`0.1 Foundation + Dragon UI ✅` → `0.2 Native Mount ✅` → `0.3 Dragon Explorer 🚧` → `0.4 Extended Providers` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
+`0.1 Foundation + Dragon UI ✅` → `0.2 Native Mount ✅` → `0.3 Dragon Explorer ✅` → `0.4 Extended Providers 🚧 next` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
 
 The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.md), and the vector sigil is stored under [`docs/branding/dragon-sigil.svg`](docs/branding/dragon-sigil.svg).
 
@@ -120,6 +137,7 @@ The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.m
 - x64 + ARM64 targets
 - shared Core engine for GUI and future CLI
 - isolated Windows service layer for native Storage operations
+- provider-backed direct-browse architecture for formats that can be safely parsed without mounting
 
 ## Build on Windows
 
@@ -129,13 +147,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real Windows ISO/VHD/VHDX mount integration, Explorer/Preview integration against a mounted ISO and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview and mounted-volume browsing never write to the image. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing and provider-backed direct ISO browsing are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 

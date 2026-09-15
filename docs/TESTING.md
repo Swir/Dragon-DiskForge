@@ -37,6 +37,28 @@ The drag-out validator currently proves:
 
 The actual human gesture from Dragon Explorer into Windows Explorer/Desktop remains a manual desktop QA case because GitHub Actions cannot reliably emulate cross-process pointer drag/drop.
 
+## Provider-backed ISO direct-browse integration
+
+Run on Windows:
+
+```powershell
+dotnet run --project tests/DragonDiskForge.DirectBrowse.IntegrationTests/DragonDiskForge.DirectBrowse.IntegrationTests.csproj -c Release
+```
+
+This suite creates a disposable ISO with Windows IMAPI2FS and validates the managed ISO9660/Joliet provider without mounting the image. It proves:
+
+- a real IMAPI-generated ISO is positively recognized
+- root files and directories are listed from ISO extents
+- nested folders are navigable through virtual `/` paths
+- recursive search finds nested entries
+- file and directory Copy out preserve content
+- Copy out reports completion progress
+- existing destinations are not silently overwritten
+- virtual path traversal is rejected
+- pre-cancelled search is rejected safely
+- a fake `.iso` extension is not treated as a valid provider image
+- the image remains detached before and after list/search/Copy out
+
 ## Native Windows mount / Explorer integration
 
 Run on an elevated Windows development session:
@@ -69,11 +91,12 @@ Every green CI run also uploads `DragonDiskForge-win-x64` as a temporary workflo
 3. Run Core smoke tests.
 4. Run mounted-history smoke tests.
 5. Run drag-out safety smoke tests.
-6. Run native Windows ISO/VHD/VHDX + Explorer/Preview integration tests.
-7. Configure MSBuild.
-8. Restore the solution.
-9. Build the WinUI application in Release x64.
-10. Publish the Windows x64 workflow artifact.
+6. Run provider-backed ISO direct-browse integration while the image remains detached.
+7. Run native Windows ISO/VHD/VHDX + mounted Explorer/Preview integration tests.
+8. Configure MSBuild.
+9. Restore the solution.
+10. Build the WinUI application in Release x64.
+11. Publish the Windows x64 workflow artifact.
 
 A feature should not be marked complete in `docs/ROADMAP.md` merely because code was committed. Its relevant real test/build path must pass first.
 
@@ -81,6 +104,8 @@ A feature should not be marked complete in `docs/ROADMAP.md` merely because code
 
 GitHub-hosted Windows runners execute as administrators and cannot faithfully emulate all interactive desktop behavior. The required UAC and cross-process drag-out matrix is maintained in `docs/MANUAL-VALIDATION.md`.
 
+Direct ISO browsing itself is automatically validated because it does not depend on a human shell gesture; its integration test explicitly confirms the image remains detached.
+
 ## Test-data rule
 
-Do not commit large real disk images to the repository. Signature tests generate minimal temporary files, and mount integration creates disposable images at runtime with Windows-native tooling.
+Do not commit large real disk images to the repository. Signature tests generate minimal temporary files, and mount/direct-browse integration creates disposable images at runtime with Windows-native tooling.

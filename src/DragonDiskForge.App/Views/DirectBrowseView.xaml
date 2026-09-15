@@ -1,0 +1,171 @@
+<UserControl
+    x:Class="DragonDiskForge.App.Views.DirectBrowseView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="Transparent" Padding="30,24,30,34" MaxWidth="1320" HorizontalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,16" ColumnSpacing="18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock Text="DIRECT IMAGE BROWSE" FontSize="11" FontWeight="Bold"
+                           Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="210" />
+                <TextBlock Text="Browse without mounting"
+                           FontFamily="Segoe UI Variable Display"
+                           FontSize="30" FontWeight="SemiBold"
+                           Foreground="{ThemeResource DragonTextBrush}" />
+                <TextBlock x:Name="SourceDescriptionText"
+                           Text="Provider-backed read-only image session"
+                           Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Border Style="{StaticResource DragonStatusPillStyle}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Ellipse Width="7" Height="7" Fill="{ThemeResource DragonSuccessBrush}" />
+                        <TextBlock Text="NO MOUNT" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <ProgressRing x:Name="BusyRing" Width="22" Height="22" IsActive="False" />
+                <Button x:Name="UpButton" Content="Up" Click="Up_Click" IsEnabled="False"
+                        Style="{StaticResource DragonSecondaryButtonStyle}" />
+                <Button x:Name="RefreshButton" Content="Refresh" Click="Refresh_Click" IsEnabled="False"
+                        Style="{StaticResource DragonSecondaryButtonStyle}" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="{ThemeResource DragonPanelStrongBrush}"
+                BorderBrush="{ThemeResource DragonBorderBrush}"
+                BorderThickness="1" CornerRadius="16" Padding="12"
+                Margin="0,0,0,12">
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon Glyph="&#xE838;" FontSize="16"
+                          Foreground="{ThemeResource DragonEmberBrush}"
+                          VerticalAlignment="Center" />
+                <TextBlock x:Name="AddressText" Grid.Column="1" Text="/"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Foreground="{ThemeResource DragonTextBrush}" />
+                <TextBox x:Name="SearchBox" Grid.Column="2"
+                         PlaceholderText="Search inside this image" />
+                <Button Grid.Column="3" Content="Search" Click="Search_Click"
+                        x:Name="SearchButton"
+                        Style="{StaticResource DragonSecondaryButtonStyle}" />
+                <Button Grid.Column="4" Content="Clear" Click="ClearSearch_Click"
+                        x:Name="ClearSearchButton" Visibility="Collapsed"
+                        Style="{StaticResource DragonSecondaryButtonStyle}" />
+            </Grid>
+        </Border>
+
+        <InfoBar x:Name="StatusBar"
+                 Grid.Row="2"
+                 IsOpen="False"
+                 IsClosable="True"
+                 Margin="0,0,0,12" />
+
+        <Grid Grid.Row="3" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock x:Name="ItemCountText" Text="0 items"
+                           Foreground="{ThemeResource DragonMutedBrush}" />
+                <TextBlock Text="ISO9660/Joliet provider • image stays detached • Copy out is non-destructive"
+                           FontSize="11" Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" x:Name="CopyOutButton" Content="Copy out"
+                    Click="CopyOut_Click" IsEnabled="False"
+                    Style="{StaticResource DragonPrimaryButtonStyle}" />
+        </Grid>
+
+        <Grid Grid.Row="4">
+            <Border x:Name="EmptyState"
+                    Background="{ThemeResource DragonPanelStrongBrush}"
+                    BorderBrush="{ThemeResource DragonBorderBrush}"
+                    BorderThickness="1" CornerRadius="22" Padding="28"
+                    MinHeight="240">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                    <Border Width="64" Height="64" CornerRadius="19"
+                            Background="{ThemeResource DragonEmberSoftBrush}">
+                        <FontIcon Glyph="&#xE7C3;" FontSize="27"
+                                  Foreground="{ThemeResource DragonMoltenBrush}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock x:Name="EmptyTitleText" Text="This location is empty"
+                               FontSize="20" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock x:Name="EmptyDescriptionText"
+                               Text="There are no files or folders to show here."
+                               Foreground="{ThemeResource DragonMutedBrush}"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="560" />
+                </StackPanel>
+            </Border>
+
+            <ListView x:Name="EntryList"
+                      Visibility="Collapsed"
+                      SelectionMode="Single"
+                      IsItemClickEnabled="True"
+                      ItemClick="EntryList_ItemClick"
+                      SelectionChanged="EntryList_SelectionChanged"
+                      Background="Transparent"
+                      HorizontalContentAlignment="Stretch">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,7" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{ThemeResource DragonPanelStrongBrush}"
+                                BorderBrush="{ThemeResource DragonBorderBrush}"
+                                BorderThickness="1" CornerRadius="14" Padding="14">
+                            <Grid ColumnSpacing="13">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="42" Height="42" CornerRadius="12"
+                                        Background="{ThemeResource DragonEmberSoftBrush}">
+                                    <FontIcon Glyph="{Binding Glyph}" FontSize="18"
+                                              Foreground="{ThemeResource DragonMoltenBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding SecondaryText}"
+                                               Foreground="{ThemeResource DragonMutedBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Meta}"
+                                           Foreground="{ThemeResource DragonMutedBrush}"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
+</UserControl>
