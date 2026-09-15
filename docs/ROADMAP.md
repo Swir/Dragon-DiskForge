@@ -77,7 +77,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ---
 
-## 0.3 Dragon Explorer — 🚧 in progress
+## 0.3 Dragon Explorer — ✅ complete
 
 ### Mounted-volume Explorer slice — ✅ complete
 - ✅ Core Explorer models + `IExplorerService` contract
@@ -153,15 +153,28 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Cross-process human gesture retained as an explicit manual desktop QA case
 - ✅ PR #10 / run #103 passes Core, mounted-history, drag-out safety, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows x64 artifact publishing before the docs/version pass
 
-### Remaining 0.3 scope
-- ⬜ Provider-backed direct browsing without mounting where technically supported
-- ⬜ Final 0.3 regression pass and documentation/version closure
+### Provider-backed direct browsing slice — ✅ complete
+- ✅ `IDirectBrowseProvider` extends the provider architecture for read-only browsing without mounting
+- ✅ managed ISO9660/Joliet direct-browse provider
+- ✅ direct directory/file enumeration from ISO extents
+- ✅ virtual `/` path navigation with path-traversal rejection
+- ✅ recursive direct search with cancellation and result limits
+- ✅ safe direct file/folder Copy out with progress and cancellation
+- ✅ silent-overwrite protection and Windows filename validation
+- ✅ ISO extent/bounds checks and directory safety limits
+- ✅ dedicated `Direct ISO` WinUI tab marked `NO MOUNT`
+- ✅ `Explore directly` enabled only after positive provider capability detection
+- ✅ direct tabs coexist with mounted-volume tabs and are independent from Mount/Unmount lifecycle
+- ✅ real Windows IMAPI fixture proves list → nested navigation → search → file/folder Copy out while the ISO remains detached
+- ✅ fake `.iso` extension rejection and pre-cancelled search validation
+- ✅ PR #12 / run #128 passes direct-browse integration, native mount regression, restore, full WinUI `Release|x64` build and x64 artifact
+- ✅ PR #12 / run #131 passes the same full regression path after the README progress-bar checkpoint
 
-**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, including direct provider-backed browsing where technically supported, with the full 0.3 regression path green.
+**Exit criteria — passed on the feature branch before merge:** a user can inspect and extract useful content from supported images without leaving Dragon DiskForge; ISO9660/Joliet can also be browsed directly without mounting, and the full 0.3 Windows regression path is green.
 
 ---
 
-## 0.4 Extended Image Providers — ⬜ planned
+## 0.4 Extended Image Providers — 🚧 next
 
 - ⬜ IMG / RAW partition parser
 - ⬜ IMA / floppy images
