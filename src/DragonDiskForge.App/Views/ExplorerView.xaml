@@ -84,9 +84,14 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="ItemCountText" Text="0 items"
-                       Foreground="{ThemeResource DragonMutedBrush}"
-                       VerticalAlignment="Center" />
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock x:Name="ItemCountText" Text="0 items"
+                           Foreground="{ThemeResource DragonMutedBrush}" />
+                <TextBlock Text="Tip: drag a safe file or folder directly to Windows Explorer to copy it out."
+                           FontSize="11"
+                           Foreground="{ThemeResource DragonMutedBrush}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <Button x:Name="OpenButton" Content="Open" Click="Open_Click"
                         IsEnabled="False" Style="{StaticResource DragonSecondaryButtonStyle}" />
@@ -144,7 +149,10 @@
                     <DataTemplate>
                         <Border Background="{ThemeResource DragonPanelStrongBrush}"
                                 BorderBrush="{ThemeResource DragonBorderBrush}"
-                                BorderThickness="1" CornerRadius="14" Padding="14">
+                                BorderThickness="1" CornerRadius="14" Padding="14"
+                                CanDrag="True"
+                                DragStarting="ExplorerItem_DragStarting"
+                                ToolTipService.ToolTip="Drag to Windows Explorer to copy out">
                             <Grid ColumnSpacing="13">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="42" />
