@@ -1,3 +1,4 @@
+using DragonDiskForge.Core.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -5,6 +6,8 @@ namespace DragonDiskForge.App.Views;
 
 public sealed partial class ExplorerWorkspaceView : UserControl
 {
+    private const string DirectKeyPrefix = "direct|";
+
     private readonly nint _windowHandle;
     private readonly Dictionary<string, TabViewItem> _tabs = new(StringComparer.OrdinalIgnoreCase);
 
@@ -28,7 +31,7 @@ public sealed partial class ExplorerWorkspaceView : UserControl
             return;
         }
 
-        var key = BuildKey(image, root);
+        var key = BuildMountedKey(image, root);
         if (_tabs.TryGetValue(key, out var existing))
         {
             if (existing.Content is ExplorerView explorer)
@@ -47,7 +50,44 @@ public sealed partial class ExplorerWorkspaceView : UserControl
             Tag = key,
             IsClosable = true
         };
-        ToolTipService.SetToolTip(tab, $"{image}\n{root}\nClosing this tab does not unmount the image.");
+        ToolTipService.SetToolTip(tab, $"Mounted volume\n{image}\n{root}\nClosing this tab does not unmount the image.");
+
+        _tabs.Add(key, tab);
+        WorkspaceTabs.TabItems.Add(tab);
+        WorkspaceTabs.SelectedItem = tab;
+        UpdateEmptyState();
+    }
+
+    public async Task OpenDirectAsync(IDirectImageExplorer explorer)
+    {
+        ArgumentNullException.ThrowIfNull(explorer);
+        var image = Path.GetFullPath(explorer.ImagePath);
+        if (!File.Exists(image))
+        {
+            ShowNoMountedVolume("The direct-browse image is no longer available. Reopen it from the Forge or Images library.");
+            return;
+        }
+
+        var key = BuildDirectKey(image);
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            if (existing.Content is DirectImageExplorerView directView)
+                await directView.OpenAsync(explorer);
+            WorkspaceTabs.SelectedItem = existing;
+            return;
+        }
+
+        var view = new DirectImageExplorerView(_windowHandle);
+        await view.OpenAsync(explorer);
+
+        var tab = new TabViewItem
+        {
+            Header = $"{Path.GetFileName(image)} • direct",
+            Content = view,
+            Tag = key,
+            IsClosable = true
+        };
+        ToolTipService.SetToolTip(tab, $"Direct provider: {explorer.ProviderId}\n{image}\nNo Windows mount is used.");
 
         _tabs.Add(key, tab);
         WorkspaceTabs.TabItems.Add(tab);
@@ -59,7 +99,8 @@ public sealed partial class ExplorerWorkspaceView : UserControl
     {
         var normalized = Path.GetFullPath(imagePath) + "|";
         var keys = _tabs.Keys
-            .Where(key => key.StartsWith(normalized, StringComparison.OrdinalIgnoreCase))
+            .Where(key => !IsDirectKey(key)
+                && key.StartsWith(normalized, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         foreach (var key in keys)
@@ -75,7 +116,7 @@ public sealed partial class ExplorerWorkspaceView : UserControl
             return;
 
         EmptyDescriptionText.Text = message
-            ?? "Open a mounted ISO, VHD or VHDX from the Mounted dashboard. Each image opens in its own tab.";
+            ?? "Open a mounted ISO/VHD/VHDX from Mounted, or open a supported image directly from the Forge without mounting.";
         UpdateEmptyState();
     }
 
@@ -98,7 +139,7 @@ public sealed partial class ExplorerWorkspaceView : UserControl
     private void PruneUnavailableTabs()
     {
         var staleKeys = _tabs.Keys
-            .Where(key => !TryGetRootFromKey(key, out var root) || !Directory.Exists(root))
+            .Where(IsStaleKey)
             .ToArray();
 
         foreach (var key in staleKeys)
@@ -106,9 +147,17 @@ public sealed partial class ExplorerWorkspaceView : UserControl
 
         if (staleKeys.Length > 0)
         {
-            EmptyDescriptionText.Text = "One or more Explorer tabs were closed because their mounted Windows volumes are no longer available.";
+            EmptyDescriptionText.Text = "One or more Explorer tabs were closed because their backing Windows volume or image file is no longer available.";
             UpdateEmptyState();
         }
+    }
+
+    private static bool IsStaleKey(string key)
+    {
+        if (TryGetDirectImageFromKey(key, out var image))
+            return !File.Exists(image);
+
+        return !TryGetRootFromMountedKey(key, out var root) || !Directory.Exists(root);
     }
 
     private void RemoveTab(string key)
@@ -126,11 +175,35 @@ public sealed partial class ExplorerWorkspaceView : UserControl
         EmptyState.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private static string BuildKey(string imagePath, string rootPath)
+    private static string BuildMountedKey(string imagePath, string rootPath)
         => $"{Path.GetFullPath(imagePath)}|{Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootPath))}";
 
-    private static bool TryGetRootFromKey(string key, out string root)
+    private static string BuildDirectKey(string imagePath)
+        => DirectKeyPrefix + Path.GetFullPath(imagePath);
+
+    private static bool IsDirectKey(string key)
+        => key.StartsWith(DirectKeyPrefix, StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryGetDirectImageFromKey(string key, out string imagePath)
     {
+        if (!IsDirectKey(key) || key.Length <= DirectKeyPrefix.Length)
+        {
+            imagePath = string.Empty;
+            return false;
+        }
+
+        imagePath = key[DirectKeyPrefix.Length..];
+        return true;
+    }
+
+    private static bool TryGetRootFromMountedKey(string key, out string root)
+    {
+        if (IsDirectKey(key))
+        {
+            root = string.Empty;
+            return false;
+        }
+
         var separator = key.LastIndexOf('|');
         if (separator < 0 || separator == key.Length - 1)
         {
