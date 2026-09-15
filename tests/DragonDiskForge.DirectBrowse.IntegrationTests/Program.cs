@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Text;
 using DragonDiskForge.Core.Providers;
 
+const int SectorSizeForProbe = 2048 * 20;
+
 if (!OperatingSystem.IsWindows())
 {
     Console.WriteLine("SKIP  Direct ISO browse integration requires Windows IMAPI.");
@@ -25,9 +27,9 @@ var unicodeContent = "Joliet Unicode filename.";
 
 try
 {
-    await File.WriteAllTextAsync(Path.Combine(sourceRoot, markerName), markerContent, Encoding.UTF8);
-    await File.WriteAllTextAsync(Path.Combine(docsRoot, nestedName), nestedContent, Encoding.UTF8);
-    await File.WriteAllTextAsync(Path.Combine(sourceRoot, unicodeName), unicodeContent, Encoding.UTF8);
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, markerName), markerContent);
+    await File.WriteAllTextAsync(Path.Combine(docsRoot, nestedName), nestedContent);
+    await File.WriteAllTextAsync(Path.Combine(sourceRoot, unicodeName), unicodeContent);
 
     var imagePath = Path.Combine(tempRoot, "direct.iso");
     Console.WriteLine("INFO  Creating disposable Joliet/ISO9660 image with Windows IMAPI2FS...");
@@ -136,8 +138,6 @@ if (failures.Count > 0)
 }
 
 Console.WriteLine("\nDragon DiskForge direct ISO browse integration tests passed.");
-
-const int SectorSizeForProbe = 2048 * 20;
 
 void Check(bool condition, string name)
 {
