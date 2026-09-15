@@ -10,24 +10,34 @@ Run from the repository root:
 dotnet run --project tests/DragonDiskForge.Core.SmokeTests/DragonDiskForge.Core.SmokeTests.csproj -c Release
 ```
 
-The current harness validates:
+The current harness validates format/signature detection, safe mount defaults, SHA-256 behavior, Explorer listing/search/copy-out safety, Preview classification and Image Library persistence behavior.
 
-- case-insensitive extension lookup
-- known/unknown extension behavior
-- VHDX signature detection
-- QCOW/QCOW2 signature detection
-- ISO-9660 `CD001` signature detection
-- signature priority over a misleading extension
-- extension fallback for known formats
-- native-mount capability reporting for ISO
-- mount-request safe defaults
-- SHA-256 verification through `ImageVerificationService`
-- SHA-256 progress and cancellation
-- missing-file error behavior
+## Mounted-history smoke tests
 
-The harness returns a non-zero process exit code if any check fails, so GitHub Actions can stop before Windows integration/build work.
+```powershell
+dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
+```
 
-## Native Windows mount integration
+These tests validate bounded local history, Mount/Unmount event retention and the separation between local metadata and live Windows state.
+
+## Drag-out safety smoke tests
+
+```powershell
+dotnet run --project tests/DragonDiskForge.DragOut.SmokeTests/DragonDiskForge.DragOut.SmokeTests.csproj -c Release
+```
+
+The drag-out validator currently proves:
+
+- an existing file inside the mounted root is accepted
+- an existing folder inside the mounted root is accepted
+- a path outside the mounted root is rejected
+- a listed reparse point/junction is rejected before transfer
+- a stale/missing source is rejected
+- the WinUI payload path is compiled as Copy-only, never Move
+
+The actual human gesture from Dragon Explorer into Windows Explorer/Desktop remains a manual desktop QA case because GitHub Actions cannot reliably emulate cross-process pointer drag/drop.
+
+## Native Windows mount / Explorer integration
 
 Run on an elevated Windows development session:
 
@@ -35,25 +45,7 @@ Run on an elevated Windows development session:
 dotnet run --project tests/DragonDiskForge.Windows.IntegrationTests/DragonDiskForge.Windows.IntegrationTests.csproj -c Release
 ```
 
-The integration suite creates disposable test images at runtime; large binary fixtures are not committed to the repository.
-
-It currently validates:
-
-- VHD creation with DiskPart
-- VHDX creation with DiskPart
-- ISO creation with Windows IMAPI2FS
-- ISO/VHD/VHDX capability routing
-- detached initial state
-- pre-cancelled mount safety
-- native mount and unmount
-- read-only VHD/VHDX mount behavior
-- NoDriveLetter behavior
-- automatic drive-letter detection
-- mounted ISO file access
-- live Mounted inventory appearance after mount
-- live Mounted inventory removal after unmount
-- friendly unsupported-format errors
-- progress completion reporting
+The integration suite creates disposable images at runtime. It validates native ISO/VHD/VHDX lifecycle, read-only behavior, drive/inventory detection, cancellation safety, mounted-volume Explorer list/search/Copy out, mounted-ISO content verification and Preview against a real IMAPI-generated ISO.
 
 Mounted inventory is intentionally derived from current Windows Storage state rather than remembered application state.
 
@@ -68,21 +60,26 @@ msbuild DragonDiskForge.sln /restore /p:Configuration=Release /p:Platform=x64
 msbuild DragonDiskForge.sln /m /p:Configuration=Release /p:Platform=x64
 ```
 
+Every green CI run also uploads `DragonDiskForge-win-x64` as a temporary workflow artifact for desktop/manual validation.
+
 ## CI order
 
 1. Checkout repository.
 2. Install .NET 10 SDK.
 3. Run Core smoke tests.
-4. Run native Windows ISO/VHD/VHDX mount integration tests.
-5. Configure MSBuild.
-6. Restore the solution.
-7. Build the WinUI application in Release x64.
+4. Run mounted-history smoke tests.
+5. Run drag-out safety smoke tests.
+6. Run native Windows ISO/VHD/VHDX + Explorer/Preview integration tests.
+7. Configure MSBuild.
+8. Restore the solution.
+9. Build the WinUI application in Release x64.
+10. Publish the Windows x64 workflow artifact.
 
 A feature should not be marked complete in `docs/ROADMAP.md` merely because code was committed. Its relevant real test/build path must pass first.
 
 ## Manual desktop validation
 
-GitHub-hosted Windows runners execute as administrators, so interactive normal-user UAC behavior cannot be proven faithfully in CI. The required desktop validation matrix is maintained in `docs/MANUAL-VALIDATION.md`.
+GitHub-hosted Windows runners execute as administrators and cannot faithfully emulate all interactive desktop behavior. The required UAC and cross-process drag-out matrix is maintained in `docs/MANUAL-VALIDATION.md`.
 
 ## Test-data rule
 
