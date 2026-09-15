@@ -21,8 +21,9 @@ var markerName = "dragon-direct.txt";
 var markerContent = "Dragon DiskForge direct ISO browsing works without mounting.";
 var nestedName = "nested.txt";
 var nestedContent = "Nested provider-backed content.";
-await File.WriteAllTextAsync(Path.Combine(sourceRoot, markerName), markerContent, Encoding.UTF8);
-await File.WriteAllTextAsync(Path.Combine(nestedRoot, nestedName), nestedContent, Encoding.UTF8);
+var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+await File.WriteAllTextAsync(Path.Combine(sourceRoot, markerName), markerContent, utf8NoBom);
+await File.WriteAllTextAsync(Path.Combine(nestedRoot, nestedName), nestedContent, utf8NoBom);
 
 var imagePath = Path.Combine(tempRoot, "direct-browse.iso");
 var provider = new Iso9660DirectBrowseProvider();
@@ -43,7 +44,7 @@ try
     var nested = rootEntries.FirstOrDefault(x => x.IsDirectory && x.Name.Equals("Nested", StringComparison.OrdinalIgnoreCase));
     Check(marker is not null, "direct provider lists a root file without mounting");
     Check(nested is not null, "direct provider lists a root directory without mounting");
-    Check(marker?.SizeBytes == Encoding.UTF8.GetByteCount(markerContent), "direct provider reports ISO file size metadata");
+    Check(marker?.SizeBytes == utf8NoBom.GetByteCount(markerContent), "direct provider reports ISO file size metadata");
 
     var nestedEntries = await provider.ListAsync(imagePath, "/Nested");
     Check(nestedEntries.Any(x => !x.IsDirectory && x.Name.Equals(nestedName, StringComparison.OrdinalIgnoreCase)),
@@ -57,7 +58,7 @@ try
     await provider.CopyOutAsync(imagePath, "/" + markerName, exportRoot, fileProgress);
     var copiedMarker = Path.Combine(exportRoot, markerName);
     Check(File.Exists(copiedMarker), "direct provider copies a file out without mounting");
-    Check(await File.ReadAllTextAsync(copiedMarker, Encoding.UTF8) == markerContent,
+    Check(await File.ReadAllTextAsync(copiedMarker, utf8NoBom) == markerContent,
         "direct file copy preserves exact content");
     Check(fileProgress.Last >= 0.999d, "direct file copy reports completion");
 
@@ -65,7 +66,7 @@ try
     await provider.CopyOutAsync(imagePath, "/Nested", folderExportRoot, folderProgress);
     var copiedNested = Path.Combine(folderExportRoot, "Nested", nestedName);
     Check(File.Exists(copiedNested), "direct provider copies a directory tree out without mounting");
-    Check(await File.ReadAllTextAsync(copiedNested, Encoding.UTF8) == nestedContent,
+    Check(await File.ReadAllTextAsync(copiedNested, utf8NoBom) == nestedContent,
         "direct directory copy preserves nested content");
     Check(folderProgress.Last >= 0.999d, "direct directory copy reports completion");
 
