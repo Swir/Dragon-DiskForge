@@ -198,7 +198,6 @@ public sealed class Iso9660DirectBrowseProvider : IDirectBrowseProvider
         }
         catch
         {
-            // A partial destination may remain after cancellation/failure. Never delete user-visible output implicitly.
             throw;
         }
     }
@@ -400,7 +399,7 @@ public sealed class Iso9660DirectBrowseProvider : IDirectBrowseProvider
         var version = value.LastIndexOf(';');
         if (version > 0 && value[(version + 1)..].All(char.IsDigit))
             value = value[..version];
-        return value.EndsWith('.', StringComparison.Ordinal) ? value[..^1] : value;
+        return value.EndsWith(".", StringComparison.Ordinal) ? value[..^1] : value;
     }
 
     private static DateTimeOffset ParseRecordingTime(ReadOnlySpan<byte> value)
