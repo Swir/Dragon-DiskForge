@@ -35,7 +35,7 @@ Run Dragon DiskForge from a normal non-admin Windows account or a standard unele
    - Elevation should be requested only if Windows requires it.
    - After completion, the item must disappear from the live inventory.
 
-### Pass criteria
+### UAC pass criteria
 
 - ISO never asks for unnecessary elevation.
 - VHD/VHDX elevation is requested only for the native operation that needs it.
@@ -43,4 +43,34 @@ Run Dragon DiskForge from a normal non-admin Windows account or a standard unele
 - Approving UAC completes the requested operation and the UI refreshes to the real Windows state.
 - Error text is understandable and does not expose raw command noise as the primary message.
 
-This checklist is intentionally separate from the automated 0.2 integration suite. Failure here is a release-blocking desktop QA issue, not a reason to fake a CI result.
+## 0.3 Explorer drag-out validation
+
+Status: **manual desktop gesture QA required before public beta packaging**.
+
+Automated CI validates the source path, mounted-root boundary, stale-source handling, reparse-point blocking, WinUI compilation and Copy-only transfer intent. A hosted runner cannot faithfully reproduce a person dragging from one desktop application into another.
+
+### Test matrix
+
+1. Mount a trusted ISO and open it in Dragon Explorer.
+2. Drag a normal file from Dragon Explorer into an empty folder in Windows Explorer.
+   - Windows should show a copy operation.
+   - The destination copy must appear with matching content.
+   - The mounted source must remain unchanged.
+3. Drag a normal folder into Windows Explorer.
+   - Windows should copy the folder rather than move it.
+   - Source contents must remain available in Dragon Explorer.
+4. Drag an item to the Windows desktop and verify the same Copy-only behavior.
+5. Start a drag, then cancel it before dropping.
+   - No destination file/folder should be created by Dragon itself.
+6. If a reparse point/junction can be presented in a mounted test volume, verify that Dragon blocks drag-out and shows a warning.
+7. Unmount or otherwise invalidate a source and verify stale entries cannot be dragged successfully after refresh/state change.
+
+### Drag-out pass criteria
+
+- Dragon advertises Copy only; it never requests Move.
+- Source data on the mounted image remains unchanged.
+- Files and folders land correctly in Windows Explorer/Desktop.
+- Reparse points, path escapes and stale sources remain blocked.
+- A failed/cancelled drag does not create misleading success state in Dragon.
+
+These checklists are intentionally separate from the automated integration suite. Failure here is a release-blocking desktop QA issue, not a reason to fake a CI result.
