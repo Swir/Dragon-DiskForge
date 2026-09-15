@@ -45,19 +45,9 @@ public sealed class ProviderRegistry
         cancellationToken.ThrowIfCancellationRequested();
 
         var fullPath = Path.GetFullPath(path);
-        var extension = NormalizeExtension(Path.GetExtension(fullPath));
         var diagnostics = new List<ProviderProbeDiagnostic>(_registrations.Count);
 
-        var ordered = _registrations
-            .Select((registration, index) => new Candidate(
-                registration,
-                index,
-                ExtensionMatches(registration.Provider, extension)))
-            .OrderByDescending(x => x.ExtensionMatched)
-            .ThenBy(x => x.Index)
-            .ToArray();
-
-        foreach (var candidate in ordered)
+        foreach (var candidate in OrderCandidates(fullPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var descriptor = candidate.Registration.Descriptor;
@@ -104,32 +94,65 @@ public sealed class ProviderRegistry
         string path,
         CancellationToken cancellationToken = default)
     {
-        var resolution = await ResolveAsync(path, cancellationToken);
-        if (resolution.Provider is null || resolution.Descriptor is null)
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fullPath = Path.GetFullPath(path);
+        var errors = new List<string>();
+
+        foreach (var candidate in OrderCandidates(fullPath))
         {
-            var errors = resolution.Diagnostics
-                .Where(x => !string.IsNullOrWhiteSpace(x.ErrorMessage))
-                .Select(x => $"{x.ProviderId}: {x.ErrorMessage}")
-                .ToArray();
-            var detail = errors.Length == 0 ? string.Empty : $" Provider errors: {string.Join(" | ", errors)}";
-            throw new NotSupportedException($"No registered disk-image provider accepted '{Path.GetFileName(path)}'.{detail}");
+            cancellationToken.ThrowIfCancellationRequested();
+            var provider = candidate.Registration.Provider;
+            var descriptor = candidate.Registration.Descriptor;
+
+            bool supported;
+            try
+            {
+                supported = await provider.CanHandleAsync(fullPath, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{descriptor.Id} probe: {ex.Message}");
+                continue;
+            }
+
+            if (!supported)
+                continue;
+
+            try
+            {
+                return await provider.InspectAsync(fullPath, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{descriptor.Id} inspect: {ex.Message}");
+            }
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-            return await resolution.Provider.InspectAsync(Path.GetFullPath(path), cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidDataException(
-                $"Provider '{resolution.Descriptor.DisplayName}' could not inspect '{Path.GetFileName(path)}'.",
-                ex);
-        }
+        var detail = errors.Count == 0 ? string.Empty : $" Provider errors: {string.Join(" | ", errors)}";
+        throw new NotSupportedException(
+            $"No registered disk-image provider could inspect '{Path.GetFileName(path)}'.{detail}");
+    }
+
+    private IEnumerable<Candidate> OrderCandidates(string fullPath)
+    {
+        var extension = NormalizeExtension(Path.GetExtension(fullPath));
+        return _registrations
+            .Select((registration, index) => new Candidate(
+                registration,
+                index,
+                ExtensionMatches(registration.Provider, extension)))
+            .OrderByDescending(x => x.ExtensionMatched)
+            .ThenBy(x => x.Index);
     }
 
     private static bool ExtensionMatches(IDiskImageProvider provider, string extension)
