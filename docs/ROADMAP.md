@@ -69,7 +69,6 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Integration validation that mounted images appear in inventory and disappear after unmount
 - ✅ Cancellation-safety validation proving a pre-cancelled mount does not alter storage state
 - ✅ Unsupported-format friendly-error validation
-- ✅ Full Windows x64 Release CI green on current main through run #46
 
 **Manual QA note:** GitHub-hosted Windows runners execute as administrators, so the visible normal-user UAC prompt cannot be faithfully exercised in CI. The implemented elevation path has a required desktop checklist in `docs/MANUAL-VALIDATION.md` before public beta packaging.
 
@@ -77,7 +76,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ---
 
-## 0.3 Dragon Explorer — 🚧 in progress
+## 0.3 Dragon Explorer — ✅ complete
 
 ### Mounted-volume Explorer slice — ✅ complete
 - ✅ Core Explorer models + `IExplorerService` contract
@@ -99,7 +98,6 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Global Explorer navigation backed by a real mounted-volume service
 - ✅ Core automated tests for listing, metadata, search, path safety, copy-out, overwrite protection and cancellation
 - ✅ Windows integration coverage on a real IMAPI-generated mounted ISO: list → search → copy-out → content verification
-- ✅ Full Windows x64 Release validation for the first Explorer slice in PR #5 / run #56
 
 ### Preview + Image Library slice — ✅ complete
 - ✅ Bounded `FilePreviewService` in Core with cancellation
@@ -120,8 +118,6 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Successfully opened images are recorded best-effort without blocking the core open flow
 - ✅ Core automated tests for preview classification, bounded reads, cancellation, persistence, deduplication, favorites, removal and pruning
 - ✅ Real mounted-ISO integration proving Dragon Preview reads exact text directly from the mounted image
-- ✅ PR #6 / run #72 passes Core, real Windows ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI `Release|x64` build
-- ✅ Main regression run #73 passes the same path after merge
 
 ### Mounted history + multi-image workspace slice — ✅ complete
 - ✅ Local mounted-history contract and atomic JSON persistence
@@ -137,7 +133,6 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Closing an Explorer tab never unmounts the image
 - ✅ Successful Forge unmount closes tabs backed by that image
 - ✅ Stale tabs are pruned when their Windows drive root disappears
-- ✅ PR #7 / run #86 passes Core, mounted-history tests, real Windows mount/Explorer/Preview integration, restore and full WinUI `Release|x64` build
 
 ### Safe drag-out slice — ✅ complete
 - ✅ Native drag-out from mounted Explorer files/folders to Windows Explorer/Desktop
@@ -151,17 +146,38 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Runtime filesystem reparse attributes rechecked before transfer
 - ✅ Dedicated drag-out safety smoke tests
 - ✅ Cross-process human gesture retained as an explicit manual desktop QA case
-- ✅ PR #10 / run #103 passes Core, mounted-history, drag-out safety, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows x64 artifact publishing before the docs/version pass
 
-### Remaining 0.3 scope
-- ⬜ Provider-backed direct browsing without mounting where technically supported
-- ⬜ Final 0.3 regression pass and documentation/version closure
+### Provider-backed direct browsing slice — ✅ complete
+- ✅ `IDirectBrowseProvider` capability contract in Core
+- ✅ `IDirectImageExplorer` read-only browsing/extraction session contract
+- ✅ Provider registry enables only providers that accept the real image
+- ✅ ISO9660 direct provider with Joliet Unicode-name support
+- ✅ Direct ISO list/navigation/search without Windows mount
+- ✅ Safe direct Copy out for files and folder trees
+- ✅ No silent destination overwrite
+- ✅ Cancellation and incomplete-output cleanup where possible
+- ✅ Virtual-path traversal protection
+- ✅ Multi-extent ISO files fail closed instead of being extracted incorrectly
+- ✅ Dedicated direct-provider Explorer tabs coexist with mounted-volume tabs
+- ✅ Unmounting an image does not close a direct-provider tab
+- ✅ Direct-provider tabs are pruned if the backing image file disappears
+- ✅ Shell Open, Preview and drag-out remain unavailable for virtual provider entries until materialized as real Windows files
+- ✅ Real IMAPI-generated ISO integration proves list/search/Joliet Unicode/Copy out while Windows reports `Attached=False`
+- ✅ Invalid fake ISO payload is rejected by the provider registry
 
-**Exit criteria:** a user can inspect and extract useful content from an image without leaving Dragon DiskForge, including direct provider-backed browsing where technically supported, with the full 0.3 regression path green.
+### Validation — ✅ complete
+- ✅ PR #5 / run #56: mounted Explorer vertical slice
+- ✅ PR #6 / run #72: Preview + Image Library
+- ✅ PR #7 / run #86: mounted history + multi-image workspace
+- ✅ PR #10 / runs #103/#111 and main #112: safe drag-out + x64 artifact
+- ✅ PR #11 / run #115: direct ISO provider, native mount regression, restore, full WinUI `Release|x64` build and x64 artifact
+- 🚧 Final `0.3.0` documentation/version regression must be green before merge to `main`
+
+**Exit criteria — functionally passed:** a user can inspect, search and extract useful content from supported images without leaving Dragon DiskForge. Mounted ISO/VHD/VHDX browsing and tested direct ISO9660/Joliet browsing are read-only-first, and all backing operations are real rather than UI placeholders. Milestone closure becomes final when the `0.3.0` docs/version head and post-merge `main` regression are green.
 
 ---
 
-## 0.4 Extended Image Providers — ⬜ planned
+## 0.4 Extended Image Providers — ⬜ next
 
 - ⬜ IMG / RAW partition parser
 - ⬜ IMA / floppy images
@@ -174,7 +190,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ DMG
 - ⬜ WIM/ESD
 - ⬜ FFU
-- ⬜ Stable provider/plugin contract
+- ⬜ Stable provider/plugin contract consolidation
 - ⬜ Capability reporting per provider
 - ⬜ Provider fallback chain
 - ⬜ Provider isolation/error containment
@@ -253,7 +269,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 ## 0.9 Quality, Security + Beta Hardening — ⬜ planned
 
 - ⬜ Comprehensive automated Core unit tests
-- ⬜ Provider tests
+- ⬜ Provider tests expansion
 - ⬜ Mount/unmount integration tests expansion
 - ⬜ Non-admin UAC desktop validation matrix
 - ⬜ Cross-process Explorer drag-out desktop validation matrix

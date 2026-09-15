@@ -6,87 +6,82 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ## [Unreleased]
 
+### Planned
+- Milestone 0.4 Extended Image Providers
+- IMG / RAW partition provider work
+- provider capability/fallback/isolation consolidation
+
+## [0.3.0] - 2026-09-15
+
 ### Added
 - `ExplorerEntry` model and `IExplorerService` contract in Core
-- filesystem-backed mounted-volume Explorer service for ISO/VHD/VHDX drive roots
-- safe folders-first directory listing with file size and modified-time metadata
-- folder navigation, Up and address/breadcrumb display in the WinUI Dragon Explorer
-- recursive search with result limits and cancellation
-- safe Copy out to a user-selected destination outside the mounted-image root
-- non-destructive Copy out that refuses to overwrite existing destination names
-- preservation of empty directories during folder Copy out
-- Explorer progress/cancellation handling
-- executable/script trust warning before shell-opening potentially active content
-- live Explorer navigation item backed by the real service
-- Mounted dashboard → Dragon Explorer routing using the current Windows drive root
-- fallback Explorer navigation to the first currently mounted volume with a drive letter
-- Core smoke coverage for Explorer listing, metadata, path-boundary safety, search, Copy out, empty folders, overwrite protection and cancellation
-- real Windows Explorer integration against an IMAPI-generated mounted ISO: list → search → Copy out → content verification
-- bounded `FilePreviewService` in Core with cancellation
-- read-only text Preview with a hard character limit and truncation indication
-- safe image Preview rendered inside Dragon Explorer without shell execution
-- PDF metadata-only Preview
-- media metadata-only Preview with no auto-play
-- binary/unsupported metadata fallback
-- Dragon Explorer Preview pane that follows the active selection and cancels stale preview requests
-- local Recent Images history
-- local Favorites
-- atomic JSON-backed image-library persistence under the current Windows profile
-- Windows case-insensitive image-path deduplication and bounded recent-list pruning that preserves Favorites
+- filesystem-backed mounted-volume Explorer for ISO/VHD/VHDX drive roots
+- folders-first browsing, folder navigation, Up and breadcrumb/address display
+- recursive mounted-volume search with cancellation and result limits
+- safe mounted-volume Copy out with progress/cancellation, overwrite protection, empty-folder preservation and root/reparse safety
+- executable/script trust warning before shell-opening active content
+- Mounted dashboard → Dragon Explorer routing using current Windows state
+- real mounted-ISO Explorer integration: list → search → Copy out → content verification
+- bounded `FilePreviewService` with read-only text Preview and truncation indication
+- image Preview rendered without shell execution
+- PDF/media metadata-only Preview and binary fallback
+- Preview cancellation so stale selections cannot replace a newer selection
+- local Recent Images + Favorites with atomic JSON persistence and Windows path deduplication
 - real Images view with Open / Favorite / Unfavorite / Remove actions
-- missing-file library state that disables Open rather than failing silently
-- Core smoke coverage for Preview classification, bounded reads, cancellation, image-library persistence, deduplication, favorites, removal and pruning
-- real mounted-ISO integration proving Dragon Preview reads exact text directly from the mounted image
-- `MountHistoryEntry`, `MountHistoryAction` and `IMountHistoryService` for local mounted-image history
-- atomic JSON-backed mounted-history persistence with bounded newest-first retention
-- dedicated mounted-history smoke-test project and CI gate
-- separate LIVE WINDOWS STATE and MOUNTED HISTORY sections in the Mounted dashboard
-- safe Clear History workflow that never changes live Windows mount state
+- `MountHistoryEntry`, `MountHistoryAction` and `IMountHistoryService`
+- atomic mounted-history persistence with bounded newest-first retention
+- dedicated Mounted history UI and safe Clear History behavior
 - multi-image `ExplorerWorkspaceView` using WinUI `TabView`
-- one independent `ExplorerView` per mounted image/root
-- duplicate-tab prevention by activating an existing image/root tab
-- stale Explorer-tab pruning when a mounted Windows drive root disappears
+- one independent mounted Explorer session per image/root with duplicate-tab prevention and stale-tab pruning
 - safe native drag-out from mounted Explorer files/folders to Windows Explorer/Desktop
-- `ExplorerDragOutValidator` in Core for last-moment mounted-root, existence and reparse-point validation
+- `ExplorerDragOutValidator` with mounted-root, stale-source and reparse-point validation
 - Copy-only WinUI `DataPackage` transfer using `StorageFile` / `StorageFolder`
-- asynchronous `DragStarting` deferral for safe StorageItem resolution
-- dedicated drag-out safety smoke-test project and CI gate
-- `docs/DRAG-OUT.md` safety notes and a desktop gesture QA matrix
+- dedicated drag-out safety smoke tests and manual cross-process gesture QA matrix
+- `IDirectBrowseProvider` and `IDirectImageExplorer` contracts for read-only browsing without a Windows mount
+- direct-browse provider registry that enables only providers that accept the real image
+- ISO9660/Joliet direct provider in Core
+- virtual ISO list/navigation/search without assigning a Windows drive
+- safe direct-provider Copy out for files/folder trees with progress/cancellation and overwrite protection
+- Windows-name sanitization and path-collision checks for provider extraction
+- fail-closed handling for unsupported multi-extent ISO file records
+- dedicated direct-provider Explorer tabs inside the existing multi-image workspace
+- independent lifetime for mounted and direct-provider tabs
+- real Windows IMAPI integration proving ISO9660/Joliet list/search/Unicode/Copy out while `Get-DiskImage` remains detached
+- direct-provider rejection of invalid fake ISO payloads
 - Windows x64 workflow artifact publishing as `DragonDiskForge-win-x64`
 
 ### Changed
-- project development version advanced to `0.3.0-alpha.2`
-- milestone 0.3 remains in progress with mounted-volume Explorer, Preview/Image Library, mounted-history, multi-image workspace and safe drag-out slices complete
-- Explorer navigation opens the multi-image workspace rather than a single global Explorer instance
-- closing an Explorer tab never unmounts the image
-- successful Forge unmount closes Explorer tabs backed by that image
-- successful native Mount/Unmount operations record local history only after Windows confirms the state transition
-- live mount state remains authoritative; history metadata never substitutes for Windows Storage state
-- Explorer is enabled only when a real mounted-volume backing path can be resolved from current Windows state
-- mounted-volume browsing and Preview remain read-only; writes are limited to explicit Copy out destinations
-- drag-out explicitly advertises Copy only and never requests Move
-- drag-out rechecks root containment, source existence and runtime reparse attributes immediately before populating the Windows transfer payload
-- reparse points/junctions are not traversed during recursive search, Copy out or drag-out
-- successfully opened images are recorded to Recent Images best-effort; persistence failure cannot block the core image-open path
-- green CI runs publish a Windows x64 artifact for manual desktop validation
+- project version advanced from `0.3.0-alpha.2` to `0.3.0`
+- Explorer navigation uses a multi-image workspace that can host both mounted-volume and tested direct-provider sessions
+- successful Forge unmount closes only tabs backed by that mounted image; direct-provider tabs remain independent
+- live Windows mount state remains authoritative; history metadata never substitutes for Windows Storage state
+- mounted-volume browsing, Preview and direct-provider browsing remain read-only-first
+- explicit Copy out is the only write path from direct-provider sessions
+- direct-provider virtual entries intentionally do not expose shell Open, Preview or drag-out until materialized as real Windows files
+- drag-out advertises Copy only and never Move
+- successfully opened images continue to record Recent Images best-effort without blocking image open
+- CI order now includes dedicated direct ISO browse integration before native mount regression
 
 ### Fixed
-- qualified `System.IO.Path` inside the image-library view model to avoid property-name shadowing during WinUI compilation
-- disambiguated `System.IO.FileAttributes` from `Windows.Storage.FileAttributes` in the WinUI app
-- kept live Mounted inventory independent from mounted-history persistence so metadata failure cannot hide or misreport actual Windows mount state
-- replaced the older drag-out branch/PR with a clean branch based on the latest `main`, preserving the x64 artifact pipeline and removing temporary branch-only markers
+- qualified `System.IO.Path` inside image-library view-model code to avoid name shadowing
+- disambiguated `System.IO.FileAttributes` from `Windows.Storage.FileAttributes`
+- kept live Mounted inventory independent from mounted-history persistence
+- replaced the stale first drag-out branch with a clean latest-main implementation
+- corrected the direct-ISO test fixture generator to use CodeDom-compatible C# syntax on GitHub-hosted Windows runners
 
 ### Verified
-- PR #5 / GitHub Actions run #56 passes Core smoke tests, real ISO/VHD/VHDX integration including Explorer list/search/Copy out, restore and full WinUI `Release|x64` build
-- main GitHub Actions run #58 passes the same first-slice regression path after merge and roadmap synchronization
-- PR #6 / GitHub Actions run #72 passes Core Preview/Image Library tests, real ISO/VHD/VHDX integration including mounted-ISO text Preview, restore and full WinUI `Release|x64` build
-- main GitHub Actions run #73 passes the same Preview/Image Library regression path after merge
-- PR #7 / GitHub Actions run #86 passes Core smoke tests, dedicated mounted-history tests, real ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI `Release|x64` build before the documentation/version pass
-- PR #10 / GitHub Actions run #103 passes Core smoke tests, mounted-history tests, dedicated drag-out safety tests, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows x64 artifact publishing before this documentation/version pass
+- PR #5 / run #56: mounted Explorer vertical slice passes Core, real ISO/VHD/VHDX integration and WinUI Release x64
+- main run #58: mounted Explorer regression after merge
+- PR #6 / run #72 and main #73: Preview/Image Library and mounted-ISO Preview regression
+- PR #7 / run #86: mounted history + multi-image workspace with dedicated history tests
+- PR #10 / runs #103 and #111: drag-out safety, full Windows integration, WinUI Release x64 and artifact publication
+- main run #112: drag-out post-merge regression
+- PR #11 / run #115: real direct ISO9660/Joliet browse/search/Copy out while detached, native mount regression, restore, full WinUI Release x64 and artifact publication
+- final `0.3.0` documentation/version head and post-merge main regression are required before formal milestone closure
 
-### Planned
-- provider-backed direct browsing without mounting where technically supported
-- final 0.3 regression/documentation closure
+### Manual QA notes
+- GitHub-hosted Windows runners execute as administrators, so visible normal-user UAC prompt behavior remains tracked in `docs/MANUAL-VALIDATION.md`.
+- The human cross-process drag gesture remains a desktop QA case even though its validator and compiled WinUI path are automated.
 
 ## [0.2.0] - 2026-09-14
 
