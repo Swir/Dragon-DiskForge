@@ -12,6 +12,7 @@ try
     await ValidateExtensionPreferenceAsync(samplePath);
     await ValidateFallbackAsync(samplePath);
     await ValidateFailureIsolationAsync(samplePath);
+    await ValidateInspectionFailureFallbackAsync(samplePath);
     await ValidateCancellationAsync(samplePath);
     ValidateDuplicateIds();
     await ValidateInspectionAsync(samplePath);
@@ -84,6 +85,23 @@ static async Task ValidateFailureIsolationAsync(string path)
         "provider failure is preserved in diagnostics");
 }
 
+static async Task ValidateInspectionFailureFallbackAsync(string path)
+{
+    var brokenInspector = new FakeProvider(
+        "broken-inspect", [".iso"], canHandle: true,
+        inspectError: new InvalidDataException("damaged inspector"));
+    var fallback = new FakeProvider("fallback-inspect", [".iso"], canHandle: true, format: "FALLBACK");
+    var registry = new ProviderRegistry([
+        new ProviderRegistration(brokenInspector, Priority: 100),
+        new ProviderRegistration(fallback, Priority: 10)
+    ]);
+
+    var info = await registry.InspectAsync(path);
+    Check(info.Format == "FALLBACK", "inspection failure falls back to the next accepted provider");
+    Check(brokenInspector.InspectCount == 1, "failing inspector was attempted once");
+    Check(fallback.InspectCount == 1, "fallback inspector runs after isolated inspection failure");
+}
+
 static async Task ValidateCancellationAsync(string path)
 {
     using var cts = new CancellationTokenSource();
@@ -138,13 +156,23 @@ class FakeProvider : IDiskImageProvider
 {
     private readonly bool _canHandle;
     private readonly Exception? _probeError;
+    private readonly Exception? _inspectError;
+    private readonly string _format;
 
-    public FakeProvider(string id, IReadOnlyCollection<string> extensions, bool canHandle, Exception? probeError = null)
+    public FakeProvider(
+        string id,
+        IReadOnlyCollection<string> extensions,
+        bool canHandle,
+        Exception? probeError = null,
+        Exception? inspectError = null,
+        string format = "FAKE")
     {
         Id = id;
         Extensions = extensions;
         _canHandle = canHandle;
         _probeError = probeError;
+        _inspectError = inspectError;
+        _format = format;
     }
 
     public string Id { get; }
@@ -165,11 +193,14 @@ class FakeProvider : IDiskImageProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
         InspectCount++;
+        if (_inspectError is not null)
+            throw _inspectError;
+
         var file = new FileInfo(path);
         return ValueTask.FromResult(new DiskImageInfo(
             file.FullName,
             file.Name,
-            "FAKE",
+            _format,
             file.Length,
             "fake-provider",
             CanExplore: false,
