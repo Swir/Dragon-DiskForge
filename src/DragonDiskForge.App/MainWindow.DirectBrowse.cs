@@ -1,6 +1,7 @@
 using DragonDiskForge.Core.Providers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace DragonDiskForge.App;
 
@@ -12,6 +13,8 @@ public sealed partial class MainWindow
 
     internal void EnableDirectBrowseUi()
     {
+        RefreshMilestoneUiText();
+
         _directBrowseButton = ResultActions.Children
             .OfType<Button>()
             .FirstOrDefault(button => string.Equals(button.Content?.ToString(), "Explore", StringComparison.OrdinalIgnoreCase));
@@ -37,6 +40,25 @@ public sealed partial class MainWindow
         };
 
         _ = RefreshDirectBrowseCapabilityAsync();
+    }
+
+    private void RefreshMilestoneUiText()
+    {
+        ReplaceExactText(RootLayout, "Core 0.2", "Core 0.3");
+        ReplaceExactText(
+            RootLayout,
+            "Open, inspect, verify and mount supported disk images in a safe read-only workflow. Dragon Explorer is the next engine milestone.",
+            "Open, inspect, verify, mount and browse supported disk images in a safe read-only workflow. Dragon Explorer supports mounted volumes and direct ISO browsing.");
+    }
+
+    private static void ReplaceExactText(DependencyObject root, string oldText, string newText)
+    {
+        if (root is TextBlock textBlock && string.Equals(textBlock.Text, oldText, StringComparison.Ordinal))
+            textBlock.Text = newText;
+
+        var childCount = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < childCount; index++)
+            ReplaceExactText(VisualTreeHelper.GetChild(root, index), oldText, newText);
     }
 
     private async Task RefreshDirectBrowseCapabilityAsync()
