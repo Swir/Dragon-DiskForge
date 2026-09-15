@@ -8,6 +8,19 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.3.0-alpha.2
 
+## Project progress — 30% toward 1.0
+
+`██████░░░░░░░░░░░░░░ 30%`
+
+**Overall completion:** **30%**
+
+- `0.1 Foundation + Dragon UI` — **100%** ✅
+- `0.2 Native Mount + Unmount` — **100%** ✅
+- `0.3 Dragon Explorer` — **~98%** 🚧
+- `0.4 → 1.0` — planned / future milestones
+
+> This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints.
+
 ### 0.1 Foundation + Dragon Visual Identity ✅
 
 - WinUI 3 / .NET 10 desktop shell
