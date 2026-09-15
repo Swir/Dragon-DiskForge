@@ -6,7 +6,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current version — 0.3.0-alpha.1
+## Current version — 0.3.0-alpha.2
 
 ### 0.1 Foundation + Dragon Visual Identity ✅
 
@@ -34,7 +34,7 @@ Implemented and proven on Windows CI:
 
 ### 0.3 Dragon Explorer 🚧
 
-The current 0.3 alpha contains three proven slices.
+The current 0.3 alpha contains four proven slices.
 
 **Mounted-volume Explorer**
 
@@ -70,16 +70,27 @@ The current 0.3 alpha contains three proven slices.
 - successful unmount closes tabs backed by that image
 - stale Explorer tabs are pruned if their Windows drive root disappears
 - dedicated mounted-history smoke tests
-- PR #7 / GitHub Actions run #86 passed Core, history, real Windows mount/Explorer/Preview integration, restore and full WinUI `Release|x64` build before the documentation/version pass
+
+**Safe drag-out to Windows Explorer**
+
+- mounted Explorer files/folders can be dragged directly to Windows Explorer/Desktop as **Copy-only** storage items
+- the source is revalidated against the mounted root immediately before transfer
+- stale sources, path escapes, reparse points and junctions are blocked
+- runtime filesystem attributes are rechecked so stale UI state cannot bypass the safety gate
+- drag data is prepared asynchronously through the WinUI `DragStarting` deferral
+- dedicated drag-out safety smoke tests run in CI
+- PR #10 / GitHub Actions run #103 passed Core, mounted-history, drag-out safety, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows artifact publishing before this documentation pass
 
 Remaining 0.3 scope:
 
-- drag files out to Windows Explorer where technically safe
 - provider-backed direct browsing without mounting where technically supported
+- final 0.3 regression/documentation closure
+
+The cross-process human drag gesture itself is also retained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
 The interactive UAC prompt itself cannot be faithfully exercised on GitHub-hosted administrator runners. A normal-user desktop checklist is maintained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md) and remains a manual QA gate before public beta packaging.
 
-Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md). Execution work is tracked with GitHub Issues.
+Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md). Execution work is tracked with GitHub Issues and pull requests.
 
 Major milestones:
 
@@ -105,11 +116,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, mounted-history smoke tests, real Windows ISO/VHD/VHDX mount integration, Explorer/Preview integration against a mounted ISO and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real Windows ISO/VHD/VHDX mount integration, Explorer/Preview integration against a mounted ISO and a full Windows x64 Release build in GitHub Actions.
+
+Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview and mounted-volume browsing never write to the image. Native mount defaults to read-only. Copy out writes only to an explicit user-selected destination and refuses silent overwrite conflicts. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview and mounted-volume browsing never write to the image. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 
