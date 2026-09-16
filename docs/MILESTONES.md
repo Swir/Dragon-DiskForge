@@ -70,6 +70,43 @@ Released version: **0.3.0**.
 
 The same project rule continues: no Explorer control becomes active before its backing operation exists and is tested. Human cross-process drag and normal-user UAC prompts remain explicit manual desktop QA cases rather than fabricated CI claims.
 
-## 0.4 Extended Image Providers — NEXT 🚧
+## 0.4 Extended Image Providers — IN PROGRESS 🚧
 
-Next execution focuses on expanding the provider architecture beyond ISO while keeping capability reporting, isolation and read-only safety explicit. `docs/ROADMAP.md` remains the source of truth for the exact provider order and completion state.
+Development version: **0.4.0-alpha.1**.
+
+Current milestone completion is approximately **30%**.
+
+### Completed execution slices
+
+1. **Provider registry foundation** ✅
+   - centralized `ProviderRegistry`
+   - explicit capability reporting
+   - extension-first resolution plus provider/signature fallback
+   - probe and inspection failure isolation
+   - cancellation preserved across provider fallback
+   - provider diagnostics and duplicate-ID protection
+   - ISO9660/Joliet direct browsing migrated to registry resolution
+
+2. **IMG / RAW partition provider** ✅
+   - read-only `.img`, `.raw` and `.dd` support
+   - MBR primary partitions
+   - bounded EBR logical partitions with loop detection
+   - GPT partition tables with 512/4096-byte logical-sector probing
+   - partition type/name metadata
+   - strict image-boundary validation
+   - explicit `PartitionTable` capability
+   - Direct Browse, Mount and Convert remain disabled because those backends are not implemented for RAW
+   - dedicated RAW/IMG smoke tests in Windows CI
+
+### Next execution slices
+
+- IMA / floppy-image provider
+- BIN/CUE provider
+- remaining optical/virtual-disk/container providers from `docs/ROADMAP.md`
+- continued hardening of the internal provider contract before any public plugin/API stability promise
+
+### 0.4 validation checkpoints
+
+- PR #16 / run #153 — new RAW/IMG provider tests passed before the final UI/docs synchronization pass
+
+`docs/ROADMAP.md` remains the source of truth for exact provider order and completion state. A provider capability becomes user-visible only after its backing operation and tests exist.
