@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -10,6 +11,19 @@ public sealed record SplitImageManifest(int Version, string OriginalName, long L
 public sealed class ImageFileToolsService
 {
     private const int BufferSize = 1024 * 1024;
+    private static readonly uint[] CrcTable = BuildCrcTable();
+
+    private static uint[] BuildCrcTable()
+    {
+        var table = new uint[256];
+        for (uint i = 0; i < table.Length; i++)
+        {
+            var value = i;
+            for (var bit = 0; bit < 8; bit++) value = (value >> 1) ^ ((value & 1) != 0 ? 0xEDB88320u : 0);
+            table[i] = value;
+        }
+        return table;
+    }
 
     public Task CreateRawAsync(string destination, long size, CancellationToken token = default)
     {
@@ -32,6 +46,14 @@ public sealed class ImageFileToolsService
         return AtomicFileOutput.WriteAsync(destination, async output =>
         {
             await using var input = OpenInput(source);
+            if (input.Length < 18) throw new InvalidDataException("Truncated GZip image.");
+            var trailer = new byte[8];
+            input.Seek(-8, SeekOrigin.End);
+            await input.ReadExactlyAsync(trailer, token);
+            input.Position = 0;
+            var expectedCrc = BinaryPrimitives.ReadUInt32LittleEndian(trailer);
+            var expectedSize = BinaryPrimitives.ReadUInt32LittleEndian(trailer.AsSpan(4));
+            uint crc = uint.MaxValue;
             await using var gzip = new GZipStream(input, CompressionMode.Decompress, leaveOpen: true);
             var buffer = new byte[BufferSize];
             long written = 0;
@@ -41,8 +63,11 @@ public sealed class ImageFileToolsService
                 if (count > maximumOutputBytes - written) throw new InvalidDataException("Decompressed image exceeds the configured output limit.");
                 await output.WriteAsync(buffer.AsMemory(0, count), token);
                 written += count;
+                for (var i = 0; i < count; i++) crc = CrcTable[(crc ^ buffer[i]) & 255] ^ (crc >> 8);
                 progress?.Report(Math.Min(1d, (double)input.Position / Math.Max(1, input.Length)));
             }
+            if (~crc != expectedCrc || unchecked((uint)written) != expectedSize)
+                throw new InvalidDataException("Incomplete GZip image, checksum mismatch, or unsupported multiple-member archive.");
             progress?.Report(1);
         }, token);
     }
