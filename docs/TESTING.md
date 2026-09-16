@@ -170,3 +170,12 @@ GitHub-hosted Windows runners execute as administrators and cannot faithfully em
 ## Test-data rule
 
 Do not commit large real disk images. Metadata/signature tests generate minimal or sparse temporary fixtures, and mount/direct-browse integration creates disposable images at runtime with Windows-native tooling.
+
+## File tools, creation and release package
+
+Run the FileTools and Creation smoke-test projects. These generate disposable fixtures and verify
+SHA-512, compression/decompression limits, split-part integrity and path safety, cancelled/failed writes,
+independent ISO parsing/extraction, and RAW→VHD/VHDX→RAW byte-for-byte round trips.
+Run scripts/package.ps1 from a Windows build environment with MSBuild and .NET 10.
+Packaging validates runtime files, CLI startup and a live WinUI main window before ZIP/checksum generation.
+Interactive UAC, drag gestures and clean-machine checks remain separate.
