@@ -29,6 +29,12 @@ try
     await tools.CompressAsync(source, compressed);
     await tools.DecompressAsync(compressed, expanded, bytes.Length);
     Check((await File.ReadAllBytesAsync(expanded)).SequenceEqual(bytes), "GZip round trip");
+    var truncatedGzip = Path.Combine(root, "truncated.gz");
+    var gzipBytes = await File.ReadAllBytesAsync(compressed);
+    await File.WriteAllBytesAsync(truncatedGzip, gzipBytes[..^8]);
+    var truncatedOutput = Path.Combine(root, "truncated.raw");
+    await Reject(() => tools.DecompressAsync(truncatedGzip, truncatedOutput, bytes.Length), "truncated gzip rejected");
+    Check(!File.Exists(truncatedOutput), "truncated gzip leaves no output");
     var limited = Path.Combine(root, "limited.raw");
     await Reject(() => tools.DecompressAsync(compressed, limited, bytes.Length - 1), "decompression limit enforced");
     Check(!File.Exists(limited), "no output after decompression limit failure");
