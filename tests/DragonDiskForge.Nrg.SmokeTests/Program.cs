@@ -60,13 +60,13 @@ try
     Expect(!await provider.CanHandleAsync(badOffset), "NRG chunk-table offset outside the file must be rejected.");
 
     var missingEnd = Path.Combine(root, "missing-end.nrg");
-    CreateNrg(missingEnd, version: 2,
+    CreateNrgCore(missingEnd, version: 2,
         new[] { new TrackSpec(1, 0x41, 0x00, 2048, 8) },
         includeEndChunk: false);
     Expect(!await provider.CanHandleAsync(missingEnd), "NRG metadata without END! must be rejected.");
 
     var missingCue = Path.Combine(root, "missing-cue.nrg");
-    CreateNrg(missingCue, version: 2,
+    CreateNrgCore(missingCue, version: 2,
         new[] {
             new TrackSpec(1, 0x01, 0x07, 2352, 4),
             new TrackSpec(2, 0x41, 0x00, 2048, 4)
@@ -85,7 +85,7 @@ try
     Expect(!await provider.CanHandleAsync(cueMismatch), "Cue audio/data control must agree with DAO track mode.");
 
     var metadataOverlap = Path.Combine(root, "metadata-overlap.nrg");
-    CreateNrg(metadataOverlap, version: 2,
+    CreateNrgCore(metadataOverlap, version: 2,
         new[] { new TrackSpec(1, 0x41, 0x00, 2048, 4) },
         extendLastTrackIntoMetadata: true);
     Expect(!await provider.CanHandleAsync(metadataOverlap), "NRG track byte range must not overlap the metadata chunk table.");
@@ -124,9 +124,9 @@ finally
 }
 
 static void CreateNrg(string path, int version, params TrackSpec[] tracks)
-    => CreateNrg(path, version, tracks, includeEndChunk: true);
+    => CreateNrgCore(path, version, tracks, includeEndChunk: true);
 
-static void CreateNrg(
+static void CreateNrgCore(
     string path,
     int version,
     TrackSpec[] tracks,
