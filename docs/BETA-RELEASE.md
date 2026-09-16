@@ -24,23 +24,29 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] deeper bounded exFAT/FAT32/UDF filesystem evidence
 - [x] bounded NTFS `$MFT` / `$MFTMirr` metadata-depth validation
 - [x] cross-source boot/installer architecture reconciliation without guessed conflict resolution
+- [x] centralized semantic development-version metadata
+- [x] independently verified clean-package candidate gate
 - [ ] independently bounded UDF traversal where justified
 - [ ] truthful guest-sector reader foundation for sparse/compressed virtual disks
 - [ ] final 0.5 beta-scope hardening checkpoint
 
-Latest validated checkpoints include PR #33 / implementation run #262 and PR #34 / implementation run #266. These prove automated code/build/package-candidate paths, not clean-machine public-beta readiness.
+Latest validated checkpoints include PR #34 / run #266 and PR #35 / implementation run #270. Run #270 proves the complete existing automated test/native/build path plus clean-package build, independent ZIP verification and both artifact uploads.
 
 ### Windows beta package
 - [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build
 - [x] candidate package requires exactly one `DragonDiskForge.App.exe`
 - [x] candidate package excludes `.pdb` and test-only payloads
 - [x] candidate package emits a manifest and SHA-256 sidecar
-- [x] run #266 candidate artifact was independently downloaded and its sidecar SHA-256 matched the ZIP
+- [x] central product version metadata feeds executable and package metadata
+- [x] candidate package manifest records semantic version, ProductVersion/FileVersion, entry-point hash, icon and architecture
+- [x] independent CI verification reopens the ZIP and validates checksum/manifest/version/hash/icon/content policy before artifact upload
+- [x] canonical Dragon icon is included in the clean package root
+- [x] run #270 clean artifact was independently downloaded after CI: sidecar SHA-256 matched the nested ZIP; manifest version was `0.5.0-alpha.1`; executable SHA matched the manifest; one application EXE and zero PDB files were present
 - [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
-- [ ] final beta version embedded in application assemblies
-- [ ] application icon and version metadata verified in the final beta package
+- [ ] final beta version suffix embedded in application assemblies
+- [ ] application icon and version metadata verified in the final beta package after suffix promotion
 - [ ] final public package SHA-256 published with the Release
 
 ### Regression and manual QA
@@ -52,7 +58,7 @@ Latest validated checkpoints include PR #33 / implementation run #262 and PR #34
 - [x] ISO direct-browse integration green
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
-- [x] clean ZIP candidate build/checksum gate green
+- [x] versioned clean ZIP candidate build/checksum/verification gate green
 - [ ] normal-user UAC checklist completed on a desktop machine
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
@@ -68,7 +74,7 @@ Latest validated checkpoints include PR #33 / implementation run #262 and PR #34
 
 ## Current beta readiness
 
-**NOT READY.** Automated Windows CI now proves the full existing regression path plus a clean ZIP candidate and checksum, but the agreed 0.5 engineering scope is still unfinished. Independently bounded UDF/guest-sector work, final beta version metadata, clean-machine validation, normal-user UAC and real cross-process drag-out/manual regression remain open.
+**NOT READY.** Automated Windows CI now proves the full existing regression path plus a versioned clean ZIP candidate, checksum and independent package-verification gate. The remaining blockers are the unfinished agreed 0.5 engineering scope (independently bounded UDF traversal where justified and truthful sparse/compressed guest-sector reader foundations), final beta-scope hardening, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
 
 ## Rule
 

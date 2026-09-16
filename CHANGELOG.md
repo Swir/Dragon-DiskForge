@@ -41,14 +41,18 @@ The project follows semantic versioning while it evolves toward 1.0.
 - explicit architecture-conflict warnings for direct one-to-one disagreement without mislabeling multi-architecture media
 - dedicated intelligence-hardening fixtures for healthy/corrupt/out-of-range NTFS metadata, architecture reconciliation and cancellation
 - clean Windows x64 ZIP candidate packaging with package manifest, debug/test-content rejection and SHA-256 sidecar
+- centralized semantic product version metadata in `Directory.Build.props`
+- executable ProductVersion/FileVersion plus package-manifest version/hash evidence
+- independent `verify-package.ps1` clean-package gate for checksum, manifest, version, architecture, entry-point SHA-256, icon and payload policy
+- canonical Dragon icon inclusion in the clean package root
 
 ### Changed
-- development version remains **0.5.0-alpha.1**
-- project progress advances to **55% toward 1.0** after validated NTFS/architecture hardening and the clean Windows package-candidate path
-- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **88%**
+- development version remains **0.5.0-alpha.1**, now sourced from the central build-version contract instead of stale 0.4 metadata
+- project progress advances to **56% toward 1.0** after validating the release-version and independent clean-package verification gate
+- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **90%**
 - CI now gates provider registry, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/installer intelligence, unified image intelligence and image reporting before provider/native/build regression
-- the Windows analysis report now merges bounded NTFS depth findings and reconciles independent boot/installer architecture evidence
-- green Windows CI now publishes both the engineering artifact and a clean ZIP candidate with a SHA-256 sidecar
+- the Windows analysis report merges bounded NTFS depth findings and reconciles independent boot/installer architecture evidence
+- green Windows CI now builds, independently verifies and publishes a versioned clean ZIP candidate with SHA-256 in addition to the engineering artifact
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
@@ -63,6 +67,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - architecture reconciliation preserves conflicting evidence instead of guessing a winner
 - bootability is reported only from structurally valid El Torito evidence
 - health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee
+- package hardening changes release metadata/verification only and enable no disk mutation capability
 - existing cancellation, failure isolation and truthful capability behavior remain intact
 
 ### Verified
@@ -86,11 +91,14 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #33 / run #262 — deeper filesystem evidence implementation + complete regression/build/artifact before docs synchronization
 - PR #34 / run #266 — NTFS/architecture hardening, full regression/build, clean Windows ZIP candidate and SHA-256 before docs synchronization
 - PR #34 / run #266 package review — sidecar SHA-256 matched the downloaded candidate ZIP; one app EXE; zero PDB/test-only files
+- PR #35 / run #270 — central version metadata, complete regression/build, clean-package build, independent package verification and both artifact uploads before docs synchronization
+- PR #35 / run #270 package review — downloaded sidecar SHA-256 matched the nested ZIP; manifest version `0.5.0-alpha.1`; executable SHA matched; one app EXE; zero PDB files
 
 ### Planned
 - independently bounded UDF traversal where justified
 - guest-sector readers before filesystem intelligence inside sparse/compressed virtual disks
-- final 0.5 beta-scope hardening, final beta version metadata and clean-machine/manual QA
+- final 0.5 beta-scope hardening and clean-machine/manual QA
+- promote the verified version pipeline to `0.5.0-beta.1` only when the beta gate is complete
 - public beta `0.5.0-beta.1` only after the agreed 0.5 scope and independent package/manual QA gates are proven
 
 ## [0.3.0] - 2026-09-15

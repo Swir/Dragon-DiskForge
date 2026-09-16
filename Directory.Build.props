@@ -3,7 +3,16 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.4.0-alpha.1</Version>
+
+    <!-- Centralized product version. Keep the assembly/file version numeric while the
+         informational/package version carries the pre-release label. -->
+    <DragonDiskForgeVersionPrefix>0.5.0</DragonDiskForgeVersionPrefix>
+    <DragonDiskForgeVersionSuffix>alpha.1</DragonDiskForgeVersionSuffix>
+    <Version>$(DragonDiskForgeVersionPrefix)-$(DragonDiskForgeVersionSuffix)</Version>
+    <AssemblyVersion>$(DragonDiskForgeVersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(DragonDiskForgeVersionPrefix).0</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+
     <Authors>Dragon DiskForge</Authors>
     <Product>Dragon DiskForge</Product>
   </PropertyGroup>
