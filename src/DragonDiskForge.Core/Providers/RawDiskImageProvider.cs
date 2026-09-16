@@ -9,7 +9,7 @@ namespace DragonDiskForge.Core.Providers;
 /// </summary>
 public sealed class RawDiskImageProvider : IDiskImageProvider
 {
-    private const int MinimumRawImageBytes = 512;
+    private const int LogicalSectorBytes = 512;
     private const long IsoSignatureOffset = 0x8001;
     private static readonly string[] SupportedExtensions = [".img", ".raw"];
 
@@ -31,7 +31,9 @@ public sealed class RawDiskImageProvider : IDiskImageProvider
             return false;
 
         var file = new FileInfo(fullPath);
-        if (!file.Exists || file.Length < MinimumRawImageBytes)
+        if (!file.Exists
+            || file.Length < LogicalSectorBytes
+            || file.Length % LogicalSectorBytes != 0)
             return false;
 
         // RAW has no universal magic. Reject known structured image signatures so a renamed
@@ -62,7 +64,7 @@ public sealed class RawDiskImageProvider : IDiskImageProvider
             file.Name,
             format,
             file.Length,
-            "Provider / raw extension + structured-signature guard",
+            "Provider / raw extension + 512-byte alignment + structured-signature guard",
             CanExplore: false,
             CanMount: false,
             CanConvert: false,
