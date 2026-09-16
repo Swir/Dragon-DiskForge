@@ -13,6 +13,7 @@ public sealed class RawPartitionImageProvider : IPartitionTableProvider
     private const int MaxGptEntries = 16_384;
     private const int MaxGptEntrySize = 4_096;
     private static readonly int[] CandidateSectorSizes = [512, 4096];
+    private static readonly string[] RawExtensions = [".img", ".raw", ".dd"];
 
     private static readonly HashSet<byte> ExtendedPartitionTypes = new() { 0x05, 0x0F, 0x85 };
 
@@ -57,13 +58,17 @@ public sealed class RawPartitionImageProvider : IPartitionTableProvider
 
     public string Id => "raw-partitions";
     public string DisplayName => "IMG / RAW partitions";
-    public IReadOnlyCollection<string> Extensions { get; } = [".img", ".raw", ".dd"];
+    public IReadOnlyCollection<string> Extensions => RawExtensions;
 
     public async ValueTask<bool> CanHandleAsync(
         string path,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return false;
+
+        var extension = Path.GetExtension(path);
+        if (!RawExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
             return false;
 
         try
