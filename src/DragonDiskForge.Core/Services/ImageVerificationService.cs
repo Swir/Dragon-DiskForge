@@ -6,11 +6,20 @@ public sealed class ImageVerificationService
 {
     private const int BufferSize = 1024 * 1024;
 
-    public async Task<string> ComputeSha256Async(
-        string path,
+    public Task<string> ComputeSha256Async(string path, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default) => ComputeHashAsync(path, "sha256", progress, cancellationToken);
+
+    public async Task<string> ComputeHashAsync(
+        string path, string algorithmName = "sha256",
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        var algorithmId = algorithmName.Replace("-", "").ToUpperInvariant() switch
+        {
+            "SHA256" => HashAlgorithmName.SHA256,
+            "SHA512" => HashAlgorithmName.SHA512,
+            _ => throw new ArgumentException("Supported hashes: SHA-256 and SHA-512.", nameof(algorithmName))
+        };
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if (!File.Exists(path))
             throw new FileNotFoundException("Disk image was not found.", path);
@@ -25,7 +34,7 @@ public sealed class ImageVerificationService
             bufferSize: BufferSize,
             options: FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        using var algorithm = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var algorithm = IncrementalHash.CreateHash(algorithmId);
         var buffer = GC.AllocateUninitializedArray<byte>(BufferSize);
         var totalLength = stream.Length;
         long processed = 0;
