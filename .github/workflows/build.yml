@@ -45,6 +45,9 @@ jobs:
       - name: NRG provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.Nrg.SmokeTests/DragonDiskForge.Nrg.SmokeTests.csproj -c Release
 
+      - name: CCD/IMG/SUB provider smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Ccd.SmokeTests/DragonDiskForge.Ccd.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 
