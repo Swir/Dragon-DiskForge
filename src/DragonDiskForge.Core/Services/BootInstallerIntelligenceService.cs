@@ -50,9 +50,9 @@ public sealed class BootInstallerIntelligenceService
         }
 
         var bootCatalog = await ReadElToritoAsync(fullPath, file.Length, cancellationToken);
-        var paths = await SnapshotPathsAsync(browseProvider, fullPath, cancellationToken);
-        var architectures = DetectArchitectureHints(paths);
-        var installers = DetectInstallers(paths, architectures);
+        var files = await SnapshotFilePathsAsync(browseProvider, fullPath, cancellationToken);
+        var architectures = DetectArchitectureHints(files);
+        var installers = DetectInstallers(files, architectures);
 
         return new BootInstallerIntelligenceInfo(
             resolution.Descriptor.Id,
@@ -96,7 +96,6 @@ public sealed class BootInstallerIntelligenceService
 
             if (descriptor[0] == 255)
                 break;
-
             if (descriptor[0] != 0)
                 continue;
 
@@ -124,8 +123,10 @@ public sealed class BootInstallerIntelligenceService
         await ReadExactlyAtAsync(stream, catalogOffset, catalog, cancellationToken);
 
         ValidateCatalogHeader(catalog);
-        var entries = new List<BootCatalogEntryInfo>();
-        entries.Add(ParseBootEntry(catalog.AsSpan(32, 32), catalog[1], "Default", fileLength));
+        var entries = new List<BootCatalogEntryInfo>
+        {
+            ParseBootEntry(catalog.AsSpan(32, 32), catalog[1], "Default", fileLength)
+        };
 
         var cursor = 64;
         while (cursor + 32 <= catalog.Length)
@@ -134,7 +135,6 @@ public sealed class BootInstallerIntelligenceService
             var indicator = catalog[cursor];
             if (indicator == 0)
                 break;
-
             if (indicator is not (0x90 or 0x91))
                 throw new InvalidDataException($"Unexpected El Torito section-header indicator 0x{indicator:X2}.");
 
@@ -152,7 +152,7 @@ public sealed class BootInstallerIntelligenceService
             {
                 var entry = catalog.AsSpan(cursor, 32);
                 if (entry[0] == 0x44)
-                    continue; // Section Entry Extension; evidence only, not a boot image entry.
+                    continue;
                 entries.Add(ParseBootEntry(entry, platformId, sectionId, fileLength));
             }
 
@@ -244,12 +244,12 @@ public sealed class BootInstallerIntelligenceService
             sectionId);
     }
 
-    private static async Task<HashSet<string>> SnapshotPathsAsync(
+    private static async Task<HashSet<string>> SnapshotFilePathsAsync(
         IDirectBrowseProvider provider,
         string imagePath,
         CancellationToken cancellationToken)
     {
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var visitedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "/" };
         var queue = new Queue<string>();
         queue.Enqueue("/");
@@ -273,9 +273,15 @@ public sealed class BootInstallerIntelligenceService
                 var normalized = NormalizeVirtualPath(entry.FullPath);
                 if (normalized.Length == 0)
                     continue;
-                paths.Add(normalized);
 
-                if (!entry.IsDirectory || entry.IsReparsePoint)
+                if (!entry.IsDirectory)
+                {
+                    if (!entry.IsReparsePoint)
+                        files.Add(normalized);
+                    continue;
+                }
+
+                if (entry.IsReparsePoint)
                     continue;
                 if (normalized.Count(ch => ch == '/') >= MaxVirtualDepth)
                     throw new InvalidDataException("Direct-browse tree exceeds the bounded virtual depth for installer intelligence.");
@@ -286,35 +292,35 @@ public sealed class BootInstallerIntelligenceService
             }
         }
 
-        return paths;
+        return files;
     }
 
-    private static IReadOnlyList<string> DetectArchitectureHints(HashSet<string> paths)
+    private static IReadOnlyList<string> DetectArchitectureHints(HashSet<string> files)
     {
         var hints = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        AddArchitecture(paths, "efi/boot/bootx64.efi", "x86_64");
-        AddArchitecture(paths, "efi/boot/bootia32.efi", "x86");
-        AddArchitecture(paths, "efi/boot/bootaa64.efi", "ARM64");
-        AddArchitecture(paths, "efi/boot/bootarm.efi", "ARM");
-        AddArchitecture(paths, "efi/boot/bootriscv64.efi", "RISC-V 64");
+        AddArchitecture("efi/boot/bootx64.efi", "x86_64");
+        AddArchitecture("efi/boot/bootia32.efi", "x86");
+        AddArchitecture("efi/boot/bootaa64.efi", "ARM64");
+        AddArchitecture("efi/boot/bootarm.efi", "ARM");
+        AddArchitecture("efi/boot/bootriscv64.efi", "RISC-V 64");
         return hints.ToArray();
 
-        void AddArchitecture(HashSet<string> snapshot, string path, string architecture)
+        void AddArchitecture(string path, string architecture)
         {
-            if (snapshot.Contains(path))
+            if (files.Contains(path))
                 hints.Add(architecture);
         }
     }
 
     private static IReadOnlyList<InstallerDetectionInfo> DetectInstallers(
-        HashSet<string> paths,
+        HashSet<string> files,
         IReadOnlyList<string> architectureHints)
     {
         var detections = new List<InstallerDetectionInfo>();
         var architecture = architectureHints.Count == 1 ? architectureHints[0] : string.Empty;
 
-        var windowsPayload = FirstExisting(paths, "sources/install.wim", "sources/install.esd", "sources/install.swm");
-        if (paths.Contains("setup.exe") && paths.Contains("sources/boot.wim") && windowsPayload is not null)
+        var windowsPayload = FirstExisting(files, "sources/install.wim", "sources/install.esd", "sources/install.swm");
+        if (files.Contains("setup.exe") && files.Contains("sources/boot.wim") && windowsPayload is not null)
         {
             detections.Add(new InstallerDetectionInfo(
                 InstallerFamily.Windows,
@@ -323,10 +329,10 @@ public sealed class BootInstallerIntelligenceService
                 Array.AsReadOnly(new[] { "setup.exe", "sources/boot.wim", windowsPayload })));
         }
 
-        var casperInitrd = paths.FirstOrDefault(x => x.StartsWith("casper/initrd", StringComparison.OrdinalIgnoreCase));
-        if (paths.Contains("casper/vmlinuz")
+        var casperInitrd = files.FirstOrDefault(x => x.StartsWith("casper/initrd", StringComparison.OrdinalIgnoreCase));
+        if (files.Contains("casper/vmlinuz")
             && casperInitrd is not null
-            && paths.Contains("casper/filesystem.squashfs"))
+            && files.Contains("casper/filesystem.squashfs"))
         {
             detections.Add(new InstallerDetectionInfo(
                 InstallerFamily.Linux,
@@ -335,11 +341,11 @@ public sealed class BootInstallerIntelligenceService
                 Array.AsReadOnly(new[] { "casper/vmlinuz", casperInitrd, "casper/filesystem.squashfs" })));
         }
 
-        var debianKernel = FirstExisting(paths, "install.amd/vmlinuz", "install.386/vmlinuz", "install.a64/vmlinuz", "install/vmlinuz");
+        var debianKernel = FirstExisting(files, "install.amd/vmlinuz", "install.386/vmlinuz", "install.a64/vmlinuz", "install/vmlinuz");
         if (debianKernel is not null)
         {
             var directory = debianKernel[..debianKernel.LastIndexOf('/')];
-            var initrd = FirstExisting(paths, directory + "/initrd.gz", directory + "/initrd");
+            var initrd = FirstExisting(files, directory + "/initrd.gz", directory + "/initrd");
             if (initrd is not null)
             {
                 var debianArchitecture = debianKernel.StartsWith("install.amd/", StringComparison.OrdinalIgnoreCase) ? "x86_64"
@@ -354,11 +360,11 @@ public sealed class BootInstallerIntelligenceService
             }
         }
 
-        if (paths.Contains("images/pxeboot/vmlinuz")
-            && paths.Contains("images/pxeboot/initrd.img")
-            && (paths.Contains("images/install.img") || paths.Contains("liveos/squashfs.img")))
+        if (files.Contains("images/pxeboot/vmlinuz")
+            && files.Contains("images/pxeboot/initrd.img")
+            && (files.Contains("images/install.img") || files.Contains("liveos/squashfs.img")))
         {
-            var payload = paths.Contains("images/install.img") ? "images/install.img" : "liveos/squashfs.img";
+            var payload = files.Contains("images/install.img") ? "images/install.img" : "liveos/squashfs.img";
             detections.Add(new InstallerDetectionInfo(
                 InstallerFamily.Linux,
                 "Anaconda-style install/live media",
@@ -369,11 +375,20 @@ public sealed class BootInstallerIntelligenceService
         return detections;
     }
 
-    private static string? FirstExisting(HashSet<string> paths, params string[] candidates)
-        => candidates.FirstOrDefault(paths.Contains);
+    private static string? FirstExisting(HashSet<string> files, params string[] candidates)
+        => candidates.FirstOrDefault(files.Contains);
 
     private static string NormalizeVirtualPath(string value)
-        => value.Replace('\\', '/').Trim('/').Trim().ToLowerInvariant();
+    {
+        var normalized = value.Replace('\\', '/').Trim('/').Trim();
+        if (normalized.Length == 0)
+            return string.Empty;
+
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Any(segment => segment is "." or ".."))
+            throw new InvalidDataException("Direct-browse provider returned a traversal-style virtual path.");
+        return string.Join('/', segments).ToLowerInvariant();
+    }
 
     private static string ReadAscii(ReadOnlySpan<byte> value)
         => Encoding.ASCII.GetString(value).TrimEnd('\0', ' ');
