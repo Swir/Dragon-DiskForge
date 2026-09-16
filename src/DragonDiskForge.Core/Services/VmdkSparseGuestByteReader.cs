@@ -24,6 +24,7 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
     private readonly ulong _activeGrainDirectoryOffsetBytes;
     private readonly ulong _grainDirectoryEntries;
     private readonly ulong _grainTableBytes;
+    private readonly ulong _metadataEndOffsetBytes;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _disposed;
 
@@ -32,7 +33,8 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
         VirtualDiskMetadataInfo metadata,
         ulong activeGrainDirectoryOffsetBytes,
         ulong grainDirectoryEntries,
-        ulong grainTableBytes)
+        ulong grainTableBytes,
+        ulong metadataEndOffsetBytes)
     {
         _stream = stream;
         _metadata = metadata;
@@ -40,6 +42,7 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
         _activeGrainDirectoryOffsetBytes = activeGrainDirectoryOffsetBytes;
         _grainDirectoryEntries = grainDirectoryEntries;
         _grainTableBytes = grainTableBytes;
+        _metadataEndOffsetBytes = metadataEndOffsetBytes;
     }
 
     public ulong Length => _metadata.CapacityBytes;
@@ -69,6 +72,10 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
         try
         {
             var fileLength = checked((ulong)stream.Length);
+            var metadataEndOffsetBytes = CheckedMultiply(
+                metadata.OverheadSectors,
+                SectorSize,
+                "VMDK metadata overhead");
             var grains = DivideRoundUp(metadata.CapacitySectors, metadata.GrainSizeSectors);
             var directoryEntries = DivideRoundUp(grains, metadata.GrainTableEntries);
             if (directoryEntries == 0)
@@ -83,6 +90,7 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
             var directoryOffsetBytes = CheckedMultiply(directorySector, SectorSize, "VMDK grain-directory offset");
             var directoryBytes = CheckedMultiply(directoryEntries, sizeof(uint), "VMDK grain-directory size");
             EnsurePhysicalRange(fileLength, directoryOffsetBytes, directoryBytes, "VMDK active grain directory");
+            EnsureMetadataRange(metadataEndOffsetBytes, directoryOffsetBytes, directoryBytes, "VMDK active grain directory");
 
             var grainTableBytes = CheckedMultiply(metadata.GrainTableEntries, sizeof(uint), "VMDK grain-table size");
             if (grainTableBytes == 0)
@@ -93,7 +101,8 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
                 metadata,
                 directoryOffsetBytes,
                 directoryEntries,
-                grainTableBytes);
+                grainTableBytes,
+                metadataEndOffsetBytes);
         }
         catch
         {
@@ -148,6 +157,7 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
                 {
                     var grainTableOffset = CheckedMultiply(grainTableSector, SectorSize, "VMDK grain-table offset");
                     EnsurePhysicalRange(grainTableOffset, _grainTableBytes, "VMDK grain table");
+                    EnsureMetadataRange(_metadataEndOffsetBytes, grainTableOffset, _grainTableBytes, "VMDK grain table");
 
                     var grainEntryOffset = CheckedAdd(
                         grainTableOffset,
@@ -196,8 +206,7 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
         }
 
         var grainOffset = CheckedMultiply(grainSector, SectorSize, "VMDK grain offset");
-        var firstDataOffset = CheckedMultiply(_metadata.OverheadSectors, SectorSize, "VMDK metadata overhead");
-        if (grainOffset < firstDataOffset)
+        if (grainOffset < _metadataEndOffsetBytes)
             throw new InvalidDataException("VMDK grain data points inside the declared metadata overhead region.");
 
         EnsurePhysicalRange(grainOffset, _grainSizeBytes, "VMDK grain data");
@@ -263,6 +272,12 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
     {
         if (offset > boundary || length > boundary - offset)
             throw new InvalidDataException($"{description} extends outside the physical VMDK file.");
+    }
+
+    private static void EnsureMetadataRange(ulong metadataEndOffset, ulong offset, ulong length, string description)
+    {
+        if (offset >= metadataEndOffset || length > metadataEndOffset - offset)
+            throw new InvalidDataException($"{description} extends beyond the declared VMDK metadata overhead region.");
     }
 
     private static ulong DivideRoundUp(ulong value, ulong divisor)
