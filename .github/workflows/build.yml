@@ -39,6 +39,9 @@ jobs:
       - name: Filesystem depth smoke tests
         run: dotnet run --project tests/DragonDiskForge.FileSystemDepth.SmokeTests/DragonDiskForge.FileSystemDepth.SmokeTests.csproj -c Release
 
+      - name: UDF bounded traversal smoke tests
+        run: dotnet run --project tests/DragonDiskForge.UdfTraversal.SmokeTests/DragonDiskForge.UdfTraversal.SmokeTests.csproj -c Release
+
       - name: 0.5 intelligence hardening smoke tests
         run: dotnet run --project tests/DragonDiskForge.IntelligenceHardening.SmokeTests/DragonDiskForge.IntelligenceHardening.SmokeTests.csproj -c Release
 
