@@ -108,6 +108,15 @@ public sealed class FloppyImageProvider : IMediaGeometryProvider
         if (bpb.State == BpbState.Valid)
         {
             var parsed = bpb.Info!;
+            if (parsed.BytesPerSector != geometry.BytesPerSector
+                || parsed.SectorsPerTrack != geometry.SectorsPerTrack
+                || parsed.Heads != geometry.Heads
+                || parsed.Tracks != geometry.Tracks)
+            {
+                throw new InvalidDataException(
+                    "Floppy BPB geometry disagrees with the standard geometry implied by the image length.");
+            }
+
             return new MediaGeometryInfo(
                 geometry.Name,
                 parsed.BytesPerSector,
@@ -203,7 +212,7 @@ public sealed class FloppyImageProvider : IMediaGeometryProvider
             return BpbParseResult.Invalid("Floppy BPB leaves no data sectors.");
 
         var clusterCount = dataSectors / sectorsPerCluster;
-        var fileSystemHint = clusterCount < 4_085
+        var computedFileSystemHint = clusterCount < 4_085
             ? "FAT12"
             : clusterCount < 65_525 ? "FAT16" : "FAT32-like";
 
@@ -214,8 +223,10 @@ public sealed class FloppyImageProvider : IMediaGeometryProvider
         var declaredFs = boot[38] is 0x28 or 0x29
             ? ReadAscii(boot.Slice(54, 8))
             : string.Empty;
-        if (!string.IsNullOrWhiteSpace(declaredFs))
-            fileSystemHint = declaredFs;
+
+        var fileSystemHint = IsCompatibleFatLabel(declaredFs, computedFileSystemHint)
+            ? declaredFs
+            : computedFileSystemHint;
 
         return BpbParseResult.Valid(new ParsedBpb(
             bytesPerSector,
@@ -227,6 +238,19 @@ public sealed class FloppyImageProvider : IMediaGeometryProvider
             fileSystemHint,
             volumeLabel,
             mediaDescriptor));
+    }
+
+    private static bool IsCompatibleFatLabel(string declared, string computed)
+    {
+        if (string.IsNullOrWhiteSpace(declared))
+            return false;
+
+        return computed switch
+        {
+            "FAT12" => declared.Equals("FAT12", StringComparison.OrdinalIgnoreCase),
+            "FAT16" => declared.Equals("FAT16", StringComparison.OrdinalIgnoreCase),
+            _ => declared.StartsWith("FAT32", StringComparison.OrdinalIgnoreCase)
+        };
     }
 
     private static string ReadAscii(ReadOnlySpan<byte> value)
