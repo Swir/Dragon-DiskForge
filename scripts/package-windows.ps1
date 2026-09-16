@@ -1,12 +1,41 @@
 [CmdletBinding()]
 param(
     [string]$SourceDirectory = "src/DragonDiskForge.App/bin/x64/Release",
-    [string]$OutputDirectory = "artifacts/windows"
+    [string]$OutputDirectory = "artifacts/windows",
+    [string]$ExpectedVersion = ""
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+function Get-RepositoryVersion {
+    param([string]$Override)
+
+    if (-not [string]::IsNullOrWhiteSpace($Override)) {
+        return $Override.Trim()
+    }
+
+    $propsPath = Join-Path (Get-Location) "Directory.Build.props"
+    if (-not (Test-Path $propsPath -PathType Leaf)) {
+        throw "Directory.Build.props was not found; cannot determine the package version."
+    }
+
+    [xml]$props = Get-Content -Path $propsPath -Raw
+    $group = @($props.Project.PropertyGroup) | Select-Object -First 1
+    $prefix = [string]$group.DragonDiskForgeVersionPrefix
+    $suffix = [string]$group.DragonDiskForgeVersionSuffix
+    if ([string]::IsNullOrWhiteSpace($prefix)) {
+        throw "DragonDiskForgeVersionPrefix is missing from Directory.Build.props."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($suffix)) {
+        return $prefix.Trim()
+    }
+
+    return "$($prefix.Trim())-$($suffix.Trim())"
+}
+
+$expected = Get-RepositoryVersion -Override $ExpectedVersion
 $source = (Resolve-Path $SourceDirectory).Path
 $output = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDirectory))
 $stage = Join-Path $output "DragonDiskForge-win-x64"
@@ -56,11 +85,29 @@ if ($testFiles.Count -ne 0) {
     throw "Public-package staging contains test-only files."
 }
 
+$icon = Join-Path $stage "DragonDiskForge.ico"
+if (-not (Test-Path $icon -PathType Leaf)) {
+    throw "Packaged application is missing DragonDiskForge.ico."
+}
+
+$versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($entryPoint)
+$productVersion = [string]$versionInfo.ProductVersion
+$fileVersion = [string]$versionInfo.FileVersion
+if ([string]::IsNullOrWhiteSpace($productVersion) -or -not $productVersion.StartsWith($expected, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Packaged application ProductVersion '$productVersion' does not match expected version '$expected'."
+}
+
+$entryPointSha256 = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $manifest = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     product = "Dragon DiskForge"
+    version = $expected
+    productVersion = $productVersion
+    fileVersion = $fileVersion
     architecture = "x64"
     entryPoint = "DragonDiskForge.App.exe"
+    icon = "DragonDiskForge.ico"
+    entryPointSha256 = $entryPointSha256
     debugSymbolsIncluded = $false
     fileCount = $files.Count
 }
@@ -76,5 +123,7 @@ $line = "$hash  $([System.IO.Path]::GetFileName($zip))"
 Set-Content -Path $checksum -Value $line -Encoding ascii
 
 Write-Host "Packaged $($files.Count) application files."
+Write-Host "Version: $expected"
+Write-Host "ProductVersion: $productVersion"
 Write-Host "ZIP: $zip"
 Write-Host "SHA-256: $hash"
