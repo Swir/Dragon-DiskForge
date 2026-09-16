@@ -43,7 +43,7 @@ public sealed class ImageVerificationService
         return new ImageVerificationInfo(
             Convert.ToHexString(sha256.GetHashAndReset()),
             Convert.ToHexString(sha512.GetHashAndReset()),
-            totalLength);
+            processed);
     }
 
     public Task<string> ComputeSha256Async(
