@@ -11,7 +11,8 @@ public enum ProviderCapabilities
     PartitionTable = 1 << 4,
     MediaGeometry = 1 << 5,
     TrackLayout = 1 << 6,
-    VirtualDiskMetadata = 1 << 7
+    VirtualDiskMetadata = 1 << 7,
+    ContainerMetadata = 1 << 8
 }
 
 public static class ProviderCapabilityExtensions
@@ -39,6 +40,9 @@ public static class ProviderCapabilityExtensions
 
         if (provider is IVirtualDiskMetadataProvider or IQcowMetadataProvider or IDmgMetadataProvider)
             capabilities |= ProviderCapabilities.VirtualDiskMetadata;
+
+        if (provider is IWimMetadataProvider)
+            capabilities |= ProviderCapabilities.ContainerMetadata;
 
         return capabilities;
     }
