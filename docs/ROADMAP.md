@@ -156,12 +156,12 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.6 Create + Convert + Verify — 🚧 in progress
 
-**Current 0.6 engineering completion: approximately 20%.** One of five top-level roadmap deliverables is implemented and validated.
+**Current 0.6 engineering completion: approximately 40%.** Two of five top-level roadmap deliverables are implemented and validated.
 
 - ⬜ image creation and conversion pipeline
 - ⬜ split/join and sparse/compression handling
 - ✅ SHA-256/SHA-512 verification
-- ⬜ temporary output + atomic finalization
+- ✅ temporary output + atomic finalization
 - ⬜ cancellation/rollback safety
 
 ### SHA-256/SHA-512 verification — ✅ complete foundation
@@ -174,9 +174,21 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ explicit Windows CI verification gate
 - ✅ PR #41 implementation run #292 passed the complete Windows regression/build/package path
 
+### Temporary output + atomic finalization — ✅ complete foundation
+- ✅ reusable Core `SafeOutputService`
+- ✅ unique temporary output created in the destination directory
+- ✅ explicit `FailIfExists` and `ReplaceExisting` overwrite policies
+- ✅ completed temporary output is flushed before finalization
+- ✅ same-directory move for new destinations and replace semantics for existing destinations
+- ✅ pre-existing and racing destination cases fail closed according to policy
+- ✅ writer failure/cancellation/failed commit cleanup preserves existing destinations when possible
+- ✅ missing parent directories and unknown overwrite policies fail closed
+- ✅ generated rollback/race/cancellation/temp-cleanup coverage
+- ✅ PR #42 implementation run #296 and final run #297 passed the complete Windows regression/build/package path
+
 ### Next 0.6 engineering priority
 
-Establish a reusable safe output-transaction layer before exposing image creation/conversion: temporary output in the destination directory, explicit overwrite policy, same-volume atomic finalization where supported, cleanup on cancellation/failure, and rollback-oriented tests. Mutating UI capabilities remain disabled until the full backing pipeline is proven.
+Build the first real format-producing pipeline on top of `SafeOutputService` so pipeline-level cancellation/rollback behavior can be proven rather than inferred from the shared transaction primitive. A bounded guest-image-to-RAW export over already proven QCOW2/VMDK readers is the strongest next conversion slice. Creation, split/join and additional sparse/compression semantics remain disabled until separately implemented and tested.
 
 ## 0.7 Physical Media Tools — ⬜ planned
 Future physical-media functionality remains gated behind dedicated safety design, explicit user confirmation, device identity checks and independent validation before it becomes user-visible.

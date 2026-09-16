@@ -53,9 +53,9 @@ The automated engineering exit criteria are satisfied. Public beta publication r
 
 ## 0.6 Create + Convert + Verify — IN PROGRESS 🚧
 
-Current engineering completion: approximately **20%** based on 1 of 5 top-level roadmap deliverables completed and validated.
+Current engineering completion: approximately **40%** based on 2 of 5 top-level roadmap deliverables completed and validated.
 
-### Completed execution slice
+### Completed execution slices
 
 1. **Dual SHA-256/SHA-512 verification foundation** ✅
    - `ImageVerificationInfo` returns SHA-256, SHA-512 and exact hashed byte count
@@ -66,13 +66,22 @@ Current engineering completion: approximately **20%** based on 1 of 5 top-level 
    - generated smoke coverage validates multi-buffer data, empty files, both digests, byte count, progress, cancellation and missing files
    - PR #41 implementation run #292 passed the verification gate and the complete Windows regression/build/package path ✅
 
+2. **Temporary output + atomic finalization foundation** ✅
+   - reusable `SafeOutputService` stages output in a unique temporary file beside the destination
+   - explicit `FailIfExists` and `ReplaceExisting` policies
+   - completed temporary output is flushed before final commit
+   - racing destinations are handled deterministically rather than overwritten accidentally
+   - writer failure and cancellation preserve existing destinations and clean temporary output when possible
+   - missing destination directories and unknown overwrite policy values fail closed
+   - generated tests cover new output, replacement, cancellation, writer failure, destination races and temp cleanup
+   - PR #42 implementation run #296 and final run #297 passed the safe-output gate and the complete Windows regression/build/package path ✅
+
 ### Remaining execution slices
 
 - image creation and conversion pipeline
 - split/join and sparse/compression handling
-- temporary output + atomic finalization
-- cancellation/rollback safety for mutating pipelines
+- cancellation/rollback safety for real mutating pipelines
 
-The next implementation work should establish the safe output-transaction foundation before user-visible creation/conversion is enabled: temporary output, same-volume atomic commit where supported, explicit overwrite policy, cancellation cleanup and rollback-oriented tests.
+The next implementation work should build a real format-producing pipeline on top of `SafeOutputService` so rollback and cancellation are tested through actual mutation orchestration rather than only the shared transaction primitive. A bounded guest-image-to-RAW export over the proven QCOW2/VMDK readers is the preferred next conversion slice.
 
 A capability becomes user-visible only after its real backing path and tests exist.
