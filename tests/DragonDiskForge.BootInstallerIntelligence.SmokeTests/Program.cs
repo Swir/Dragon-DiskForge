@@ -11,6 +11,7 @@ try
 {
     await HybridWindows();
     await LinuxCasperWithoutCatalog();
+    await DirectoryMarkersAreNotFiles();
     await RejectBadChecksum();
     await RejectBootRangeOutsideImage();
     await RejectProviderWithoutDirectBrowse();
@@ -53,6 +54,23 @@ async Task LinuxCasperWithoutCatalog()
     Expect(!info.HasElToritoCatalog && !info.IsBootable, "Filesystem markers must never fabricate bootability.");
     Expect(info.ArchitectureHints.SequenceEqual(["ARM64"]), "EFI fallback path must yield ARM64 hint.");
     Expect(info.Installers.Any(x => x.Family == InstallerFamily.Linux && x.Variant.Contains("casper", StringComparison.OrdinalIgnoreCase)), "casper marker trio must be recognized.");
+}
+
+async Task DirectoryMarkersAreNotFiles()
+{
+    var path = await Image("directory-lookalikes.iso", catalog: false, badChecksum: false, biosLba: 30);
+    var provider = new FakeBrowse(new Dictionary<string, IReadOnlyList<ExplorerEntry>>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["/"] = [D("setup.exe", "/setup.exe"), D("sources", "/sources"), D("efi", "/efi")],
+        ["/setup.exe"] = [],
+        ["/sources"] = [F("boot.wim", "/sources/boot.wim"), F("install.wim", "/sources/install.wim")],
+        ["/efi"] = [D("boot", "/efi/boot")],
+        ["/efi/boot"] = [D("bootx64.efi", "/efi/boot/bootx64.efi")],
+        ["/efi/boot/bootx64.efi"] = []
+    });
+    var info = await Analyze(path, provider);
+    Expect(info.Installers.All(x => x.Family != InstallerFamily.Windows), "A directory named setup.exe must not become Windows installer evidence.");
+    Expect(info.ArchitectureHints.Count == 0, "A directory named like an EFI fallback binary must not become architecture evidence.");
 }
 
 async Task RejectBadChecksum()
