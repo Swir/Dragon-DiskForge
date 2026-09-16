@@ -22,30 +22,13 @@ Released version: **0.3.0**.
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
 
-Development version at milestone close: **0.4.0-alpha.1**.
-
 Required 0.4 engineering scope: **100% complete**.
 
-### Completed execution slices
+Completed provider/foundation slices: registry foundation, IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD, FFU and provider-contract hardening.
 
-1. **Provider registry foundation** ✅
-2. **IMG / RAW partition provider** ✅
-3. **IMA / floppy media provider** ✅
-4. **BIN / CUE track-layout provider** ✅
-5. **MDF / MDS CD track-layout provider** ✅
-6. **NRG v1/v2 track-layout provider** ✅
-7. **CCD / IMG / SUB track-layout provider** ✅
-8. **VMDK sparse metadata provider** ✅
-9. **QCOW / QCOW2 metadata provider** ✅
-10. **DMG / UDIF metadata provider** ✅
-11. **WIM / ESD metadata provider** ✅
-12. **FFU metadata provider** ✅
-13. **Provider-contract hardening** ✅
-
-### Final 0.4 validation
-
+Final 0.4 checkpoints:
 - PR #26 / run #226 — final FFU docs-synchronized head
-- PR #27 / run #228 — hardening code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
+- PR #27 / run #228 — provider-contract hardening + full provider/native/build/artifact regression
 
 Closing 0.4 completes the internal engineering contract only. It does not declare a stable public plugin API.
 
@@ -53,39 +36,47 @@ Closing 0.4 completes the internal engineering contract only. It does not declar
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **11%**.
+Current milestone completion is approximately **30%**.
 
 ### Completed execution slices
 
 1. **Cross-provider partition intelligence** ✅
+2. **Bounded filesystem-recognition foundation** ✅
 
 ### Cross-provider partition intelligence ✅
 
 - capability-driven `PartitionIntelligenceService`
 - provider resolution through `ProviderRegistry` + `PartitionTable`
-- stable finding codes and severities
-- duplicate index and zero-length checks
-- LBA arithmetic overflow checks
-- byte offset/size consistency checks
-- physical image-bound checks
-- overlapping partition-range checks
-- bootable partition count preserved without overstating health
-- capability-driven fake providers used in smoke tests
-- read-only analysis only; no mount, write or repair path
+- stable finding codes/severities
+- duplicate index, zero length, LBA overflow, byte-geometry, bounds and overlap checks
+- capability-driven fake providers
+- read-only analysis only
+- PR #28 / run #232 docs-synchronized full regression/build/artifact ✅
 
-### 0.5 validation checkpoints
+### Bounded filesystem-recognition foundation ✅
 
-- PR #28 / run #231 — cross-provider partition intelligence code head passed dedicated tests, all provider regressions, Explorer safety, ISO/native Windows integration, Release x64 build and artifact before documentation synchronization
+- provider-integrated `FileSystemRecognitionService`
+- physical whole-file scanning only where byte mapping is truthful
+- partition-scoped scanning after structural validation of provider-reported physical ranges
+- FAT12/FAT16/FAT32 recognition and basic metadata
+- exFAT boot metadata
+- supported NTFS boot metadata
+- ext2/ext3/ext4 superblock recognition and metadata
+- ISO9660/Joliet descriptors and volume label
+- UDF VRS recognition
+- generated sparse test fixtures rather than committed binary images
+- false-positive, invalid-layout and cancellation coverage
+- no sparse/compressed virtual guest-sector translation
+- no mount, traversal, extraction, repair or writes
+- PR #29 / run #234 code head passed the new filesystem gate plus all existing provider, Explorer, native Windows, Release x64 and artifact checks before documentation synchronization
 
-### Next execution slices
+### Remaining execution slices
 
-- bounded ISO9660/UDF filesystem recognition and metadata
-- FAT/FAT32/exFAT recognition and metadata
-- NTFS metadata where supported
-- ext-family recognition
-- bootability and BIOS/UEFI intelligence
+- richer UDF/FAT/NTFS metadata and reader depth
+- bootability + BIOS/UEFI intelligence
 - Windows/Linux installer recognition
-- architecture, label and UUID/GUID intelligence
-- health/corruption warnings grounded in proven metadata
+- architecture + cross-source label/UUID/GUID aggregation
+- health/corruption warnings backed by proven metadata checks
+- virtual guest-sector readers before inspecting filesystems inside sparse/compressed virtual disks
 
 A capability becomes user-visible only after its real backing path and tests exist.

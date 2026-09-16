@@ -1,16 +1,66 @@
 # Dragon DiskForge — Testing
 
-Dragon DiskForge treats a green Windows build, Core smoke tests and real Windows integration tests as requirements for milestone progress.
+Dragon DiskForge treats a green Windows build, Core smoke tests, provider/intelligence gates and real Windows integration tests as requirements for milestone progress.
 
-## Core smoke tests
-
-Run from the repository root:
+## Core + registry gates
 
 ```powershell
 dotnet run --project tests/DragonDiskForge.Core.SmokeTests/DragonDiskForge.Core.SmokeTests.csproj -c Release
+dotnet run --project tests/DragonDiskForge.ProviderRegistry.SmokeTests/DragonDiskForge.ProviderRegistry.SmokeTests.csproj -c Release
 ```
 
-The current harness validates format/signature detection, safe mount defaults, SHA-256 behavior, Explorer listing/search/copy-out safety, Preview classification and Image Library persistence behavior.
+These validate base detection/verification behavior plus provider descriptor validation, deterministic resolution, extension normalization, truthful capability inference, failure isolation and cancellation.
+
+## Partition intelligence
+
+```powershell
+dotnet run --project tests/DragonDiskForge.PartitionIntelligence.SmokeTests/DragonDiskForge.PartitionIntelligence.SmokeTests.csproj -c Release
+```
+
+The suite uses capability-driven providers and verifies clean layouts plus duplicate indexes, zero-length entries, LBA overflow, byte-geometry mismatches, physical bounds, overlaps, recognized providers without `PartitionTable`, and cancellation.
+
+## Filesystem recognition
+
+```powershell
+dotnet run --project tests/DragonDiskForge.FileSystemRecognition.SmokeTests/DragonDiskForge.FileSystemRecognition.SmokeTests.csproj -c Release
+```
+
+Fixtures are generated as bounded/sparse temporary images at runtime. The suite proves:
+
+- FAT12, FAT16 and FAT32 BPB/cluster-count classification
+- FAT label, serial, logical-sector and allocation-unit metadata
+- exFAT OEM/geometry/serial recognition
+- NTFS OEM/BPB/serial/cluster recognition
+- ext2/ext3/ext4 superblock + feature classification, label, UUID and block size
+- ISO9660 primary descriptor recognition
+- Joliet variant and UCS-2 volume label handling
+- ordered UDF `BEA01` / `NSR02|NSR03` / `TEA01` VRS recognition
+- filesystem scanning inside provider-reported partition ranges
+- preservation of partition index and physical offset in evidence
+- blank recognized images do not receive guessed filesystems
+- unrecognized images are rejected at the provider gate
+- structurally invalid partition layouts are rejected before filesystem probing
+- pre-cancelled recognition stops immediately
+
+The recognition tests intentionally do not pretend physical bytes in VMDK/QCOW/DMG containers are guest filesystem sectors.
+
+## Image-provider gates
+
+Dedicated smoke projects cover:
+
+- RAW/IMG MBR/EBR/GPT
+- IMA/floppy geometry/BPB
+- BIN/CUE
+- MDF/MDS
+- NRG
+- CCD/IMG/SUB
+- VMDK sparse metadata
+- QCOW/QCOW2 metadata
+- DMG/UDIF metadata
+- WIM/ESD metadata
+- FFU metadata
+
+Every new provider is exercised independently before the broader Windows regression/build steps.
 
 ## Mounted-history smoke tests
 
@@ -18,7 +68,7 @@ The current harness validates format/signature detection, safe mount defaults, S
 dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 ```
 
-These tests validate bounded local history, Mount/Unmount event retention and the separation between local metadata and live Windows state.
+These validate bounded local history, Mount/Unmount event retention and separation between local metadata and live Windows state.
 
 ## Drag-out safety smoke tests
 
@@ -26,16 +76,7 @@ These tests validate bounded local history, Mount/Unmount event retention and th
 dotnet run --project tests/DragonDiskForge.DragOut.SmokeTests/DragonDiskForge.DragOut.SmokeTests.csproj -c Release
 ```
 
-The drag-out validator currently proves:
-
-- an existing file inside the mounted root is accepted
-- an existing folder inside the mounted root is accepted
-- a path outside the mounted root is rejected
-- a listed reparse point/junction is rejected before transfer
-- a stale/missing source is rejected
-- the WinUI payload path is compiled as Copy-only, never Move
-
-The actual human gesture from Dragon Explorer into Windows Explorer/Desktop remains a manual desktop QA case because GitHub Actions cannot reliably emulate cross-process pointer drag/drop.
+The validator proves accepted in-root files/folders, rejection of outside-root paths, reparse points and stale sources, and Copy-only WinUI payload behavior. The actual cross-process human drag gesture remains manual QA.
 
 ## Provider-backed ISO direct-browse integration
 
@@ -45,19 +86,7 @@ Run on Windows:
 dotnet run --project tests/DragonDiskForge.DirectBrowse.IntegrationTests/DragonDiskForge.DirectBrowse.IntegrationTests.csproj -c Release
 ```
 
-This suite creates a disposable ISO with Windows IMAPI2FS and validates the managed ISO9660/Joliet provider without mounting the image. It proves:
-
-- a real IMAPI-generated ISO is positively recognized
-- root files and directories are listed from ISO extents
-- nested folders are navigable through virtual `/` paths
-- recursive search finds nested entries
-- file and directory Copy out preserve content
-- Copy out reports completion progress
-- existing destinations are not silently overwritten
-- virtual path traversal is rejected
-- pre-cancelled search is rejected safely
-- a fake `.iso` extension is not treated as a valid provider image
-- the image remains detached before and after list/search/Copy out
+The suite creates a disposable ISO with Windows IMAPI2FS and validates ISO9660/Joliet list/navigation/search/Copy out without mounting, overwrite/path-traversal protection, cancellation, fake-extension rejection and detached-state preservation.
 
 ## Native Windows mount / Explorer integration
 
@@ -67,45 +96,44 @@ Run on an elevated Windows development session:
 dotnet run --project tests/DragonDiskForge.Windows.IntegrationTests/DragonDiskForge.Windows.IntegrationTests.csproj -c Release
 ```
 
-The integration suite creates disposable images at runtime. It validates native ISO/VHD/VHDX lifecycle, read-only behavior, drive/inventory detection, cancellation safety, mounted-volume Explorer list/search/Copy out, mounted-ISO content verification and Preview against a real IMAPI-generated ISO.
+Disposable runtime images validate native ISO/VHD/VHDX lifecycle, read-only behavior, drive/inventory detection, cancellation, mounted-volume Explorer operations and Preview/content behavior.
 
 Mounted inventory is intentionally derived from current Windows Storage state rather than remembered application state.
 
 ## Windows x64 validation
 
-GitHub Actions builds the real Windows application with the `Release|x64` solution configuration.
-
-Equivalent commands on a Windows developer machine are:
+GitHub Actions builds the real Windows application with `Release|x64`:
 
 ```powershell
 msbuild DragonDiskForge.sln /restore /p:Configuration=Release /p:Platform=x64
 msbuild DragonDiskForge.sln /m /p:Configuration=Release /p:Platform=x64
 ```
 
-Every green CI run also uploads `DragonDiskForge-win-x64` as a temporary workflow artifact for desktop/manual validation.
+Every green CI run uploads `DragonDiskForge-win-x64` as a temporary workflow artifact for desktop/manual validation.
 
-## CI order
+## Current CI order
 
 1. Checkout repository.
 2. Install .NET 10 SDK.
-3. Run Core smoke tests.
-4. Run mounted-history smoke tests.
-5. Run drag-out safety smoke tests.
-6. Run provider-backed ISO direct-browse integration while the image remains detached.
-7. Run native Windows ISO/VHD/VHDX + mounted Explorer/Preview integration tests.
-8. Configure MSBuild.
-9. Restore the solution.
-10. Build the WinUI application in Release x64.
-11. Publish the Windows x64 workflow artifact.
+3. Core smoke tests.
+4. Provider-registry smoke tests.
+5. Partition-intelligence smoke tests.
+6. Filesystem-recognition smoke tests.
+7. All dedicated image-provider smoke tests.
+8. Mount-history and drag-out safety smoke tests.
+9. Provider-backed ISO direct-browse integration.
+10. Native Windows ISO/VHD/VHDX + mounted Explorer integration.
+11. Configure MSBuild.
+12. Restore solution.
+13. Build WinUI Release x64.
+14. Upload Windows x64 artifact.
 
-A feature should not be marked complete in `docs/ROADMAP.md` merely because code was committed. Its relevant real test/build path must pass first.
+A feature is not complete because code was committed. Its relevant test path and the required full regression/build gate must pass first.
 
 ## Manual desktop validation
 
-GitHub-hosted Windows runners execute as administrators and cannot faithfully emulate all interactive desktop behavior. The required UAC and cross-process drag-out matrix is maintained in `docs/MANUAL-VALIDATION.md`.
-
-Direct ISO browsing itself is automatically validated because it does not depend on a human shell gesture; its integration test explicitly confirms the image remains detached.
+GitHub-hosted Windows runners execute as administrators and cannot faithfully emulate all interactive desktop behavior. Required UAC and cross-process drag-out cases are maintained in `docs/MANUAL-VALIDATION.md`.
 
 ## Test-data rule
 
-Do not commit large real disk images to the repository. Signature tests generate minimal temporary files, and mount/direct-browse integration creates disposable images at runtime with Windows-native tooling.
+Do not commit large real disk images. Metadata/signature tests generate minimal or sparse temporary fixtures, and mount/direct-browse integration creates disposable images at runtime with Windows-native tooling.

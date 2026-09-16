@@ -37,32 +37,10 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 **Required 0.4 engineering scope: 100%.** Provider foundation, eleven additional image families and provider-contract hardening are real and tested.
 
-### Provider foundation + hardening — ✅ complete
-- ✅ explicit capability reporting
-- ✅ deterministic priority/extension-first resolution
-- ✅ deterministic provider-ID tie-breaking for equal priorities
-- ✅ signature/provider fallback
-- ✅ probe/inspection failure isolation
-- ✅ cancellation hard stop
-- ✅ diagnostics and duplicate-ID protection
-- ✅ provider descriptor snapshots at registration time
-- ✅ validated provider IDs and extension declarations
-- ✅ immutable normalized descriptor extensions
-- ✅ intentional signature-only provider support
-- ✅ safe display-name fallback
-
-### Proven 0.4 image families
-- ✅ IMG / RAW partition metadata
-- ✅ IMA / floppy media metadata
-- ✅ BIN / CUE track layout
-- ✅ MDF / MDS CD track layout
-- ✅ NRG v1/v2 track layout
-- ✅ CCD / IMG / SUB track layout
-- ✅ VMDK sparse v1 metadata
-- ✅ QCOW / QCOW2 metadata
-- ✅ DMG / UDIF metadata
-- ✅ WIM / ESD container metadata
-- ✅ FFU container metadata
+- ✅ truthful capability reporting and deterministic provider resolution
+- ✅ failure isolation, cancellation and descriptor hardening
+- ✅ IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB
+- ✅ VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU metadata
 
 **0.4 exit criteria: PASSED.** Closing this milestone hardens the internal provider contract; it does not promise a stable public plugin API.
 
@@ -70,36 +48,48 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 11%.** The first capability-driven intelligence slice is implemented and validated.
+**Current 0.5 completion: approximately 30%.** Cross-provider partition intelligence and the bounded filesystem-recognition foundation are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
-- ✅ resolves through `ProviderRegistry` + `PartitionTable` capability rather than format-specific shortcuts
-- ✅ stable structural finding codes and severities
-- ✅ duplicate partition-index detection
-- ✅ zero-length partition detection
-- ✅ start/end LBA overflow detection
-- ✅ provider-reported byte offset/size consistency checks
-- ✅ physical image-bound validation
-- ✅ overlapping partition-range detection
-- ✅ bootable partition count preserved without claiming filesystem health
+- ✅ resolves through `ProviderRegistry` + `PartitionTable`
+- ✅ duplicate-index, zero-length, arithmetic-overflow, geometry, physical-bound and overlap findings
+- ✅ stable finding codes/severities
 - ✅ capability-driven fake providers in dedicated smoke tests
-- ✅ read-only only; no writes, repairs or mounting
-- ✅ PR #28 / run #231 passed this slice plus the complete existing provider/native/build/artifact regression path before documentation synchronization
+- ✅ no writes, repairs or fake filesystem-health claims
+- ✅ PR #28 / final docs-synchronized run #232 passed full Windows regression/build/artifact
+
+### Bounded filesystem-recognition foundation — ✅ complete
+- ✅ provider-integrated `FileSystemRecognitionService`
+- ✅ scans whole physical images only when that byte mapping is truthful
+- ✅ partition-capable providers are scanned only through structurally validated physical partition ranges
+- ✅ FAT12/FAT16/FAT32 bounded BPB recognition and metadata
+- ✅ exFAT bounded boot metadata
+- ✅ NTFS bounded boot metadata where supported
+- ✅ ext2/ext3/ext4 superblock recognition, label, UUID and block size
+- ✅ ISO9660/Joliet descriptor recognition and volume label
+- ✅ UDF VRS recognition (`BEA01` / `NSR02|NSR03` / `TEA01`)
+- ✅ generated sparse fixtures, false-positive checks and cancellation coverage
+- ✅ structurally invalid partition layouts rejected before filesystem probing
+- ✅ explicit refusal to pretend sparse/compressed virtual-disk guest sectors are physical bytes
+- ✅ PR #29 / run #234 passed this code slice plus the complete existing provider/native/build/artifact regression before documentation synchronization
+
+### Filesystem family depth
+- 🚧 ISO9660/UDF — ISO direct browsing already proven; bounded ISO/Joliet and UDF recognition now proven; richer UDF metadata/traversal remains
+- 🚧 FAT/FAT32/exFAT — recognition/geometry proven; deeper reader functionality remains
+- 🚧 NTFS metadata — bounded boot metadata proven; deeper supported metadata remains
+- ✅ ext-family recognition — ext2/ext3/ext4 recognition and basic metadata proven
 
 ### Remaining 0.5 scope
-- ⬜ ISO9660/UDF filesystem recognition and metadata
-- ⬜ FAT/FAT32/exFAT recognition and metadata
-- ⬜ NTFS metadata where supported
-- ⬜ ext-family recognition
 - ⬜ bootability + BIOS/UEFI detection
 - ⬜ Windows/Linux installer recognition
-- ⬜ architecture, labels and UUID/GUID metadata
-- ⬜ health/corruption warnings
+- ⬜ architecture and cross-source labels/UUID/GUID aggregation
+- ⬜ health/corruption warnings grounded in proven metadata checks
+- ⬜ virtual guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
 
-**0.5 entry rule:** build on provider capabilities rather than format-specific UI shortcuts. New filesystem/intelligence features remain disabled until their real engine path and tests exist.
+**0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No format-specific UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** bounded filesystem recognition/metadata, beginning with signatures and structures that can be validated read-only without mounting.
+**Next engineering focus:** bootability/BIOS/UEFI and installer intelligence using existing provider + direct-browse evidence, while continuing to deepen filesystem metadata safely.
 
 ---
 
