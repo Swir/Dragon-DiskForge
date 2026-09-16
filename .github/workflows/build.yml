@@ -39,6 +39,9 @@ jobs:
       - name: Boot + installer intelligence smoke tests
         run: dotnet run --project tests/DragonDiskForge.BootInstallerIntelligence.SmokeTests/DragonDiskForge.BootInstallerIntelligence.SmokeTests.csproj -c Release
 
+      - name: Unified image intelligence smoke tests
+        run: dotnet run --project tests/DragonDiskForge.ImageIntelligence.SmokeTests/DragonDiskForge.ImageIntelligence.SmokeTests.csproj -c Release
+
       - name: RAW/IMG partition-provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.RawPartition.SmokeTests/DragonDiskForge.RawPartition.SmokeTests.csproj -c Release
 
