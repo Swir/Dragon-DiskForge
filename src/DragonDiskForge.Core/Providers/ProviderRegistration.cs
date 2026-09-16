@@ -28,6 +28,7 @@ public sealed record ProviderDescriptor(
             IQcowMetadataProvider qcow => qcow.DisplayName,
             IDmgMetadataProvider dmg => dmg.DisplayName,
             IWimMetadataProvider wim => wim.DisplayName,
+            IFfuMetadataProvider ffu => ffu.DisplayName,
             _ => provider.Id
         };
 
