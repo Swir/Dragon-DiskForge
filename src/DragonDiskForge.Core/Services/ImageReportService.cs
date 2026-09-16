@@ -39,6 +39,14 @@ public sealed class ImageReportService
                     var depth = await new FileSystemDepthService().AnalyzeAsync(path, fileSystems, cancellationToken);
                     analysis = MergeDepthEvidence(analysis, depth);
 
+                    if (fileSystems.Detections.Any(x => x.Kind == FileSystemKind.Udf))
+                    {
+                        var udfTraversal = await new UdfTraversalService().AnalyzeAsync(path, fileSystems, cancellationToken);
+                        analysis = MergeDepthEvidence(
+                            analysis,
+                            new FileSystemDepthInfo(udfTraversal.Identity, udfTraversal.HealthFindings));
+                    }
+
                     if (fileSystems.Detections.Any(x => x.Kind == FileSystemKind.Ntfs))
                     {
                         var ntfsDepth = await new NtfsMetadataDepthService().AnalyzeAsync(path, fileSystems, cancellationToken);

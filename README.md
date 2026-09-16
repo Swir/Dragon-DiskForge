@@ -6,17 +6,17 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 56% toward 1.0
+## Project progress — 57% toward 1.0
 
-`███████████░░░░░░░░░ 56%`
+`███████████░░░░░░░░░ 57%`
 
-**Overall completion:** **56%**
+**Overall completion:** **57%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~90%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **~93%** 🚧
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -38,7 +38,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## 0.5 Partitions + File Systems + Image Intelligence 🚧
 
-Nine substantial 0.5 execution slices are now implemented and validated.
+Ten substantial 0.5 execution slices are now implemented and validated.
 
 ### Cross-provider partition intelligence ✅
 
@@ -119,11 +119,21 @@ Nine substantial 0.5 execution slices are now implemented and validated.
 - `verify-package.ps1` independently reopens the ZIP and rejects checksum, manifest, version, architecture, EXE hash, icon, PDB or test-content mismatches
 - the run #270 clean artifact was independently downloaded after CI: ZIP sidecar SHA-256 matched, the manifest reported `0.5.0-alpha.1`, the executable hash matched the manifest, one application EXE was present, and no PDB files were present
 
+### Bounded UDF root-directory traversal ✅
+
+- dedicated `UdfTraversalService` operates only after UDF recognition supplies a truthful physical byte region
+- follows only validated Type 1 partition maps; virtual, sparable and metadata partition maps remain unsupported rather than guessed
+- validates Partition Descriptors, File Set Descriptor, root File Entry and File Identifier Descriptor tags/checksums/CRCs/locations before accepting evidence
+- root-directory reads are capped at **8 MiB** and **4096 entries**
+- first slice accepts exactly one recorded short allocation extent and never recursively walks subdirectories
+- validated File Set Identifier flows into analysis/report identity evidence
+- generated smoke tests cover a valid root entry, corrupt FID checksum, out-of-range root ICB, unsupported Type 2 map and cancellation
+- implementation run #274 passed the new UDF traversal gate plus the complete provider/Explorer/native Windows/Release/package-verification path
+
 See [`docs/FILESYSTEM-DEPTH.md`](docs/FILESYSTEM-DEPTH.md), [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md), [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md) and [`docs/IMAGE-INTELLIGENCE.md`](docs/IMAGE-INTELLIGENCE.md).
 
 ### Remaining 0.5 work
 
-- independently bounded UDF traversal where justified
 - truthful guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
 - final 0.5 beta-scope hardening/documentation
 - clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA
@@ -156,13 +166,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and the engineering artifact.
+CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and the engineering artifact.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Deeper filesystem checks never leave already-recognized physical regions. NTFS depth checks validate metadata only and never repair, follow attributes or traverse directories. Architecture reconciliation preserves conflicting proven clues rather than guessing a winner. Health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee.
+Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Deeper filesystem checks never leave already-recognized physical regions. UDF root traversal follows only validated physical Type 1 mappings, is non-recursive and does not enable Direct Browse or extraction. NTFS depth checks validate metadata only and never repair, follow attributes or traverse directories. Architecture reconciliation preserves conflicting proven clues rather than guessing a winner. Health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee.
 
 VMDK, QCOW and DMG expose only proven metadata. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 

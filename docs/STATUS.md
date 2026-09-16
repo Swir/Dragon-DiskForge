@@ -16,13 +16,13 @@
 
 ## Overall project progress
 
-**56% toward 1.0** — milestones 0.1 through 0.4 are complete. Milestone 0.5 now includes validated partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the user-facing Analyze/report path, deeper exFAT/FAT32/UDF evidence, bounded NTFS `$MFT`/`$MFTMirr` metadata validation, cross-source architecture reconciliation and a versioned independently verified clean Windows package-candidate path.
+**57% toward 1.0** — milestones 0.1 through 0.4 are complete. Milestone 0.5 now includes validated partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the user-facing Analyze/report path, deeper exFAT/FAT32/UDF evidence, bounded NTFS `$MFT`/`$MFTMirr` metadata validation, cross-source architecture reconciliation, bounded UDF root-directory traversal and a versioned independently verified clean Windows package-candidate path.
 
 ## Current milestone
 
 **0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **90%**.
+Current milestone completion is approximately **93%**.
 
 ## Proven 0.5 slices
 
@@ -35,6 +35,7 @@ Current milestone completion is approximately **90%**.
 7. NTFS metadata + architecture-reconciliation hardening ✅
 8. Clean Windows x64 package-candidate + SHA-256 path ✅
 9. Central release version + independent package verification gate ✅
+10. Bounded UDF root-directory traversal ✅
 
 ### Cross-provider partition intelligence proven scope
 
@@ -115,6 +116,21 @@ Current milestone completion is approximately **90%**.
 - the run #270 clean artifact was independently downloaded: sidecar SHA-256 matched the nested ZIP; manifest version `0.5.0-alpha.1`; executable hash matched; one app EXE and zero PDB files
 - final beta suffix promotion and clean-machine/manual QA remain release gates
 
+### Bounded UDF root-directory traversal proven scope
+
+- dedicated `UdfTraversalService` runs only against recognized UDF regions backed by truthful physical byte mappings
+- validates AVDP/main descriptor-sequence metadata, Type 1 partition maps and matching Partition Descriptors before translating partition-relative addresses
+- validates File Set Descriptor, root File Entry, supported ICB strategy/directory type and allocation-descriptor bounds
+- first slice follows exactly one recorded short allocation extent for the root directory
+- root reads are capped at 8 MiB and 4096 File Identifier Descriptors
+- File Identifier Descriptor tag checksum, tag location, CRC and extent bounds are validated before names are accepted
+- OSTA compressed Unicode IDs 8/16 supported after descriptor validation
+- validated File Set Identifier becomes report identity evidence
+- Type 2 virtual/sparable/metadata partition maps are deliberately not followed
+- no Direct Browse, extraction, recursion, repair or writes
+- generated valid/corrupt/out-of-range/unsupported-map/cancellation fixtures
+- PR #36 / implementation run #274 passed the new UDF traversal gate and complete provider/Explorer/native Windows/Release/package-verification/artifact path before documentation synchronization
+
 ## Proven validation checkpoints
 
 ### 0.4
@@ -140,17 +156,18 @@ Current milestone completion is approximately **90%**.
 - PR #33 / run #262 — deeper filesystem evidence implementation + complete Windows regression/build/artifact before docs synchronization
 - PR #34 / run #266 — NTFS/architecture hardening + clean package candidate + SHA-256 + complete Windows regression/build path before docs synchronization
 - PR #35 / run #270 — centralized version metadata + strict clean-package verification + complete Windows regression/build/package/artifact path before docs synchronization
+- PR #36 / run #274 — bounded UDF root traversal implementation + complete regression/build/package-verification/artifact path before docs synchronization
 
 ## Next engineering focus
 
-**Independently bounded UDF traversal where justified, truthful guest-sector reader foundations for sparse/compressed virtual disks, and then final 0.5 beta-scope hardening/manual QA.**
+**Truthful guest-sector reader foundations for sparse/compressed virtual disks, then final 0.5 beta-scope hardening/manual QA.**
 
-The planned first public beta remains `0.5.0-beta.1`. It is **not ready yet**: the verified version/package pipeline still carries the development suffix `0.5.0-alpha.1`, 0.5 has unfinished UDF/guest-sector engineering scope, and clean-machine/UAC/cross-process drag-out/manual regression gates in `docs/BETA-RELEASE.md` remain open.
+The planned first public beta remains `0.5.0-beta.1`. It is **not ready yet**: the verified version/package pipeline still carries the development suffix `0.5.0-alpha.1`, truthful sparse/compressed guest-sector reader foundations and final 0.5 beta-scope hardening remain unfinished, and clean-machine/UAC/cross-process drag-out/manual regression gates in `docs/BETA-RELEASE.md` remain open.
 
 ## Current safety state
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
 
-Filesystem recognition does not imply filesystem traversal, repair or write support. Deeper filesystem checks stay within recognized physical regions. NTFS depth checks do not follow attributes or mutate metadata. Conflicting architecture evidence is preserved rather than collapsed to a guessed winner. Health findings cover only explicitly implemented metadata checks; absence of a finding is not a whole-filesystem health guarantee.
+Filesystem recognition does not imply unrestricted filesystem traversal, repair or write support. Deeper filesystem checks stay within recognized physical regions. The bounded UDF traversal path is limited to validated Type 1 physical mappings, one root-directory short extent and non-recursive names; it does not enable Direct Browse. NTFS depth checks do not follow attributes or mutate metadata. Conflicting architecture evidence is preserved rather than collapsed to a guessed winner. Health findings cover only explicitly implemented metadata checks; absence of a finding is not a whole-filesystem health guarantee.
 
 Interactive UAC and the real cross-process Explorer drag gesture remain manual QA cases in `docs/MANUAL-VALIDATION.md`.
