@@ -22,7 +22,7 @@ finally { try { Directory.Delete(root, true); } catch { } }
 async Task HybridWindows()
 {
     var path = await Image("windows.iso", catalog: true, badChecksum: false, biosLba: 30);
-    var provider = new FakeBrowse(new(StringComparer.OrdinalIgnoreCase)
+    var provider = new FakeBrowse(new Dictionary<string, IReadOnlyList<ExplorerEntry>>(StringComparer.OrdinalIgnoreCase)
     {
         ["/"] = [F("setup.exe", "/setup.exe"), D("sources", "/sources"), D("efi", "/efi")],
         ["/sources"] = [F("boot.wim", "/sources/boot.wim"), F("install.wim", "/sources/install.wim")],
@@ -42,7 +42,7 @@ async Task HybridWindows()
 async Task LinuxCasperWithoutCatalog()
 {
     var path = await Image("linux.iso", catalog: false, badChecksum: false, biosLba: 30);
-    var provider = new FakeBrowse(new(StringComparer.OrdinalIgnoreCase)
+    var provider = new FakeBrowse(new Dictionary<string, IReadOnlyList<ExplorerEntry>>(StringComparer.OrdinalIgnoreCase)
     {
         ["/"] = [D("casper", "/casper"), D("efi", "/efi")],
         ["/casper"] = [F("vmlinuz", "/casper/vmlinuz"), F("initrd", "/casper/initrd"), F("filesystem.squashfs", "/casper/filesystem.squashfs")],
