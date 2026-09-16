@@ -36,6 +36,9 @@ jobs:
       - name: Filesystem recognition smoke tests
         run: dotnet run --project tests/DragonDiskForge.FileSystemRecognition.SmokeTests/DragonDiskForge.FileSystemRecognition.SmokeTests.csproj -c Release
 
+      - name: Filesystem depth smoke tests
+        run: dotnet run --project tests/DragonDiskForge.FileSystemDepth.SmokeTests/DragonDiskForge.FileSystemDepth.SmokeTests.csproj -c Release
+
       - name: Boot + installer intelligence smoke tests
         run: dotnet run --project tests/DragonDiskForge.BootInstallerIntelligence.SmokeTests/DragonDiskForge.BootInstallerIntelligence.SmokeTests.csproj -c Release
 
