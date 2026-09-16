@@ -35,15 +35,21 @@ The project follows semantic versioning while it evolves toward 1.0.
 - CUES v1 BCD MSF-to-LBA decoding and CUEX v2 signed-LBA decoding
 - DAOI v1 and DAOX v2 track-table parsing with explicit byte-range validation
 - dedicated NRG smoke tests covering v1/v2, mixed audio/data, CUES MSF conversion, bad footer/offset, missing `END!`, missing cue metadata, unknown modes, cue/DAO mismatch, metadata overlap, foreign extensions and cancellation
+- read-only CloneCD CCD/IMG/SUB track-layout provider using the shared `TrackLayout` capability
+- CloneCD `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
+- bounded INDEX 0/1 parsing against same-name 2352-byte-sector `.img` payloads
+- optional same-name `.sub` validation at exactly 96 bytes per IMG sector
+- dedicated CCD/IMG/SUB smoke tests covering valid mixed audio/data, direct CCD/IMG/SUB inputs, missing/unaligned IMG, invalid SUB length, unsupported mode/version, missing/duplicate/non-increasing indexes, INDEX 0 ordering, foreign extensions, cancellation and CCD-vs-RAW `.img` resolution
 
 ### Changed
-- the application provider registry now includes ISO9660/Joliet, RAW partition, IMA/floppy, BIN/CUE, MDF/MDS and NRG providers
+- the application provider registry now includes ISO9660/Joliet, CCD/IMG/SUB, RAW partition, IMA/floppy, BIN/CUE, MDF/MDS and NRG providers
+- valid CloneCD image sets are resolved ahead of generic RAW for ambiguous `.img` only after a same-name `.ccd` descriptor positively validates; ordinary `.img` files still fall through to RAW
 - RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
 - IMA/FLP images can be positively recognized by media geometry without enabling fake filesystem browsing
-- BIN/CUE, MDF/MDS and NRG images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
+- BIN/CUE, MDF/MDS, NRG and CCD/IMG/SUB images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
 - Direct Browse tooltip explains when a provider recognized only a non-browse inspection capability
-- project progress advances to 37% toward 1.0 after the fifth real additional 0.4 image family
-- 0.4 milestone completion advances to approximately 59%
+- project progress advances to 38% toward 1.0 after the sixth real additional 0.4 image family
+- 0.4 milestone completion advances to approximately 65%
 
 ### Safety
 - RAW/IMG parsing is read-only and validates every referenced partition range against the image length
@@ -62,7 +68,10 @@ The project follows semantic versioning while it evolves toward 1.0.
 - NRG parsing bounds every chunk before the footer, requires a terminating empty `END!` chunk and rejects trailing metadata
 - NRG DAO track ranges must end before the chunk table; unknown modes, malformed BCD/MSF positions and missing/ambiguous cue metadata are rejected
 - NRG cue audio/data control must agree with the DAO track mode rather than being guessed
-- RAW/IMG, IMA/FLP, BIN/CUE, MDF/MDS and NRG `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+- CCD/IMG/SUB parsing bounds descriptor size/line count/line length, validates IMG alignment/ranges and rejects invalid SUB sidecar size
+- CloneCD MODE or INDEX metadata that is missing, unsupported, duplicate, out of order or out of bounds is rejected rather than guessed
+- a `.img` is claimed as CloneCD only after its same-name CCD descriptor validates; otherwise provider fallback remains available
+- RAW/IMG, IMA/FLP, BIN/CUE, MDF/MDS, NRG and CCD/IMG/SUB `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
 
 ### Verified
 - RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
@@ -70,9 +79,10 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #18 / run #172 passed Core, provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
 - PR #19 / run #182 passed the final MDF/MDS branch head with all provider smoke tests, ISO/native regression, WinUI Release x64 build and artifact publication
 - PR #20 / run #185 passed NRG v1/v2 smoke tests, all previous provider tests, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication before the documentation synchronization pass
+- PR #21 / run #193 passed CCD/IMG/SUB smoke tests, all previous provider tests, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication before the documentation synchronization pass
 
 ### Planned
-- remaining 0.4 image providers: CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 
