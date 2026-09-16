@@ -19,13 +19,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - FAT-style BPB metadata parsing with capacity, sectors/track, head-count and CHS consistency validation
 - safe blank/unformatted floppy recognition based on exact standard media size
 - dedicated IMA/floppy smoke tests covering FAT12 metadata, blank media, bad capacity, bad CHS, foreign extension isolation and cancellation
+- read-only BIN/CUE track-layout provider
+- `ITrackLayoutProvider` contract and `TrackLayout` provider capability
+- BINARY CUE parsing for AUDIO, MODE1/2048, MODE1/2352, MODE2/2336 and MODE2/2352 tracks
+- single-file and multi-file BIN/CUE layout validation with INDEX 00/01 metadata and bounded track ranges
+- same-name CUE companion resolution for `.bin` inputs
+- dedicated BIN/CUE smoke tests covering mixed-mode, multi-file, missing payload, traversal, index ordering, unsupported FILE types, orphan BINs and cancellation
 
 ### Changed
-- the application provider registry now includes ISO9660/Joliet, RAW partition and IMA/floppy providers
+- the application provider registry now includes ISO9660/Joliet, RAW partition, IMA/floppy and BIN/CUE providers
 - RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
 - IMA/FLP images can be positively recognized by media geometry without enabling fake filesystem browsing
+- BIN/CUE images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
 - Direct Browse tooltip explains when a provider recognized only a non-browse inspection capability
-- project progress advances to 34% toward 1.0 after the second real additional 0.4 image family
+- project progress advances to 35% toward 1.0 after the third real additional 0.4 image family
 
 ### Safety
 - RAW/IMG parsing is read-only and validates every referenced partition range against the image length
@@ -33,15 +40,19 @@ The project follows semantic versioning while it evolves toward 1.0.
 - GPT entry count and entry size are bounded before allocation/iteration
 - invalid `.img`/`.raw` extensions alone never make an image supported
 - IMA/FLP parsing is read-only and rejects unsupported sizes, inconsistent BPB capacity and contradictory CHS geometry
-- foreign container extensions are not claimed by RAW or floppy providers merely because their payload resembles a supported layout
-- RAW/IMG and IMA/FLP `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+- BIN/CUE parsing is read-only, bounds CUE size/line/track counts and validates every referenced BIN against real file length and sector alignment
+- CUE payload paths must remain under the CUE directory; absolute/path-traversal references are rejected
+- mixed sector sizes inside one BIN are rejected rather than producing guessed byte offsets
+- a standalone `.bin` is not claimed without a same-name CUE that actually references it
+- RAW/IMG, IMA/FLP and BIN/CUE `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
 
 ### Verified
 - RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
 - PR #17 / run #165 passed Core, provider-registry, RAW/IMG, IMA/floppy, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
+- PR #18 / run #172 passed Core, provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
 
 ### Planned
-- remaining 0.4 image providers: BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 
