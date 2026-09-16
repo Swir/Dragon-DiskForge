@@ -14,7 +14,7 @@ WinUI 3 desktop front end. It owns presentation, navigation, drag/drop, user con
 
 ### `DragonDiskForge.Core`
 
-UI-independent engine. It owns detection, provider contracts, image metadata, partition/filesystem/boot-installer intelligence, verification and provider-backed Explorer abstractions.
+UI-independent engine. It owns detection, provider contracts, image metadata, partition/filesystem/boot-installer/unified image intelligence, verification and provider-backed Explorer abstractions.
 
 Native Windows storage lifecycle remains isolated from portable Core parsing.
 
@@ -76,9 +76,32 @@ Installer marker sets are intentionally conservative. Windows media requires set
 
 See `docs/BOOT-INSTALLER-INTELLIGENCE.md` for the detailed contract.
 
+### Unified image intelligence
+
+`ImageIntelligenceService` is an aggregation layer over already-proven capabilities; it is not another format parser.
+
+Current contract:
+
+1. Resolve the image through `ProviderRegistry`.
+2. Run partition intelligence only when `PartitionTable` is truthful.
+3. Run filesystem recognition only where a direct physical-byte mapping is already proven by the current provider contract (`PartitionTable`, `MediaGeometry` or `DirectBrowse`).
+4. Run boot/installer intelligence only when `DirectBrowse` is truthful.
+5. Read WIM/ESD GUID or FFU PlatformID only through their proven container-metadata provider interfaces.
+6. Aggregate partition names, filesystem labels/IDs, container/platform identifiers and architecture hints with source provenance.
+7. Map structural partition findings into a shared health model.
+8. Perform selected filesystem health checks only inside already-recognized, bounded filesystem regions.
+
+Current filesystem health evidence includes exFAT dirty/media-failure flags, ext superblock state, and NTFS/FAT32 primary-versus-backup boot-metadata consistency. These are specific findings, not a blanket assertion that a filesystem is healthy.
+
+Every health read is bounded twice: first against the recognized filesystem region, then against the physical file. Missing evidence is never upgraded into a positive health claim.
+
+See `docs/IMAGE-INTELLIGENCE.md` for the detailed evidence contract.
+
 ### Important virtual-disk boundary
 
 Physical file offsets are **not** guest-sector offsets for sparse/compressed/container formats. VMDK, QCOW/QCOW2, DMG and similar formats therefore keep their proven metadata-only capabilities until a real guest-sector translation layer exists. Filesystem or boot intelligence must not scan arbitrary container bytes and label them as guest evidence.
+
+Unified image intelligence preserves this rule: metadata-only providers may contribute proven container metadata, but they do not gain filesystem probing from coincidental bytes.
 
 This is a deliberate safety/correctness boundary, not a missing fallback.
 
@@ -102,9 +125,11 @@ Current intelligence services never:
 - mount as a side effect
 - execute installer content
 - translate unsupported virtual guest sectors
-- claim filesystem health from a signature alone
+- infer whole-filesystem health from a signature or from absence of a finding
 - claim BIOS/UEFI bootability from filenames alone
 - infer a capability because a filename extension looks plausible
+
+Health findings may be emitted only from explicitly implemented, structurally validated, bounded metadata checks.
 
 ## Current milestone mapping
 
