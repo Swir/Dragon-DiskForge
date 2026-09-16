@@ -31,7 +31,15 @@ public sealed class ImageReportService
         ImageIntelligenceInfo? analysis = null;
         if (resolution.Provider is not null)
         {
-            try { analysis = await new ImageIntelligenceService(_registry).AnalyzeAsync(path, cancellationToken); }
+            try
+            {
+                analysis = await new ImageIntelligenceService(_registry).AnalyzeAsync(path, cancellationToken);
+                if (analysis.FileSystems is { } fileSystems)
+                {
+                    var depth = await new FileSystemDepthService().AnalyzeAsync(path, fileSystems, cancellationToken);
+                    analysis = MergeDepthEvidence(analysis, depth);
+                }
+            }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { diagnostics.Add($"Analysis incomplete: {ex.Message}"); }
         }
@@ -84,5 +92,41 @@ public sealed class ImageReportService
         }
         foreach (var diagnostic in report.Diagnostics) b.AppendLine().AppendLine(diagnostic);
         return b.ToString();
+    }
+
+    private static ImageIntelligenceInfo MergeDepthEvidence(
+        ImageIntelligenceInfo analysis,
+        FileSystemDepthInfo depth)
+    {
+        if (!depth.HasIdentity && !depth.HasHealthFindings)
+            return analysis;
+
+        var identity = analysis.Identity
+            .Concat(depth.Identity)
+            .GroupBy(
+                x => $"{x.Kind}\u001f{x.Value}\u001f{x.PartitionIndex?.ToString() ?? string.Empty}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(x => x.Kind, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.PartitionIndex ?? int.MinValue)
+            .ThenBy(x => x.Value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var health = analysis.HealthFindings
+            .Concat(depth.HealthFindings)
+            .GroupBy(
+                x => $"{x.Code}\u001f{x.PartitionIndex?.ToString() ?? string.Empty}\u001f{x.Message}",
+                StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderByDescending(x => x.Severity)
+            .ThenBy(x => x.Code, StringComparer.Ordinal)
+            .ThenBy(x => x.PartitionIndex ?? int.MinValue)
+            .ToArray();
+
+        return analysis with
+        {
+            Identity = Array.AsReadOnly(identity),
+            HealthFindings = Array.AsReadOnly(health)
+        };
     }
 }
