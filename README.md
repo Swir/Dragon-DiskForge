@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 37% toward 1.0
+## Project progress — 38% toward 1.0
 
-`███████░░░░░░░░░░░░░ 37%`
+`████████░░░░░░░░░░░░ 38%`
 
-**Overall completion:** **37%**
+**Overall completion:** **38%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~59%** 🚧
+- `0.4 Extended Image Providers` — **~65%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
@@ -106,7 +106,7 @@ Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
 
 ### 0.4 Extended Image Providers 🚧
 
-The provider foundation and five additional image families are now implemented:
+The provider foundation and six additional image families are now implemented:
 
 - central Core `ProviderRegistry`
 - explicit provider capability reporting
@@ -144,11 +144,17 @@ The provider foundation and five additional image families are now implemented:
 - DAOI 32-bit and DAOX 64-bit byte offsets are bounded against the image and metadata table
 - cue audio/data control is cross-checked against DAO track mode; unknown modes and ambiguous/missing cue metadata are rejected
 - NRG requires a terminating empty `END!` chunk and rejects trailing metadata or track ranges overlapping the chunk table
-- BIN/CUE, MDF/MDS and NRG do **not** advertise Direct Browse, Mount or Convert
-- dedicated provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS and NRG smoke tests in CI
-- PR #20 / run #185: NRG v1/v2 tests + full prior regression + WinUI Release x64 + artifact ✅
+- read-only **CCD / IMG / SUB track-layout provider** for CloneCD image sets
+- CloneCD `[TRACK n]` MODE 0/1/2 maps to AUDIO, MODE1/2352 and MODE2/2352; INDEX metadata supplies bounded track positions
+- same-name `.img` payloads must be non-empty and aligned to 2352-byte raw sectors
+- optional same-name `.sub` sidecars are accepted only when their length is exactly 96 bytes per IMG sector
+- CCD has priority over generic RAW for ambiguous `.img` only after a valid same-name `.ccd` descriptor is parsed; otherwise provider fallback remains intact
+- unsupported descriptor versions/modes, missing or non-increasing INDEX 1 metadata and invalid INDEX 0 ordering are rejected
+- BIN/CUE, MDF/MDS, NRG and CCD/IMG/SUB do **not** advertise Direct Browse, Mount or Convert
+- dedicated provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG and CCD/IMG/SUB smoke tests in CI
+- PR #21 / run #193: CCD/IMG/SUB tests + full prior regression + WinUI Release x64 + artifact ✅
 
-The next 0.4 work is **CCD/IMG/SUB**. Filesystem-level browsing for RAW, floppy and optical provider families remains intentionally disabled until the corresponding filesystem/content layers are implemented and proven.
+The next 0.4 work is **VMDK**. Filesystem-level browsing for RAW, floppy and optical provider families remains intentionally disabled until the corresponding filesystem/content layers are implemented and proven.
 
 The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
@@ -177,7 +183,7 @@ The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.m
 - provider-backed direct-browse architecture for formats that can be safely parsed without mounting
 - bounded read-only partition-table parsing for RAW disk images
 - bounded read-only floppy geometry/BPB inspection
-- bounded read-only optical track-layout parsing for BIN/CUE, MDF/MDS CD and NRG v1/v2 images
+- bounded read-only optical track-layout parsing for BIN/CUE, MDF/MDS CD, NRG v1/v2 and CCD/IMG/SUB images
 
 ## Build on Windows
 
@@ -187,13 +193,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, IMA/floppy provider smoke tests, BIN/CUE provider smoke tests, MDF/MDS provider smoke tests, NRG provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, IMA/floppy provider smoke tests, BIN/CUE provider smoke tests, MDF/MDS provider smoke tests, NRG provider smoke tests, CCD/IMG/SUB provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection and optical track-layout inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary. Floppy inspection validates known capacity/geometry and rejects inconsistent BPB metadata. BIN/CUE inspection contains referenced payloads to the CUE directory and refuses ambiguous mixed-sector offsets rather than guessing them. MDF/MDS inspection validates every descriptor and payload range, confines footer paths to the descriptor directory, uses explicit byte offsets for mixed-sector CD layouts and rejects DVD-style media until separately supported. NRG inspection bounds every metadata chunk and DAO track range, decodes v1/v2 cue positions according to their actual on-disk representation, requires `END!`, and rejects inconsistent cue/DAO metadata rather than guessing. These providers do not expose filesystem browsing until those capabilities are real and tested. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection and optical track-layout inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary. Floppy inspection validates known capacity/geometry and rejects inconsistent BPB metadata. BIN/CUE inspection contains referenced payloads to the CUE directory and refuses ambiguous mixed-sector offsets rather than guessing them. MDF/MDS inspection validates every descriptor and payload range, confines footer paths to the descriptor directory, uses explicit byte offsets for mixed-sector CD layouts and rejects DVD-style media until separately supported. NRG inspection bounds every metadata chunk and DAO track range, decodes v1/v2 cue positions according to their actual on-disk representation, requires `END!`, and rejects inconsistent cue/DAO metadata rather than guessing. CCD/IMG/SUB inspection uses documented TRACK MODE/INDEX metadata, validates 2352-byte IMG alignment and optional 96-byte-per-sector SUB length, and claims ambiguous `.img` files only after a valid same-name CCD descriptor is proven. These providers do not expose filesystem browsing until those capabilities are real and tested. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 
