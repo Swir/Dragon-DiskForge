@@ -16,6 +16,10 @@ try
             ddf decompress <input.gz> <output> <maximum-output-bytes>
             ddf split <image> <new-output-folder> <part-size-bytes>
             ddf join <image.ddfparts.json> <output>
+            ddf create-iso <source-folder> <output.iso> [LABEL]
+            ddf create-vhd <output.vhd> <size-bytes>
+            ddf create-vhdx <output.vhdx> <size-bytes>
+            ddf convert <input.raw|vhd|vhdx> <output> <raw|vhd|vhdx>
             Existing outputs are never overwritten. Ctrl+C cancels the operation.
             Exit codes: 0 success, 1 error, 2 usage/checksum mismatch, 130 cancelled.
             """);
@@ -53,6 +57,15 @@ try
             break;
         case "join" when args.Length == 3:
             await files.JoinAsync(args[1], args[2], token: token);
+            break;
+        case "create-iso" when args.Length is 3 or 4:
+            await new ImageCreationService().CreateIsoAsync(args[1], args[2], args.Length == 4 ? args[3] : "DRAGON_DISKFORGE", token: token);
+            break;
+        case "create-vhd" or "create-vhdx" when args.Length == 3:
+            await new ImageCreationService().CreateVirtualDiskAsync(args[1], long.Parse(args[2]), args[0] == "create-vhd" ? "vhd" : "vhdx", token);
+            break;
+        case "convert" when args.Length == 4:
+            await new ImageCreationService().ConvertAsync(args[1], args[2], args[3], token: token);
             break;
         default:
             Console.Error.WriteLine("Invalid arguments. Run ddf --help.");
