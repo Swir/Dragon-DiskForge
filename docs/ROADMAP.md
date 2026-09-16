@@ -48,7 +48,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 88%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation and a clean Windows package candidate path are implemented and validated.
+**Current 0.5 completion: approximately 90%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation and a versioned independently verified clean Windows package-candidate path are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
@@ -133,13 +133,17 @@ See [`docs/FILESYSTEM-DEPTH.md`](FILESYSTEM-DEPTH.md).
 - ✅ generated NTFS corruption/range, architecture reconciliation and cancellation tests
 - ✅ PR #34 / implementation run #266 passed the hardening gate plus complete provider/Explorer/native Windows/Release x64 regression
 
-### Beta package preparation — ✅ validated candidate path
+### Beta package preparation — ✅ versioned and independently verified candidate path
 - ✅ CI creates a clean Windows x64 ZIP candidate after the Release build
 - ✅ package staging rejects missing/multiple application EXEs, PDB files and test-only payloads
-- ✅ package manifest records product, architecture, entry point and debug-symbol policy
+- ✅ package manifest records product, repository version, executable ProductVersion/FileVersion, architecture, entry point, icon, entry-point SHA-256 and debug-symbol policy
 - ✅ SHA-256 checksum is generated next to the ZIP
-- ✅ run #266 candidate was independently downloaded: checksum matched; one application EXE; zero PDB/test-only files
-- 🚧 final beta version metadata, clean-machine runtime and public GitHub Release packaging remain separate release gates
+- ✅ canonical Dragon icon is guaranteed at the package root
+- ✅ product version metadata is centralized in `Directory.Build.props`
+- ✅ `verify-package.ps1` independently reopens the ZIP and verifies checksum, manifest schema, semantic version, executable metadata/hash, icon and payload exclusions
+- ✅ run #270 passed the complete Windows regression/build path plus clean-package build, package verification and both artifact uploads
+- ✅ run #270 clean package was independently downloaded after CI: sidecar SHA-256 matched the ZIP, manifest version was `0.5.0-alpha.1`, executable SHA matched the manifest, one application EXE and zero PDB files were present
+- 🚧 final `0.5.0-beta.1` suffix promotion, clean-machine runtime and public GitHub Release remain separate release gates
 
 ### Filesystem family depth
 - 🚧 ISO9660/UDF — ISO direct browsing proven; UDF VRS plus bounded primary anchor/main descriptor-sequence metadata proven; independently bounded UDF traversal remains

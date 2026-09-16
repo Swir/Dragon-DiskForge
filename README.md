@@ -6,17 +6,17 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 55% toward 1.0
+## Project progress — 56% toward 1.0
 
-`███████████░░░░░░░░░ 55%`
+`███████████░░░░░░░░░ 56%`
 
-**Overall completion:** **55%**
+**Overall completion:** **56%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~88%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **~90%** 🚧
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -34,10 +34,11 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - bounded read-only partition, filesystem, boot/install and image-intelligence services
 - user-facing **Analyze** action with text/JSON reporting and Save JSON
 - required **by Swir** + GitHub footer in the Windows UI
+- versioned, checksum-verified clean Windows x64 package candidate pipeline
 
 ## 0.5 Partitions + File Systems + Image Intelligence 🚧
 
-Seven substantial 0.5 slices plus beta-package preparation are now implemented and validated.
+Nine substantial 0.5 execution slices are now implemented and validated.
 
 ### Cross-provider partition intelligence ✅
 
@@ -102,21 +103,31 @@ Seven substantial 0.5 slices plus beta-package preparation are now implemented a
 - generated fixtures cover healthy/corrupt NTFS metadata, out-of-range `$MFTMirr`, architecture conflicts and cancellation
 - PR #34 / implementation run #266 passed the new hardening gate plus the complete provider/Explorer/native Windows/Release x64 path
 
-### Beta package preparation ✅
+### Clean Windows beta-package candidate ✅
 
-- Windows CI now creates a clean `DragonDiskForge-win-x64.zip` candidate in addition to the engineering artifact
-- public-package staging excludes `.pdb` and test-only files and requires exactly one `DragonDiskForge.App.exe` entry point
-- the package contains a deterministic package manifest and a generated SHA-256 file
-- run #266 package was independently downloaded and reviewed: checksum matched, one application EXE, zero PDB files and zero test-only files
-- this is beta-preparation evidence only; it does **not** replace clean-machine/manual beta gates
+- Windows CI creates a clean `DragonDiskForge-win-x64.zip` candidate in addition to the engineering artifact
+- public-package staging excludes `.pdb` and test-only files and requires exactly one `DragonDiskForge.App.exe`
+- the package contains a deterministic manifest and generated SHA-256 sidecar
+- the canonical Dragon icon is guaranteed in the package root
+- run #270 passed the clean-package build, independent package-verification gate and both artifact uploads
+
+### Release version + package verification ✅
+
+- product version metadata is centralized in `Directory.Build.props`
+- Release builds embed numeric assembly/file versions plus the semantic informational version
+- package manifests record repository version, executable ProductVersion/FileVersion, architecture, entry point, icon and entry-point SHA-256
+- `verify-package.ps1` independently reopens the ZIP and rejects checksum, manifest, version, architecture, EXE hash, icon, PDB or test-content mismatches
+- the run #270 clean artifact was independently downloaded after CI: ZIP sidecar SHA-256 matched, the manifest reported `0.5.0-alpha.1`, the executable hash matched the manifest, one application EXE was present, and no PDB files were present
 
 See [`docs/FILESYSTEM-DEPTH.md`](docs/FILESYSTEM-DEPTH.md), [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md), [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md) and [`docs/IMAGE-INTELLIGENCE.md`](docs/IMAGE-INTELLIGENCE.md).
 
 ### Remaining 0.5 work
 
-- further UDF traversal only after an independently bounded reader is proven
-- virtual guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
-- final 0.5 beta-scope hardening/documentation and clean-machine/manual QA gate
+- independently bounded UDF traversal where justified
+- truthful guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
+- final 0.5 beta-scope hardening/documentation
+- clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA
+- promote the verified version pipeline to the final `0.5.0-beta.1` suffix only when the beta gate is actually complete
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
 
@@ -145,7 +156,7 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish the engineering artifact plus a clean ZIP candidate with SHA-256.
+CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and the engineering artifact.
 
 ## Safety design
 
