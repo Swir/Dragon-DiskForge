@@ -11,13 +11,20 @@ public sealed class PhysicalMediaSafetyService
 
         var refusalReasons = new List<string>();
         var warnings = new List<string>();
-        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var sourceLooksPhysical = LooksLikePhysicalDevicePath(sourcePath);
+        var fullSourcePath = sourceLooksPhysical ? sourcePath.Trim() : Path.GetFullPath(sourcePath);
 
         if (sourceLengthBytes <= 0)
             refusalReasons.Add("Source image length must be greater than zero.");
 
+        if (sourceLooksPhysical)
+            refusalReasons.Add("Source must be a regular image file; physical-device sources are refused by this write-plan contract.");
+
         if (destination.DiskNumber < 0 || string.IsNullOrWhiteSpace(destination.DevicePath))
             refusalReasons.Add("Destination physical-disk identity is incomplete.");
+
+        if (string.Equals(fullSourcePath, destination.DevicePath, StringComparison.OrdinalIgnoreCase))
+            refusalReasons.Add("Source and destination resolve to the same physical device.");
 
         if (!destination.HasStableIdentity)
             refusalReasons.Add("Destination does not expose a stable hardware identity; destructive operations are refused.");
@@ -66,6 +73,13 @@ public sealed class PhysicalMediaSafetyService
             return false;
 
         return string.Equals(plan.ConfirmationToken, suppliedToken?.Trim(), StringComparison.Ordinal);
+    }
+
+    private static bool LooksLikePhysicalDevicePath(string path)
+    {
+        var candidate = path.Trim();
+        return candidate.StartsWith(@"\\.\PhysicalDrive", StringComparison.OrdinalIgnoreCase)
+            || candidate.StartsWith(@"\\?\PhysicalDrive", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildConfirmationToken(PhysicalDiskInfo destination)
