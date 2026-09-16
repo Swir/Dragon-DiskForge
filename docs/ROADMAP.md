@@ -12,249 +12,156 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.1 Foundation + Dragon Visual Identity — ✅ complete
 
-### Core foundation
 - ✅ WinUI 3 / .NET 10 desktop shell
 - ✅ `DragonDiskForge.Core` separated from GUI
-- ✅ Drag & drop + file picker
-- ✅ Initial image-format catalogue
-- ✅ Signature detection: ISO, VHD, VHDX, QCOW2, DMG, WIM/ESD
-- ✅ SHA-256 verification through shared Core service
-- ✅ SHA-256 progress reporting and user cancellation
-- ✅ Read-only-first architecture
-- ✅ Architecture document, changelog and repository hygiene
-- ✅ Windows x64 GitHub Actions build validation
-- ✅ Core smoke-test harness for signatures, fallback, errors, SHA-256 progress and cancellation
-- ✅ Foundation regression pass and future-feature locking
+- ✅ drag & drop + file picker
+- ✅ initial image-format catalogue and signature detection
+- ✅ SHA-256 verification with progress/cancellation
+- ✅ read-only-first architecture
+- ✅ Windows x64 CI and Core smoke tests
+- ✅ Dragon visual system, responsive layout, accessible themes and final Windows icon
 
-### Dragon visual system
-- ✅ Dragon visual language specification and custom sigil
-- ✅ Final Windows application icon resource
-- ✅ Obsidian / charcoal base palette
-- ✅ Ember / molten-metal accent palette
-- ✅ Deep-crimson secondary accent
-- ✅ Dragon-scale micro-pattern and restrained ember active states
-- ✅ Dragon-themed startup overlay and Forge home/drop state
-- ✅ Custom Dragon header treatment
-- ✅ Fluent/WinUI animations
-- ✅ Light theme and system-aware High Contrast resources
-- ✅ Responsive layout for compact and wide desktop windows
-
-**Exit criteria — passed:** clean Windows x64 Release build, reliable image detection smoke tests, no fake actions presented as complete, documented architecture, and a recognizably Dragon DiskForge UI rather than a generic WinUI utility.
+**Exit criteria — passed.**
 
 ---
 
 ## 0.2 Native Mount + Unmount — ✅ complete
 
-- ✅ `IMountService` contract in Core
-- ✅ Native Windows service layer isolated in `DragonDiskForge.Windows`
-- ✅ Native Windows mount service for ISO, VHD and VHDX
-- ✅ Unmount / eject
-- ✅ Drive-letter and mount-state detection
-- ✅ Read-only mount mode where supported
-- ✅ Elevation policy only when required by the VHD/VHDX native path
-- ✅ Mount progress, cancellation and friendly error translation
-- ✅ Live Mounted-image dashboard with refresh/open/unmount/cancel
-- ✅ Safe stale-state recovery by re-querying Windows
-- ✅ Live mounted inventory derived from Windows Storage state
-- ✅ Integration tests for disposable VHD/VHDX and IMAPI ISO mount/read/unmount
-- ✅ Cancellation-safety and unsupported-format validation
-- ✅ Full Windows x64 Release CI regression
+- ✅ native Windows ISO/VHD/VHDX mount/unmount
+- ✅ read-only default
+- ✅ drive-letter and attached-state detection
+- ✅ progress/cancellation and friendly errors
+- ✅ live Mounted state refreshed from Windows
+- ✅ disposable VHD/VHDX/ISO integration tests
 
-**Manual QA note:** GitHub-hosted Windows runners execute as administrators, so the visible normal-user UAC prompt cannot be faithfully exercised in CI. The implemented elevation path has a required desktop checklist in `docs/MANUAL-VALIDATION.md` before public beta packaging.
+**Manual QA:** normal-user UAC interaction remains documented in `docs/MANUAL-VALIDATION.md`.
 
-**Exit criteria — passed:** supported ISO/VHD/VHDX images can be mounted and unmounted reliably from Dragon DiskForge without external manual commands, and the app refreshes from real Windows state rather than trusting stale session state.
+**Exit criteria — passed.**
 
 ---
 
 ## 0.3 Dragon Explorer — ✅ complete
 
 ### Mounted-volume Explorer — ✅
-- ✅ Core Explorer models + `IExplorerService`
-- ✅ Safe filesystem-backed browsing for mounted ISO/VHD/VHDX
-- ✅ folders-first listing, navigation, Up and breadcrumbs
-- ✅ recursive search with cancellation and limits
-- ✅ metadata, safe shell-open and executable/script trust warning
-- ✅ safe Copy out with overwrite, root-boundary and reparse-point protection
-- ✅ copy progress + cancellation
-- ✅ mounted dashboard routing backed by live Windows state
-- ✅ Core tests and real mounted-ISO list/search/copy integration
+- ✅ list/navigation/breadcrumbs/metadata
+- ✅ recursive search with cancellation
+- ✅ safe Copy out with overwrite and reparse-point protection
+- ✅ mounted ISO integration
 
 ### Preview + Image Library — ✅
-- ✅ bounded text preview with truncation and cancellation
-- ✅ image preview without shell execution
-- ✅ PDF/media metadata-only preview
-- ✅ binary/unsupported fallback
+- ✅ bounded text/image/PDF/media preview modes
 - ✅ stale-preview cancellation
-- ✅ Recent Images + Favorites with atomic persistence and path deduplication
-- ✅ real Images view with Open/Favorite/Unfavorite/Remove
-- ✅ missing-file handling
-- ✅ Core and mounted-ISO preview integration tests
+- ✅ Recent Images + Favorites with atomic persistence
 
 ### Mounted history + multi-image workspace — ✅
-- ✅ atomic local Mount/Unmount history with bounded retention
-- ✅ history independent from authoritative Windows mounted state
-- ✅ dedicated Mounted history UI and safe Clear History
-- ✅ dedicated history smoke tests
-- ✅ WinUI TabView multi-image workspace
-- ✅ duplicate-tab prevention, stale-tab pruning and safe close semantics
-- ✅ successful unmount closes only workspace tabs backed by that image
+- ✅ local history independent from authoritative Windows state
+- ✅ WinUI TabView workspace
+- ✅ duplicate-tab prevention and stale-tab pruning
 
 ### Safe drag-out — ✅
 - ✅ native Copy-only drag-out to Windows Explorer/Desktop
-- ✅ WinUI `DragStarting` deferral for StorageItem resolution
-- ✅ mounted-root containment revalidation
-- ✅ stale source and path-escape rejection
-- ✅ listed/runtime reparse-point rejection
-- ✅ dedicated drag-out safety smoke tests
-- ✅ real cross-process pointer gesture retained as explicit manual QA
+- ✅ root containment and reparse-point revalidation
+- ✅ dedicated safety tests
 
 ### Provider-backed direct ISO browsing — ✅
-- ✅ `IDirectBrowseProvider` contract
+- ✅ `IDirectBrowseProvider`
 - ✅ managed ISO9660/Joliet parser
-- ✅ direct list/navigation/search from image extents
-- ✅ safe direct file/folder Copy out with cancellation/progress
-- ✅ overwrite, path-traversal, filename and extent validation
-- ✅ dedicated `Direct ISO` WinUI tabs marked `NO MOUNT`
-- ✅ `Explore directly` enabled only after positive provider detection
-- ✅ direct tabs independent from Mount/Unmount lifecycle
-- ✅ real IMAPI integration proving list/search/copy while ISO stays detached
-- ✅ fake-extension and cancellation regression tests
+- ✅ direct list/navigation/search/Copy out without mounting
+- ✅ extent/path/filename validation
+- ✅ real IMAPI integration
 
-### 0.3 validation checkpoints
-- ✅ PR #5 / run #56 — mounted Explorer
-- ✅ PR #6 / run #72 — Preview + Image Library
-- ✅ PR #7 / run #86 — history + multi-image workspace
-- ✅ PR #10 / run #103 — safe drag-out + x64 artifact
-- ✅ PR #12 / run #128 — direct ISO + native regression + WinUI Release + artifact
-- ✅ PR #12 / run #131 — full regression after progress synchronization
-
-**Exit criteria — passed:** supported mounted images can be browsed and useful content can be extracted without leaving Dragon DiskForge; ISO9660/Joliet can also be browsed directly without mounting.
+**Exit criteria — passed.**
 
 ---
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 65%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG and CCD/IMG/SUB families are real and tested.
+**Current 0.4 completion: approximately 71%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB and VMDK sparse metadata are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit provider capability reporting
 - ✅ deterministic priority and extension-first resolution
-- ✅ provider/signature fallback when extension candidates reject an image
+- ✅ signature/provider fallback
 - ✅ probe and inspection failure isolation
-- ✅ cancellation remains a hard stop across fallback
-- ✅ provider diagnostics and duplicate provider-ID protection
-- ✅ ISO9660/Joliet direct browsing migrated to registry resolution
-- 🚧 stable provider/plugin contract — internal Core contract is usable; public third-party stability remains a later gate
+- ✅ cancellation hard-stop semantics
+- ✅ provider diagnostics and duplicate-ID protection
+- ✅ ISO9660/Joliet direct browsing through the registry
+- 🚧 public stable plugin/provider contract remains a later stability gate
 
 ### IMG / RAW partition provider — ✅ complete
-- ✅ `.img`, `.raw` and `.dd` registration
-- ✅ MBR primary partition parsing
-- ✅ EBR logical-partition traversal with loop and count limits
-- ✅ GPT primary-header and partition-entry parsing
-- ✅ 512-byte and 4096-byte GPT logical-sector probing
-- ✅ common MBR/GPT type decoding and GPT UTF-16 partition names
-- ✅ strict image-boundary validation
-- ✅ malformed/fake-extension rejection and cancellation propagation
-- ✅ explicit `PartitionTable` capability
+- ✅ `.img`, `.raw`, `.dd`
+- ✅ MBR primary partitions
+- ✅ bounded EBR logical traversal
+- ✅ GPT with 512/4096 logical-sector probing
+- ✅ partition type/name metadata
+- ✅ strict image bounds
+- ✅ `PartitionTable` capability
 - ✅ no fake Direct Browse, Mount or Convert
-- ✅ dedicated Windows CI smoke tests
 
 ### IMA / floppy media provider — ✅ complete
-- ✅ `.ima` and `.flp` registration
-- ✅ standard raw floppy geometries from 160 KB through 2.88 MB
-- ✅ blank/unformatted exact-size recognition without fabricated filesystem claims
-- ✅ FAT-style BPB parsing when present
-- ✅ BPB capacity and CHS validation against real image geometry
-- ✅ OEM string, volume label, media descriptor and filesystem hint metadata
-- ✅ unsupported-size, malformed-BPB and foreign-extension rejection
-- ✅ cancellation propagation
-- ✅ explicit `MediaGeometry` capability
+- ✅ `.ima`, `.flp`
+- ✅ standard raw floppy geometries
+- ✅ blank/unformatted exact-size recognition
+- ✅ FAT-style BPB parsing
+- ✅ capacity and CHS validation
+- ✅ `MediaGeometry` capability
 - ✅ no fake Direct Browse, Mount or Convert
-- ✅ dedicated Windows CI smoke tests
 
 ### BIN / CUE track-layout provider — ✅ complete
-- ✅ `.cue` plus same-name companion `.bin` resolution
-- ✅ `ITrackLayoutProvider` contract and explicit `TrackLayout` capability
 - ✅ BINARY CUE parsing
-- ✅ AUDIO, MODE1/2048, MODE1/2352, MODE2/2336 and MODE2/2352 track modes
-- ✅ single-file and multi-file CUE layouts
-- ✅ bounded CUE byte size, line count and track count
-- ✅ INDEX 00/01 parsing and time validation
-- ✅ BIN existence, non-empty state and sector-alignment validation
-- ✅ track start/end range validation against real BIN length
-- ✅ strict increasing track numbers and INDEX 01 positions
-- ✅ payload paths confined to the CUE directory
-- ✅ absolute/path-traversal references rejected
-- ✅ unsupported FILE/track types rejected
-- ✅ mixed sector sizes inside one BIN rejected instead of guessing byte offsets
-- ✅ orphan `.bin` files not claimed without a matching CUE
-- ✅ cancellation propagation
-- ✅ no fake Direct Browse, Mount or Convert
-- ✅ dedicated Windows CI smoke tests
-- ✅ PR #18 / run #172 passes BIN/CUE plus the complete previous provider/native/build/artifact regression path
+- ✅ AUDIO, MODE1/2048, MODE1/2352, MODE2/2336, MODE2/2352
+- ✅ single-file and multi-file layouts
+- ✅ bounded INDEX 00/01 and payload ranges
+- ✅ path containment
+- ✅ ambiguous mixed-sector single-BIN layouts rejected
+- ✅ `TrackLayout` capability
 
 ### MDF / MDS CD track-layout provider — ✅ complete
-- ✅ `.mds` plus same-name/descriptor-referenced companion `.mdf` resolution
-- ✅ reuses `ITrackLayoutProvider` and explicit `TrackLayout` capability
-- ✅ `MEDIA DESCRIPTOR` signature and version validation
-- ✅ medium-type validation with explicit DVD-style MDS rejection in this CD-only slice
-- ✅ bounded session-table and track-block parsing
-- ✅ user-track number, sector-size, start-sector and explicit MDF byte-offset parsing
-- ✅ mixed-sector CD layouts through explicit byte offsets rather than guessed sector math
-- ✅ same-name MDF fallback plus footer-based ASCII/UTF-16 payload names
-- ✅ `*.mdf` wildcard footer resolution to the descriptor basename
-- ✅ MDS footer, filename and MDF track ranges bounded against real file sizes
-- ✅ payload paths confined to the MDS directory
-- ✅ rooted/path-traversal and non-MDF payload references rejected
-- ✅ missing/empty payload, unsupported sector size, duplicate track and malformed range rejection
-- ✅ cancellation propagation
-- ✅ no fake Direct Browse, Mount or Convert
-- ✅ dedicated Windows CI smoke tests
-- ✅ PR #19 / run #182 passes the final MDF/MDS branch head plus the complete previous provider/native/build/artifact regression path
+- ✅ `MEDIA DESCRIPTOR` signature/version/medium validation
+- ✅ bounded session/track structures
+- ✅ explicit MDF byte offsets
+- ✅ safe ASCII/UTF-16 footer payload resolution
+- ✅ DVD-style MDS intentionally rejected until separately proven
 
-### NRG track-layout provider — ✅ complete
-- ✅ `.nrg` registration through `ITrackLayoutProvider` / `TrackLayout`
-- ✅ classic `NERO` v1 footer with big-endian 32-bit chunk-table offset
-- ✅ `NER5` v2 footer with big-endian 64-bit chunk-table offset
-- ✅ CUES v1 8-byte cue entries with BCD `00:MM:SS:FF` positions converted to real LBA
-- ✅ CUEX v2 8-byte cue entries with signed big-endian LBA
-- ✅ BCD cue track/index validation and lead-out handling
-- ✅ DAOI v1 32-bit and DAOX v2 64-bit byte-offset track tables
-- ✅ real logical StartSector resolved from cue index 1 rather than guessed from byte offsets
-- ✅ track byte ranges bounded before the metadata chunk table
-- ✅ supported sector-size and DAO mode validation
-- ✅ cue audio/data control cross-checked with DAO track mode
-- ✅ missing or ambiguous cue index 1 metadata rejected
-- ✅ terminating empty `END!` chunk required and trailing metadata rejected
-- ✅ chunk count/size safety limits and cancellation propagation
-- ✅ no fake Direct Browse, Mount or Convert
-- ✅ dedicated v1/v2 Windows CI smoke tests
-- ✅ PR #20 / run #185 passes NRG plus all previous provider/native/build/artifact gates before docs synchronization
+### NRG v1/v2 track-layout provider — ✅ complete
+- ✅ `NERO` v1 and `NER5` v2 footer parsing
+- ✅ CUES BCD MSF and CUEX signed-LBA positions
+- ✅ DAOI/DAOX byte ranges
+- ✅ cue/DAO consistency checks
+- ✅ terminating empty `END!` required
 
 ### CCD / IMG / SUB track-layout provider — ✅ complete
-- ✅ `.ccd`, same-name `.img` and validated same-name `.sub` registration
-- ✅ reuses `ITrackLayoutProvider` and explicit `TrackLayout` capability
-- ✅ CloneCD `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
-- ✅ INDEX 0/1 parsing with INDEX 1 used as the logical track start
-- ✅ same-name IMG payload required, non-empty and aligned to 2352-byte raw sectors
-- ✅ optional same-name SUB sidecar accepted only at exactly 96 bytes per IMG sector
-- ✅ descriptor byte-size, line-count and line-length bounds
-- ✅ currently proven CloneCD descriptor versions 1–3 only; unvalidated future versions rejected
-- ✅ missing/duplicate/non-increasing INDEX 1, INDEX 0 after INDEX 1, unsupported modes and out-of-range positions rejected
-- ✅ CCD registration outranks generic RAW for ambiguous `.img` only after a valid same-name CCD descriptor is parsed; otherwise registry fallback remains available
+- ✅ CloneCD `.ccd`, same-name `.img`, validated `.sub`
+- ✅ MODE 0/1/2 and INDEX 0/1 handling
+- ✅ 2352-byte IMG alignment
+- ✅ optional SUB exactly 96 bytes per IMG sector
+- ✅ CCD takes precedence over RAW `.img` only after valid same-name descriptor detection
+- ✅ malformed/unsupported metadata rejected rather than guessed
+
+### VMDK sparse metadata provider — ✅ complete
+- ✅ `.vmdk` hosted sparse header version 1
+- ✅ `IVirtualDiskMetadataProvider` and `VirtualDiskMetadata` capability
+- ✅ sparse magic `0x564D444B` and version validation
+- ✅ flags, virtual capacity and grain-size parsing
+- ✅ embedded descriptor offset/size parsing
+- ✅ grain-table entry count, redundant grain-directory offset, grain-directory offset and overhead metadata
+- ✅ sector-offset overflow and physical-file bounds validation
+- ✅ unclean-shutdown/newline/compression consistency checks
+- ✅ embedded descriptor limited to 1 MiB with line/line-length bounds
+- ✅ descriptor version/createType/CID/parentCID/extent-count metadata
+- ✅ conflicting/malformed descriptor metadata rejected
+- ✅ text-only VMDK descriptors and unproven sparse-header versions not claimed
 - ✅ cancellation propagation
-- ✅ no fake Direct Browse, Mount or Convert
-- ✅ dedicated Windows CI smoke tests
-- ✅ PR #21 / run #193 passes CCD/IMG/SUB plus all previous provider/native/build/artifact gates before docs synchronization
+- ✅ no grain-table translation, virtual-sector reads, Direct Browse, Mount or Convert
+- ✅ PR #22 / run #200 passed VMDK plus the complete previous provider/native/build/artifact path before documentation synchronization
 
 ### Remaining image families
-- ⬜ VMDK
 - ⬜ QCOW/QCOW2
 - ⬜ DMG
 - ⬜ WIM/ESD
 - ⬜ FFU
 
-**Next provider:** **VMDK**.
+**Next provider:** **QCOW/QCOW2**.
 
 **Exit criteria:** providers expose consistent, truthful capabilities without turning Core into one monolithic parser.
 
@@ -262,35 +169,32 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.5 Partitions + File Systems + Image Intelligence — ⬜ planned
 
-> RAW already supplies a proven low-level MBR/GPT parser and floppy supplies validated BPB hints. Milestone 0.5 still owns cross-provider partition intelligence, actual filesystem recognition and the user-facing intelligence layer.
+> RAW already supplies proven MBR/GPT parsing and floppy supplies validated BPB hints. 0.5 owns cross-provider filesystem/content intelligence.
 
-- ⬜ MBR partition-table inspection across supported image providers
-- ⬜ GPT partition-table inspection across supported image providers
+- ⬜ partition-table inspection across supported virtual-disk providers
 - ⬜ ISO9660/UDF recognition
 - ⬜ FAT/FAT32/exFAT recognition
 - ⬜ NTFS metadata inspection where supported
 - ⬜ ext-family recognition where supported
-- ⬜ Bootability detection
-- ⬜ BIOS/UEFI boot detection
-- ⬜ Windows installer recognition
-- ⬜ Linux installer recognition
-- ⬜ Architecture detection: x86/x64/ARM64 where discoverable
-- ⬜ Volume labels, UUID/GUID and filesystem metadata
-- ⬜ Image health/corruption warnings
+- ⬜ bootability and BIOS/UEFI detection
+- ⬜ Windows/Linux installer recognition
+- ⬜ architecture detection where discoverable
+- ⬜ labels, UUID/GUID and filesystem metadata
+- ⬜ image health/corruption warnings
 
 ---
 
 ## 0.6 Create + Convert + Verify — ⬜ planned
 
-- ⬜ Create supported image formats
-- ⬜ Conversion pipeline and compatibility matrix
-- ⬜ Split/join large images
-- ⬜ Compression and sparse-image handling where supported
+- ⬜ create supported image formats
+- ⬜ conversion compatibility matrix and pipeline
+- ⬜ split/join large images
+- ⬜ compression and sparse handling where supported
 - ⬜ SHA-256 / SHA-512
-- ⬜ MD5 only for legacy verification compatibility
-- ⬜ Verify source/output after conversion
-- ⬜ Temporary-output + atomic finalization strategy
-- ⬜ Cancellation and rollback-safe output
+- ⬜ MD5 only for legacy compatibility
+- ⬜ post-conversion verification
+- ⬜ temporary output + atomic finalization
+- ⬜ cancellation and rollback-safe output
 
 **Exit criteria:** conversion never silently destroys the source and output can be independently verified.
 
@@ -298,26 +202,24 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.7 Bootable USB + Physical Media Tools — ⬜ planned
 
-- ⬜ Physical disk enumeration
-- ⬜ Strong target-disk identification
-- ⬜ Bootable USB and Windows/Linux image-writing workflows
-- ⬜ Destructive-operation confirmation screen
-- ⬜ explicit disk-size/model/serial confirmation
-- ⬜ write progress, safe cancellation and post-write verification
-- ⬜ prevent accidental system-disk selection where possible
-
-**Exit criteria:** destructive operations are difficult to trigger accidentally and always identify the target clearly.
+- ⬜ physical disk enumeration
+- ⬜ strong target-disk identification
+- ⬜ bootable USB and image-writing workflows
+- ⬜ destructive-operation confirmation
+- ⬜ disk size/model/serial confirmation
+- ⬜ write progress, cancellation and verification
+- ⬜ system-disk protection where possible
 
 ---
 
 ## 0.8 Windows Integration + Power Tools — ⬜ planned
 
-- ⬜ File associations
-- ⬜ "Open with Dragon DiskForge"
+- ⬜ file associations
+- ⬜ Open with Dragon DiskForge
 - ⬜ Windows context-menu integration
-- ⬜ CLI using the same Core engine
+- ⬜ CLI using the shared Core engine
 - ⬜ `dragon mount`, `dragon explore`, `dragon verify`, `dragon convert`
-- ⬜ optional PowerShell-friendly output
+- ⬜ PowerShell-friendly output
 - ⬜ session restore
 - ⬜ settings import/export
 - ⬜ diagnostic log export
@@ -326,38 +228,36 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.9 Quality, Security + Beta Hardening — ⬜ planned
 
-- ⬜ comprehensive Core/provider automated tests
-- ⬜ expanded mount/unmount integration tests
-- ⬜ non-admin UAC desktop validation matrix
-- ⬜ cross-process Explorer drag-out desktop validation matrix
-- ⬜ large-image and multi-terabyte sparse-image stress tests where feasible
-- ⬜ corrupt/truncated image tests
-- ⬜ fuzz-style parser robustness testing for untrusted metadata
-- ⬜ keyboard-first navigation
-- ⬜ screen-reader/accessibility review
-- ⬜ High-DPI and light/dark/system theme testing
-- ⬜ localization architecture
-- ⬜ English and Polish baseline
-- ⬜ crash handling with privacy-preserving report export
-- ⬜ performance and memory profiling
+- ⬜ comprehensive provider tests
+- ⬜ expanded mount/unmount integration matrix
+- ⬜ non-admin UAC desktop validation
+- ⬜ cross-process Explorer drag-out validation
+- ⬜ large/sparse image stress tests
+- ⬜ corrupt/truncated image cases
+- ⬜ fuzz-style parser robustness
+- ⬜ keyboard/screen-reader/accessibility review
+- ⬜ High-DPI and theme testing
+- ⬜ localization architecture with English/Polish baseline
+- ⬜ privacy-preserving crash report export
+- ⬜ performance/memory profiling
 - ⬜ beta regression checklist
 
 ---
 
 ## 1.0 Production Release — ⬜ planned
 
-- ⬜ Final Dragon UI/UX pass
-- ⬜ Signed Windows installer
-- ⬜ Portable build if technically appropriate
+- ⬜ final Dragon UI/UX pass
+- ⬜ signed Windows installer
+- ⬜ portable build if appropriate
 - ⬜ GitHub Actions release pipeline
-- ⬜ Automatic-update strategy
-- ⬜ Stable provider API
-- ⬜ Versioned configuration migration
-- ⬜ Full user documentation
-- ⬜ Supported-format/capability matrix
-- ⬜ Troubleshooting guide
-- ⬜ Release checklist
-- ⬜ Regression suite green
+- ⬜ automatic-update strategy
+- ⬜ stable provider API
+- ⬜ configuration migration
+- ⬜ full user documentation
+- ⬜ supported-format/capability matrix
+- ⬜ troubleshooting guide
+- ⬜ release checklist
+- ⬜ full regression suite green
 - ⬜ GitHub Release with binaries and checksums
 
 **1.0 definition of done:** Dragon DiskForge is visually distinctive, safe, installable, documented and genuinely useful for mounting, browsing, verifying and managing supported disk images.
@@ -366,40 +266,35 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## Post-1.0 candidates
 
-These are intentionally not allowed to delay 1.0:
-
 - ⬜ Plugin SDK for third-party providers
-- ⬜ More filesystems and forensic read-only inspection
-- ⬜ Batch conversion queue
-- ⬜ Network image sources
-- ⬜ Image comparison/diff tools
-- ⬜ Advanced repair workflows only where technically safe
+- ⬜ additional filesystems and forensic read-only inspection
+- ⬜ batch conversion queue
+- ⬜ network image sources
+- ⬜ image comparison/diff tools
+- ⬜ advanced repair workflows only where technically safe
 
 ---
 
 ## GitHub delivery workflow
 
-Every substantial feature follows this order:
-
 1. Define scope/capabilities.
-2. Implement in Core when logic is non-visual.
-3. Connect the WinUI layer.
+2. Implement non-visual logic in Core.
+3. Connect WinUI only when truthful.
 4. Add failure/cancellation paths.
 5. Test the real operation.
-6. Update docs.
-7. Update `CHANGELOG.md`.
-8. Update this roadmap status.
-9. Only then present the feature as complete.
+6. Update docs and changelog.
+7. Update roadmap/progress only after validation.
+8. Present the feature as complete only after its exit gate passes.
 
 ## Non-negotiable project rules
 
-1. Never mark a UI action as working when the underlying engine is still a placeholder.
+1. Never mark a UI action as working when the engine is still a placeholder.
 2. Read-only inspection is the safe default.
 3. Destructive operations require explicit target validation and confirmation.
 4. UI stays separate from `DragonDiskForge.Core`.
-5. New formats are added through providers/capabilities rather than one monolithic parser.
-6. `ROADMAP.md`, `CHANGELOG.md`, README progress and status docs stay synchronized with meaningful checkpoints.
-7. Large disk-image test files are never committed to the repository.
-8. Dragon styling must remain recognizable but must never reduce readability or accessibility.
-9. All dangerous operations must surface exactly what device/file will be changed before execution.
+5. New formats are added through providers/capabilities rather than a monolithic parser.
+6. README, ROADMAP, STATUS, MILESTONES and CHANGELOG stay synchronized.
+7. Large disk-image test files are never committed.
+8. Dragon styling must never reduce readability or accessibility.
+9. Dangerous operations must state exactly what device/file will change.
 10. A milestone is complete only after its exit criteria are met.

@@ -48,6 +48,9 @@ jobs:
       - name: CCD/IMG/SUB provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.Ccd.SmokeTests/DragonDiskForge.Ccd.SmokeTests.csproj -c Release
 
+      - name: VMDK sparse metadata smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Vmdk.SmokeTests/DragonDiskForge.Vmdk.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 
