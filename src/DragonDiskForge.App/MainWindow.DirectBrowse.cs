@@ -9,6 +9,7 @@ public sealed partial class MainWindow
 {
     private readonly ProviderRegistry _providerRegistry = new([
         new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100),
+        new ProviderRegistration(new CcdImageProvider(), Priority: 95),
         new ProviderRegistration(new RawPartitionImageProvider(), Priority: 90),
         new ProviderRegistration(new FloppyImageProvider(), Priority: 80),
         new ProviderRegistration(new CueSheetImageProvider(), Priority: 70),
