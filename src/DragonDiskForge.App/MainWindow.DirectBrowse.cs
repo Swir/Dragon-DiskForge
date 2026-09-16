@@ -7,7 +7,9 @@ namespace DragonDiskForge.App;
 
 public sealed partial class MainWindow
 {
-    private readonly IDirectBrowseProvider _isoDirectBrowseProvider = new Iso9660DirectBrowseProvider();
+    private readonly ProviderRegistry _providerRegistry = new([
+        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100)
+    ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
 
@@ -26,7 +28,7 @@ public sealed partial class MainWindow
         _directBrowseButton.IsEnabled = false;
         ToolTipService.SetToolTip(
             _directBrowseButton,
-            "Direct provider browsing becomes available only after the image is positively recognized.");
+            "Direct provider browsing becomes available only after a registered provider positively recognizes the image.");
         _directBrowseButton.Click += DirectBrowse_Click;
 
         _directBrowsePathCallbackToken = ImagePathText.RegisterPropertyChangedCallback(
@@ -44,11 +46,16 @@ public sealed partial class MainWindow
 
     private void RefreshMilestoneUiText()
     {
-        ReplaceExactText(RootLayout, "Core 0.2", "Core 0.3");
+        ReplaceExactText(RootLayout, "Core 0.2", "Core 0.4");
+        ReplaceExactText(RootLayout, "Core 0.3", "Core 0.4");
         ReplaceExactText(
             RootLayout,
             "Open, inspect, verify and mount supported disk images in a safe read-only workflow. Dragon Explorer is the next engine milestone.",
-            "Open, inspect, verify, mount and browse supported disk images in a safe read-only workflow. Dragon Explorer supports mounted volumes and direct ISO browsing.");
+            "Open, inspect, verify, mount and browse supported disk images in a safe read-only workflow. Dragon Explorer supports mounted volumes and provider-backed direct browsing.");
+        ReplaceExactText(
+            RootLayout,
+            "Open, inspect, verify, mount and browse supported disk images in a safe read-only workflow. Dragon Explorer supports mounted volumes and direct ISO browsing.",
+            "Open, inspect, verify, mount and browse supported disk images in a safe read-only workflow. Dragon Explorer supports mounted volumes and provider-backed direct browsing.");
     }
 
     private static void ReplaceExactText(DependencyObject root, string oldText, string newText)
@@ -78,34 +85,44 @@ public sealed partial class MainWindow
         }
 
         var path = image.Path;
-        if (!Path.GetExtension(path).Equals(".iso", StringComparison.OrdinalIgnoreCase))
-        {
-            ToolTipService.SetToolTip(
-                button,
-                "Direct browsing is currently proven for ISO9660/Joliet images. Other provider families arrive in later milestones.");
-            return;
-        }
+        ToolTipService.SetToolTip(button, "Checking registered direct-browse providers...");
 
-        ToolTipService.SetToolTip(button, "Checking ISO direct-browse capability...");
-        bool supported;
+        ProviderResolution resolution;
         try
         {
-            supported = await _isoDirectBrowseProvider.CanHandleAsync(path);
+            resolution = await _providerRegistry.ResolveAsync(path);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch
         {
-            supported = false;
+            ToolTipService.SetToolTip(button, "Provider capability detection failed safely.");
+            return;
         }
 
         if (_current is null || !string.Equals(_current.Path, path, StringComparison.OrdinalIgnoreCase))
             return;
 
+        var direct = resolution.Provider as IDirectBrowseProvider;
+        var supported = direct is not null
+            && resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.DirectBrowse) == true;
+
         button.IsEnabled = supported;
         ToolTipService.SetToolTip(
             button,
             supported
-                ? "Browse ISO9660/Joliet contents directly without mounting the image."
-                : "This ISO was not recognized by the direct ISO9660/Joliet provider. Native Mount may still be available.");
+                ? $"Browse with {resolution.Descriptor!.DisplayName} directly without mounting the image."
+                : BuildProviderUnavailableMessage(resolution));
+    }
+
+    private static string BuildProviderUnavailableMessage(ProviderResolution resolution)
+    {
+        var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
+        return failed > 0
+            ? $"No direct-browse provider accepted this image. {failed} provider probe(s) failed safely; native Mount may still be available."
+            : "No registered direct-browse provider currently accepts this image. Native Mount may still be available for supported formats.";
     }
 
     private async void DirectBrowse_Click(object sender, RoutedEventArgs e)
@@ -119,18 +136,20 @@ public sealed partial class MainWindow
 
         try
         {
-            if (!await _isoDirectBrowseProvider.CanHandleAsync(imagePath))
+            var resolution = await _providerRegistry.ResolveAsync(imagePath);
+            if (resolution.Provider is not IDirectBrowseProvider directProvider
+                || resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.DirectBrowse) != true)
             {
                 await ShowDialogAsync(
                     "Direct browse unavailable",
-                    "This image is not a supported ISO9660/Joliet filesystem. Dragon DiskForge will not pretend the provider can browse it.");
+                    "No registered direct-browse provider positively recognized this image. Dragon DiskForge will not pretend the format can be browsed.");
                 return;
             }
 
             if (_current is null || !string.Equals(_current.Path, imagePath, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            await _explorerWorkspace.OpenDirectImageAsync(imagePath, _isoDirectBrowseProvider);
+            await _explorerWorkspace.OpenDirectImageAsync(imagePath, directProvider);
             var explorerItem = ShellNav.MenuItems
                 .OfType<NavigationViewItem>()
                 .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), "explorer", StringComparison.OrdinalIgnoreCase));

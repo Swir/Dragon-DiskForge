@@ -6,18 +6,19 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current version — 0.3.0
+## Current version — 0.4.0-alpha.1
 
-## Project progress — 30% toward 1.0
+## Project progress — 31% toward 1.0
 
-`██████░░░░░░░░░░░░░░ 30%`
+`██████░░░░░░░░░░░░░░ 31%`
 
-**Overall completion:** **30%**
+**Overall completion:** **31%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 → 1.0` — planned / future milestones
+- `0.4 Extended Image Providers` — **~10%** 🚧
+- `0.5 → 1.0` — planned / future milestones
 
 > This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
 
@@ -103,15 +104,35 @@ Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
 - `Explore directly` is enabled only after the provider positively recognizes the current ISO
 - real IMAPI-generated ISO integration proves list/search/Copy out while the image remains detached
 
+### 0.4 Extended Image Providers 🚧
+
+The first 0.4 architecture slice is complete and proven:
+
+- central Core `ProviderRegistry`
+- explicit provider capability reporting
+- deterministic priority and extension-first selection
+- signature/provider fallback when an extension candidate does not accept the image
+- probe-failure and inspection-failure isolation so one parser cannot break the provider chain
+- cancellation remains a hard stop rather than being swallowed as a parser error
+- provider diagnostics for future UI/CLI reporting
+- duplicate provider-ID protection
+- existing ISO9660/Joliet direct browsing now resolves through the registry instead of hardcoded `.iso` UI logic
+- dedicated provider-registry smoke tests in CI
+- full run #145: registry + direct ISO + native ISO/VHD/VHDX regression + restore + WinUI Release x64 + artifact ✅
+
+The next 0.4 work adds the first new image family. No format-specific UI is enabled until its real provider path and tests exist.
+
 The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
 The interactive UAC prompt itself cannot be faithfully exercised on GitHub-hosted administrator runners. A normal-user desktop checklist is maintained in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md) and remains a manual QA gate before public beta packaging.
+
+The planned first public GitHub beta is **`0.5.0-beta.1`** after the required 0.4 provider work and agreed 0.5 image-intelligence scope are proven. See [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md). Execution work is tracked with GitHub Issues and pull requests.
 
 Major milestones:
 
-`0.1 Foundation + Dragon UI ✅` → `0.2 Native Mount ✅` → `0.3 Dragon Explorer ✅` → `0.4 Extended Providers 🚧 next` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
+`0.1 Foundation + Dragon UI ✅` → `0.2 Native Mount ✅` → `0.3 Dragon Explorer ✅` → `0.4 Extended Providers 🚧` → `0.5 Filesystems + Image Intelligence` → `0.6 Create/Convert/Verify` → `0.7 Bootable USB` → `0.8 Windows Integration` → `0.9 Beta Hardening` → `1.0 Production`
 
 The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.md), and the vector sigil is stored under [`docs/branding/dragon-sigil.svg`](docs/branding/dragon-sigil.svg).
 
@@ -124,6 +145,7 @@ The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.m
 - x64 + ARM64 targets
 - shared Core engine for GUI and future CLI
 - isolated Windows service layer for native Storage operations
+- provider registry with explicit capabilities, fallback and failure isolation
 - provider-backed direct-browse architecture for formats that can be safely parsed without mounting
 
 ## Build on Windows
@@ -134,13 +156,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, provider-registry smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview, mounted-volume browsing and provider-backed direct ISO browsing are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing and provider-backed direct ISO browsing are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 
