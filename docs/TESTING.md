@@ -53,6 +53,26 @@ The generated-fixture suite proves:
 
 The service also bounds Direct Browse traversal and rejects reparse-point or traversal-style evidence.
 
+## Unified image intelligence
+
+```powershell
+dotnet run --project tests/DragonDiskForge.ImageIntelligence.SmokeTests/DragonDiskForge.ImageIntelligence.SmokeTests.csproj -c Release
+```
+
+Generated fixtures prove the aggregation and health-evidence contract rather than only compilation:
+
+- partition-name + filesystem identifier aggregation from a structurally valid partition region
+- exFAT `VolumeDirty` warning and `MediaFailure` error
+- NTFS primary/backup boot-metadata mismatch detection
+- ext filesystem error-state detection and label aggregation
+- WIM/ESD container GUID aggregation through `IWimMetadataProvider`
+- FFU PlatformID aggregation through `IFfuMetadataProvider`
+- metadata-only providers cannot gain filesystem probing from coincidental filesystem-like physical bytes
+- unsupported partition/boot surfaces remain absent instead of guessed
+- cancellation remains a hard stop
+
+Every filesystem health read is bounded to the filesystem region that recognition already accepted and then bounded again to the physical file. These tests do not claim whole-filesystem health and never perform repair.
+
 ## Image-provider gates
 
 Dedicated smoke projects cover:
@@ -129,14 +149,17 @@ Every green CI run uploads `DragonDiskForge-win-x64` as a temporary workflow art
 5. Partition-intelligence smoke tests.
 6. Filesystem-recognition smoke tests.
 7. Boot + installer intelligence smoke tests.
-8. All dedicated image-provider smoke tests.
-9. Mount-history and drag-out safety smoke tests.
-10. Provider-backed ISO direct-browse integration.
-11. Native Windows ISO/VHD/VHDX + mounted Explorer integration.
-12. Configure MSBuild.
-13. Restore solution.
-14. Build WinUI Release x64.
-15. Upload Windows x64 artifact.
+8. Unified image-intelligence smoke tests.
+9. All dedicated image-provider smoke tests.
+10. Mount-history and drag-out safety smoke tests.
+11. Provider-backed ISO direct-browse integration.
+12. Native Windows ISO/VHD/VHDX + mounted Explorer integration.
+13. Configure MSBuild.
+14. Restore solution.
+15. Build WinUI Release x64.
+16. Upload Windows x64 artifact.
+
+PR #31 / run #245 proved the unified image-intelligence code/test head together with the complete provider, Explorer/native Windows, Release x64 and artifact regression path before documentation synchronization.
 
 A feature is not complete because code was committed. Its relevant test path and the required full regression/build gate must pass first.
 
