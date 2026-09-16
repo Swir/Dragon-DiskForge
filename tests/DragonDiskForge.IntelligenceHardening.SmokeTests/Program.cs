@@ -30,22 +30,24 @@ static async Task VerifyNtfsMftAndMirrorDepthAsync(string root)
 
     var path = Path.Combine(root, "ntfs-depth.img");
     var bytes = new byte[totalSectors * sectorSize];
-    var boot = bytes.AsSpan(0, sectorSize);
-    boot[0] = 0xEB;
-    boot[1] = 0x52;
-    boot[2] = 0x90;
-    "NTFS    "u8.CopyTo(boot.Slice(3, 8));
-    BinaryPrimitives.WriteUInt16LittleEndian(boot.Slice(11, 2), sectorSize);
-    boot[13] = sectorsPerCluster;
-    BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(40, 8), totalSectors);
-    BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(48, 8), mftCluster);
-    BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(56, 8), mirrorCluster);
-    boot[64] = unchecked((byte)-10); // 2^10 = 1024-byte FILE records
-    boot[68] = 1; // one cluster per index buffer
-    BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(72, 8), 0x1234567890ABCDEFUL);
-    boot[510] = 0x55;
-    boot[511] = 0xAA;
-    boot.CopyTo(bytes.AsSpan((totalSectors - 1) * sectorSize, sectorSize));
+    {
+        var boot = bytes.AsSpan(0, sectorSize);
+        boot[0] = 0xEB;
+        boot[1] = 0x52;
+        boot[2] = 0x90;
+        "NTFS    "u8.CopyTo(boot.Slice(3, 8));
+        BinaryPrimitives.WriteUInt16LittleEndian(boot.Slice(11, 2), sectorSize);
+        boot[13] = sectorsPerCluster;
+        BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(40, 8), totalSectors);
+        BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(48, 8), mftCluster);
+        BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(56, 8), mirrorCluster);
+        boot[64] = unchecked((byte)-10); // 2^10 = 1024-byte FILE records
+        boot[68] = 1; // one cluster per index buffer
+        BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(72, 8), 0x1234567890ABCDEFUL);
+        boot[510] = 0x55;
+        boot[511] = 0xAA;
+        boot.CopyTo(bytes.AsSpan((totalSectors - 1) * sectorSize, sectorSize));
+    }
 
     var mftOffset = checked((int)(mftCluster * clusterSize));
     var mirrorOffset = checked((int)(mirrorCluster * clusterSize));
@@ -78,8 +80,8 @@ static async Task VerifyNtfsMftAndMirrorDepthAsync(string root)
         "logically valid but divergent first MFT/MFTMirr records must be preserved as a warning.");
 
     bytes.AsSpan(mftOffset, recordSize).CopyTo(bytes.AsSpan(mirrorOffset, recordSize));
-    BinaryPrimitives.WriteUInt64LittleEndian(boot.Slice(56, 8), 99);
-    boot.CopyTo(bytes.AsSpan((totalSectors - 1) * sectorSize, sectorSize));
+    BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(56, 8), 99);
+    bytes.AsSpan(0, sectorSize).CopyTo(bytes.AsSpan((totalSectors - 1) * sectorSize, sectorSize));
     await File.WriteAllBytesAsync(path, bytes);
     var outOfRange = await AnalyzeWholeImageAsync(path, "ntfs-depth");
     Require(outOfRange.Analysis!.HealthFindings.Any(x => x.Code == "NTFS_MFTMIRR_CLUSTER_OUT_OF_RANGE"
