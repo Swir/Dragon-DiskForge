@@ -17,36 +17,43 @@ The project follows semantic versioning while it evolves toward 1.0.
 - stable structural partition findings for duplicate indexes, zero-length entries, LBA overflow, byte-geometry mismatches, physical image-bound violations and overlapping ranges
 - bounded `FileSystemRecognitionService` and filesystem evidence models
 - FAT12/FAT16/FAT32, exFAT, supported NTFS, ext2/ext3/ext4, ISO9660/Joliet and UDF VRS recognition
-- `BootInstallerIntelligenceService`, boot catalog evidence models and installer evidence models
-- bounded El Torito boot-record/catalog parsing with validation checksum, section and load-range validation
+- `BootInstallerIntelligenceService` with bounded El Torito and installer evidence
 - truthful BIOS/UEFI boot reporting from El Torito platform entries
-- bounded provider-backed Direct Browse evidence traversal for installer intelligence
-- Windows installation-media recognition from setup + boot WIM + install payload evidence
-- Linux casper, Debian-style and Anaconda-style installer/live-media recognition
-- EFI fallback filename architecture hints for x86, x86_64, ARM, ARM64 and RISC-V 64
+- conservative Windows/Linux installer/live-media recognition and EFI fallback architecture hints
 - `ImageIntelligenceService` plus shared identity and health-evidence models
 - cross-source partition-name, filesystem-label/identifier, WIM/ESD container-GUID and FFU PlatformID aggregation
 - bounded exFAT dirty/media-failure, ext state, NTFS backup-boot and FAT32 backup-boot health evidence
-- dedicated partition, filesystem, boot/installer and unified image-intelligence CI gates
+- WinUI **Analyze** action backed by shared `ImageReportService`
+- human-readable and JSON analysis reporting plus Save JSON
+- image-report smoke tests for unknown-input truthfulness, serialization and cancellation
+- required `by Swir` + GitHub navigation footer in the Windows UI
+- bounded `FileSystemDepthService` for deeper evidence inside already-recognized physical filesystem regions
+- exFAT main/backup boot-region checksum validation and redundant-copy comparison
+- FAT32 FSInfo placement, signature, free-cluster count and next-free-hint validation
+- UDF primary anchor validation at logical block 256
+- UDF descriptor-tag checksum, tag-location and descriptor-CRC validation
+- bounded UDF main volume-descriptor sequence inspection with a 16 MiB ceiling
+- validated UDF primary/logical volume d-string identity evidence
+- dedicated filesystem-depth generated-fixture and cancellation smoke tests
 
 ### Changed
-- development version is **0.5.0-alpha.1**
-- project progress advances to **52% toward 1.0** after the validated unified identity/health intelligence foundation
-- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **70%**
-- CI now gates provider registry, partition intelligence, filesystem recognition, boot/installer intelligence and unified image intelligence before provider/native/build regression
-- installer evidence traversal stores only real files, ignores reparse-point evidence, rejects traversal-style virtual paths and enforces directory/entry/depth limits
-- filesystem health reads are restricted to already-recognized physical filesystem regions and are also bounded against the physical image
+- development version remains **0.5.0-alpha.1**
+- project progress advances to **54% toward 1.0** after the validated Windows analysis/report surface and deeper filesystem-evidence slice
+- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **82%**
+- CI now gates provider registry, partition intelligence, filesystem recognition, filesystem depth, boot/installer intelligence, unified image intelligence and image reporting before provider/native/build regression
+- the Windows analysis report now merges deeper bounded filesystem identity/health evidence when a truthful physical filesystem mapping was already recognized
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
 - partition intelligence does not mount images, write bytes or repair partition tables
 - filesystem recognition scans only bounded physical file ranges and refuses structurally invalid partition layouts
 - sparse/compressed virtual/container formats do not gain fake guest-filesystem access without a guest-sector reader
-- bootability is reported only from a structurally valid El Torito catalog; installer file markers alone never fabricate boot support
-- installer evidence requires a truthful Direct Browse provider and never executes, extracts, mounts or modifies content
-- El Torito catalog and boot-image ranges are bounded against the physical image
+- deeper filesystem checks cannot leave an already-recognized physical filesystem region
+- exFAT redundant boot-region checks ignore only the mutable VolumeFlags and PercentInUse bytes when comparing copies
+- UDF descriptor-sequence inspection is capped at 16 MiB and rejects overflowing/out-of-range extents
+- UDF descriptor tags are validated before identity evidence is accepted
+- bootability is reported only from structurally valid El Torito evidence
 - health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee
-- exFAT/ext/NTFS/FAT32 health reads cannot escape the bounded filesystem region
 - existing cancellation, failure isolation and truthful capability behavior remain intact
 
 ### Verified
@@ -62,17 +69,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #25 / run #222 — WIM/ESD + full regression/build/artifact
 - PR #26 / run #226 — FFU + full regression/build/artifact
 - PR #27 / run #228 — provider-contract hardening + full regression/build/artifact
-- PR #28 / run #232 — docs-synchronized cross-provider partition intelligence + full regression/build/artifact
-- PR #29 / run #235 — docs-synchronized bounded filesystem recognition + full regression/build/artifact
-- PR #30 / run #242 — docs-synchronized boot/installer intelligence + full regression/build/artifact
-- PR #31 / run #245 — unified identity/health code and expanded generated-fixture tests + complete provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
+- PR #28 / run #232 — partition intelligence + full regression/build/artifact
+- PR #29 / run #235 — filesystem recognition + full regression/build/artifact
+- PR #30 / run #242 — boot/installer intelligence + full regression/build/artifact
+- PR #31 / run #245 — unified identity/health implementation + full regression/build/artifact before docs synchronization
+- PR #32 / run #260 — Windows Analyze/report surface + full regression/build/artifact
+- PR #33 / run #262 — deeper filesystem evidence implementation + new depth gate and complete regression/build/artifact before docs synchronization
 
 ### Planned
-- richer UDF/FAT/exFAT/NTFS reader depth
-- additional evidence-backed health/corruption checks without unsupported whole-filesystem claims
+- deeper supported NTFS metadata/evidence
 - stronger cross-source architecture reconciliation where multiple proven sources exist
+- independently bounded UDF traversal where justified
 - guest-sector readers before filesystem intelligence inside sparse/compressed virtual disks
-- public beta `0.5.0-beta.1` only after the agreed 0.5 scope and beta gates are proven
+- final 0.5 beta-scope hardening
+- public beta `0.5.0-beta.1` only after the agreed 0.5 scope and independent package/manual QA gates are proven
 
 ## [0.3.0] - 2026-09-15
 

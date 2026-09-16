@@ -1,6 +1,6 @@
 # Dragon DiskForge — Product Roadmap
 
-This file is the source of truth for project progress. Meaningful feature changes must update tests, `CHANGELOG.md`, status and progress documentation.
+This file is the source of truth for product progress. Meaningful feature changes must update tests, `CHANGELOG.md`, status and progress documentation.
 
 ## Status legend
 
@@ -48,7 +48,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 70%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, and the unified identity/health intelligence foundation are implemented and validated.
+**Current 0.5 completion: approximately 82%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface and a deeper bounded filesystem-evidence layer are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
@@ -57,7 +57,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ stable finding codes/severities
 - ✅ capability-driven fake providers in dedicated smoke tests
 - ✅ no writes, repairs or fake filesystem-health claims
-- ✅ PR #28 / final docs-synchronized run #232 passed full Windows regression/build/artifact
+- ✅ PR #28 / final run #232 passed full Windows regression/build/artifact
 
 ### Bounded filesystem-recognition foundation — ✅ complete
 - ✅ provider-integrated `FileSystemRecognitionService`
@@ -65,67 +65,83 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ partition-capable providers are scanned only through structurally validated physical partition ranges
 - ✅ FAT12/FAT16/FAT32 bounded BPB recognition and metadata
 - ✅ exFAT bounded boot metadata
-- ✅ NTFS bounded boot metadata where supported
+- ✅ supported NTFS boot metadata
 - ✅ ext2/ext3/ext4 superblock recognition, label, UUID and block size
 - ✅ ISO9660/Joliet descriptor recognition and volume label
 - ✅ UDF VRS recognition (`BEA01` / `NSR02|NSR03` / `TEA01`)
 - ✅ generated sparse fixtures, false-positive checks and cancellation coverage
 - ✅ explicit refusal to pretend sparse/compressed virtual-disk guest sectors are physical bytes
-- ✅ PR #29 / final docs-synchronized run #235 passed full Windows regression/build/artifact
+- ✅ PR #29 / final run #235 passed full Windows regression/build/artifact
 
 ### Boot + installer intelligence foundation — ✅ complete
-- ✅ `BootInstallerIntelligenceService` with explicit boot and installer evidence models
-- ✅ bounded El Torito boot-record/catalog discovery
-- ✅ validation-entry key/checksum, section-header and boot-indicator validation
+- ✅ bounded El Torito boot-record/catalog discovery and validation
 - ✅ physical boot-image load-range bounds
-- ✅ BIOS and UEFI bootability derived only from El Torito platform entries
+- ✅ BIOS and UEFI bootability derived only from catalog evidence
 - ✅ bounded provider-backed Direct Browse traversal with cycle/depth/entry limits
-- ✅ installer markers are accepted only from real files, never directory-name lookalikes or reparse-point evidence
-- ✅ traversal-style provider paths are rejected
 - ✅ Windows setup + boot WIM + install payload recognition
 - ✅ Linux casper, Debian-style and Anaconda-style installer/live evidence
 - ✅ bounded EFI fallback filename architecture hints
 - ✅ file markers never fabricate BIOS/UEFI bootability
-- ✅ dedicated smoke tests and full regression gate
-- ✅ PR #30 / final docs-synchronized run #242 passed full Windows regression/build/artifact
+- ✅ PR #30 / final run #242 passed full Windows regression/build/artifact
 
-See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](BOOT-INSTALLER-INTELLIGENCE.md) for the evidence contract.
+See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](BOOT-INSTALLER-INTELLIGENCE.md).
 
 ### Unified identity + health intelligence foundation — ✅ complete
 - ✅ `ImageIntelligenceService` composes only already-proven provider/intelligence capabilities
-- ✅ partition names and filesystem labels/identifiers are aggregated with source + partition provenance
+- ✅ partition names and filesystem labels/identifiers retain source + partition provenance
 - ✅ WIM/ESD container GUIDs and FFU PlatformIDs are exposed as bounded identity evidence
-- ✅ boot/installer architecture hints are normalized into the unified result
+- ✅ architecture hints flow from the bounded boot/installer layer
 - ✅ partition structural findings flow into a shared health model
-- ✅ exFAT `VolumeDirty` and `MediaFailure` flags become evidence-backed health findings
-- ✅ ext superblock clean/error state becomes evidence-backed health findings
-- ✅ NTFS primary/backup boot metadata is compared within the recognized filesystem region
-- ✅ FAT32 primary/backup boot metadata is compared within the recognized filesystem region
-- ✅ all health reads are bounded against both the recognized filesystem region and physical image
+- ✅ exFAT dirty/media-failure, ext state, NTFS backup-boot and FAT32 backup-boot checks
 - ✅ metadata-only sparse/compressed/container providers do not gain fake filesystem probing
-- ✅ generated exFAT, NTFS, ext, WIM and FFU fixtures plus byte-mapping and cancellation coverage
-- ✅ PR #31 / run #245 passed the complete code/test head plus provider/native/build/artifact regression before documentation synchronization
+- ✅ PR #31 / implementation run #245 passed full code/test/native/build/artifact regression
 
-See [`docs/IMAGE-INTELLIGENCE.md`](IMAGE-INTELLIGENCE.md) for the evidence and health contract.
+See [`docs/IMAGE-INTELLIGENCE.md`](IMAGE-INTELLIGENCE.md).
+
+### Windows Analyze + reporting surface — ✅ complete
+- ✅ bounded **Analyze** action in the image result card
+- ✅ shared `ImageReportService` text/JSON reporting over truthful provider resolution
+- ✅ Save JSON without enabling unsupported mutation paths
+- ✅ unknown-input truthfulness, serialization and cancellation tests
+- ✅ `by Swir` + GitHub navigation footer
+- ✅ PR #32 / run #260 passed complete Windows CI and Release x64 artifact publication
+
+### Deeper filesystem evidence — ✅ complete
+- ✅ `FileSystemDepthService` is restricted to already-recognized physical filesystem regions
+- ✅ exFAT main/backup 12-sector boot-region checksum validation
+- ✅ exFAT redundant boot-copy comparison excluding mutable VolumeFlags/PercentInUse bytes
+- ✅ FAT32 FSInfo reserved-area/range validation
+- ✅ FAT32 FSInfo lead/structure/trail signature validation
+- ✅ FAT32 free-cluster count and next-free hint bounds
+- ✅ UDF primary Anchor Volume Descriptor Pointer validation at logical block 256
+- ✅ UDF descriptor-tag checksum, tag-location and CRC validation
+- ✅ bounded main volume-descriptor sequence with a 16 MiB inspection ceiling
+- ✅ validated UDF Primary/Logical Volume Descriptor d-strings become identity evidence
+- ✅ generated valid/corrupt exFAT, FAT32 FSInfo, valid/corrupt UDF and cancellation tests
+- ✅ PR #33 / implementation run #262 passed the new gate plus all prior provider/Explorer/native Windows/Release x64/artifact checks before documentation synchronization
+
+See [`docs/FILESYSTEM-DEPTH.md`](FILESYSTEM-DEPTH.md).
 
 ### Filesystem family depth
-- 🚧 ISO9660/UDF — ISO direct browsing proven; bounded ISO/Joliet and UDF recognition proven; richer UDF metadata/traversal remains
-- 🚧 FAT/FAT32/exFAT — recognition plus selected bounded boot/health metadata proven; deeper reader functionality remains
+- 🚧 ISO9660/UDF — ISO direct browsing proven; UDF VRS plus bounded primary anchor/main descriptor-sequence metadata proven; independently bounded UDF traversal remains
+- 🚧 FAT/FAT32/exFAT — recognition plus selected backup/checksum/FSInfo health evidence proven; deeper reader functionality remains
 - 🚧 NTFS metadata — bounded boot metadata plus backup-boot consistency proven; deeper supported metadata remains
 - ✅ ext-family recognition — ext2/ext3/ext4 recognition/basic metadata and bounded superblock state evidence proven
 
 ### Image-intelligence depth
 - ✅ bootability + BIOS/UEFI foundation through bounded El Torito evidence
 - ✅ Windows/Linux installer-recognition foundation through bounded Direct Browse file evidence
-- ✅ cross-source identity aggregation foundation for partition names, filesystem labels/IDs and proven container/platform identifiers
+- ✅ cross-source identity aggregation for partition/filesystem/container/platform identifiers
 - ✅ bounded architecture-hint aggregation foundation
 - ✅ evidence-backed health/corruption foundation for partition structure and selected filesystem metadata
-- 🚧 deeper filesystem health coverage remains intentionally format-specific and evidence-gated
+- ✅ user-facing text/JSON analysis report surface
+- 🚧 stronger reconciliation when several independent architecture sources exist
+- 🚧 deeper supported NTFS and UDF reader paths
 - ⬜ virtual guest-sector readers before filesystems inside sparse/compressed virtual disks can be analyzed
 
 **0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No format-specific UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** deepen bounded FAT/exFAT/NTFS/UDF readers and health evidence, then build independently tested guest-sector reader paths for sparse/compressed virtual disks before extending filesystem intelligence into those containers.
+**Next engineering focus:** deeper supported NTFS metadata, cross-source architecture reconciliation and independently tested guest-sector reader paths for sparse/compressed virtual disks; then final 0.5 beta-scope hardening.
 
 ---
 
