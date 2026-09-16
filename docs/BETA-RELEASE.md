@@ -26,11 +26,11 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] cross-source boot/installer architecture reconciliation without guessed conflict resolution
 - [x] centralized semantic development-version metadata
 - [x] independently verified clean-package candidate gate
-- [ ] independently bounded UDF traversal where justified
+- [x] independently bounded UDF root-directory traversal for validated Type 1 physical mappings
 - [ ] truthful guest-sector reader foundation for sparse/compressed virtual disks
 - [ ] final 0.5 beta-scope hardening checkpoint
 
-Latest validated checkpoints include PR #34 / run #266 and PR #35 / implementation run #270. Run #270 proves the complete existing automated test/native/build path plus clean-package build, independent ZIP verification and both artifact uploads.
+Latest validated checkpoints include PR #35 / run #270 and PR #36 / implementation run #274. Run #274 proves the new bounded UDF traversal gate plus the complete existing automated provider, Explorer, native Windows, Release x64, clean-package build/verification and artifact path.
 
 ### Windows beta package
 - [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build
@@ -54,6 +54,7 @@ Latest validated checkpoints include PR #34 / run #266 and PR #35 / implementati
 - [x] provider registry/fallback/isolation tests green
 - [x] provider-specific tests green
 - [x] partition/filesystem/intelligence/report automated gates green
+- [x] bounded UDF traversal gate green
 - [x] NTFS/architecture hardening gate green
 - [x] ISO direct-browse integration green
 - [x] native ISO/VHD/VHDX mount integration green
@@ -74,7 +75,7 @@ Latest validated checkpoints include PR #34 / run #266 and PR #35 / implementati
 
 ## Current beta readiness
 
-**NOT READY.** Automated Windows CI now proves the full existing regression path plus a versioned clean ZIP candidate, checksum and independent package-verification gate. The remaining blockers are the unfinished agreed 0.5 engineering scope (independently bounded UDF traversal where justified and truthful sparse/compressed guest-sector reader foundations), final beta-scope hardening, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
+**NOT READY.** Automated Windows CI now proves the full existing regression path, bounded UDF root-directory traversal for validated Type 1 physical mappings, and the versioned clean ZIP/checksum/independent package-verification path. The remaining blockers are the unfinished truthful sparse/compressed guest-sector reader foundation, final 0.5 beta-scope hardening, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
 
 ## Rule
 

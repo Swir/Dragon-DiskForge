@@ -36,7 +36,7 @@ Closing 0.4 completes the internal engineering contract only. It does not declar
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **90%**.
+Current milestone completion is approximately **93%**.
 
 ### Completed execution slices
 
@@ -49,6 +49,7 @@ Current milestone completion is approximately **90%**.
 7. **NTFS metadata + architecture-reconciliation hardening** ✅
 8. **Clean Windows x64 package-candidate path** ✅
 9. **Central version + independent clean-package verification gate** ✅
+10. **Bounded UDF root-directory traversal** ✅
 
 ### Cross-provider partition intelligence ✅
 
@@ -127,9 +128,23 @@ Current milestone completion is approximately **90%**.
 - downloaded run #270 clean artifact confirmed sidecar ZIP checksum, manifest `0.5.0-alpha.1`, matching EXE SHA, one app EXE and zero PDB files
 - this remains a beta candidate, not a public release; final beta suffix, clean-machine/manual and public Release gates remain
 
+### Bounded UDF root-directory traversal ✅
+
+- `UdfTraversalService` operates only on already-recognized physical UDF regions
+- validated Type 1 partition maps are translated only through matching validated Partition Descriptors
+- virtual/sparable/metadata Type 2 partition maps are refused instead of guessed
+- File Set Descriptor and root File Entry descriptor tags/CRC/location are validated before following addresses
+- first slice accepts one recorded short allocation extent for the root directory
+- root traversal is capped at 8 MiB and 4096 entries
+- File Identifier Descriptor checksum/location/CRC and padded bounds are validated before names are accepted
+- validated File Set Identifier becomes identity evidence
+- OSTA compressed Unicode IDs 8/16 are decoded only after descriptor validation
+- no recursion, extraction, Direct Browse capability, repair or write path
+- generated healthy/corrupt/out-of-range/unsupported-map/cancellation fixtures
+- PR #36 / implementation run #274 passed the new traversal gate plus the complete provider/Explorer/native Windows/Release/package-verification/artifact path before documentation synchronization ✅
+
 ### Remaining execution slices
 
-- independently bounded UDF traversal where justified
 - truthful guest-sector reader foundations before sparse/compressed virtual-disk filesystem inspection
 - final 0.5 beta-scope hardening and documentation synchronization
 - clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA

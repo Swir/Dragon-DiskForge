@@ -45,14 +45,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - executable ProductVersion/FileVersion plus package-manifest version/hash evidence
 - independent `verify-package.ps1` clean-package gate for checksum, manifest, version, architecture, entry-point SHA-256, icon and payload policy
 - canonical Dragon icon inclusion in the clean package root
+- bounded `UdfTraversalService` for non-recursive root-directory traversal inside already-recognized physical UDF regions
+- validated Type 1 UDF partition-map translation through matching Partition Descriptors
+- bounded UDF File Set Descriptor, root File Entry and File Identifier Descriptor validation before root names are accepted
+- UDF root traversal limits of 8 MiB and 4096 entries, with one recorded short allocation extent in the first slice
+- validated UDF File Set Identifier identity evidence merged into the Analyze/report path
+- generated UDF traversal fixtures for valid, corrupt-FID, out-of-range root ICB, unsupported Type 2 map and cancellation cases
 
 ### Changed
-- development version remains **0.5.0-alpha.1**, now sourced from the central build-version contract instead of stale 0.4 metadata
-- project progress advances to **56% toward 1.0** after validating the release-version and independent clean-package verification gate
-- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **90%**
-- CI now gates provider registry, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/installer intelligence, unified image intelligence and image reporting before provider/native/build regression
-- the Windows analysis report merges bounded NTFS depth findings and reconciles independent boot/installer architecture evidence
-- green Windows CI now builds, independently verifies and publishes a versioned clean ZIP candidate with SHA-256 in addition to the engineering artifact
+- development version remains **0.5.0-alpha.1**, sourced from the central build-version contract
+- project progress advances to **57% toward 1.0** after validating the bounded UDF root-directory traversal slice
+- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **93%**
+- CI now gates provider registry, partition intelligence, filesystem recognition/depth, bounded UDF traversal, NTFS/architecture hardening, boot/installer intelligence, unified image intelligence and image reporting before provider/native/build regression
+- the Windows analysis report merges bounded UDF traversal identity/health evidence, bounded NTFS depth findings and reconciled boot/installer architecture evidence
+- green Windows CI builds, independently verifies and publishes a versioned clean ZIP candidate with SHA-256 in addition to the engineering artifact
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
@@ -63,6 +69,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - exFAT redundant boot-region checks ignore only the mutable VolumeFlags and PercentInUse bytes when comparing copies
 - UDF descriptor-sequence inspection is capped at 16 MiB and rejects overflowing/out-of-range extents
 - UDF descriptor tags are validated before identity evidence is accepted
+- UDF root traversal follows only validated Type 1 physical partition maps, is non-recursive and does not enable Direct Browse, extraction, repair or writes
+- UDF Type 2 virtual/sparable/metadata partition maps remain unsupported rather than being translated heuristically
 - NTFS depth checks validate bounded metadata only; they never repair records, follow attributes or traverse directories
 - architecture reconciliation preserves conflicting evidence instead of guessing a winner
 - bootability is reported only from structurally valid El Torito evidence
@@ -93,10 +101,10 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #34 / run #266 package review — sidecar SHA-256 matched the downloaded candidate ZIP; one app EXE; zero PDB/test-only files
 - PR #35 / run #270 — central version metadata, complete regression/build, clean-package build, independent package verification and both artifact uploads before docs synchronization
 - PR #35 / run #270 package review — downloaded sidecar SHA-256 matched the nested ZIP; manifest version `0.5.0-alpha.1`; executable SHA matched; one app EXE; zero PDB files
+- PR #36 / run #274 — bounded UDF root traversal implementation + complete provider/Explorer/native Windows/Release/package-verification/artifact path before docs synchronization
 
 ### Planned
-- independently bounded UDF traversal where justified
-- guest-sector readers before filesystem intelligence inside sparse/compressed virtual disks
+- truthful guest-sector readers before filesystem intelligence inside sparse/compressed virtual disks
 - final 0.5 beta-scope hardening and clean-machine/manual QA
 - promote the verified version pipeline to `0.5.0-beta.1` only when the beta gate is complete
 - public beta `0.5.0-beta.1` only after the agreed 0.5 scope and independent package/manual QA gates are proven

@@ -48,7 +48,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 90%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation and a versioned independently verified clean Windows package-candidate path are implemented and validated.
+**Current 0.5 completion: approximately 93%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation, bounded UDF root-directory traversal and a versioned independently verified clean Windows package-candidate path are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
@@ -145,8 +145,23 @@ See [`docs/FILESYSTEM-DEPTH.md`](FILESYSTEM-DEPTH.md).
 - ✅ run #270 clean package was independently downloaded after CI: sidecar SHA-256 matched the ZIP, manifest version was `0.5.0-alpha.1`, executable SHA matched the manifest, one application EXE and zero PDB files were present
 - 🚧 final `0.5.0-beta.1` suffix promotion, clean-machine runtime and public GitHub Release remain separate release gates
 
+### Bounded UDF root-directory traversal — ✅ complete
+- ✅ `UdfTraversalService` runs only for already-recognized UDF regions backed by physical image bytes
+- ✅ validates the primary anchor and bounded main volume-descriptor sequence before following traversal metadata
+- ✅ accepts only validated Type 1 physical partition maps; Type 2 virtual/sparable/metadata maps are not guessed or followed
+- ✅ validates Partition Descriptor geometry before partition-relative address translation
+- ✅ validates the File Set Descriptor and exposes its File Set Identifier as identity evidence
+- ✅ validates the root File Entry, directory type, ICB strategy and allocation-descriptor bounds
+- ✅ first traversal slice follows exactly one recorded short allocation extent for the root directory
+- ✅ root-directory reads are capped at 8 MiB and 4096 entries
+- ✅ File Identifier Descriptor tag checksum/location/CRC and descriptor bounds are validated before a name is accepted
+- ✅ OSTA compressed-Unicode IDs 8 and 16 are decoded only from validated descriptors
+- ✅ generated fixtures cover a valid root entry, corrupt FID tag, out-of-range root ICB, unsupported Type 2 partition map and cancellation
+- ✅ implementation run #274 passed the UDF traversal gate plus the complete provider, Explorer, native Windows, Release x64, clean-package verification and artifact path
+- ✅ no Direct Browse capability, extraction, repair, writes or recursive tree traversal are enabled by this slice
+
 ### Filesystem family depth
-- 🚧 ISO9660/UDF — ISO direct browsing proven; UDF VRS plus bounded primary anchor/main descriptor-sequence metadata proven; independently bounded UDF traversal remains
+- 🚧 ISO9660/UDF — ISO direct browsing proven; UDF recognition/descriptor evidence plus a bounded non-recursive Type 1 root-directory traversal are proven; generalized UDF Direct Browse and Type 2 mapping remain unsupported
 - 🚧 FAT/FAT32/exFAT — recognition plus selected backup/checksum/FSInfo health evidence proven; deeper reader functionality remains
 - 🚧 NTFS metadata — bounded boot metadata, backup-boot consistency, `$MFT`/`$MFTMirr` geometry, FILE-record update-sequence validation and first-record mirror comparison proven; broader NTFS traversal remains unsupported
 - ✅ ext-family recognition — ext2/ext3/ext4 recognition/basic metadata and bounded superblock state evidence proven
@@ -159,12 +174,12 @@ See [`docs/FILESYSTEM-DEPTH.md`](FILESYSTEM-DEPTH.md).
 - ✅ stronger reconciliation of independent boot/installer architecture hints
 - ✅ evidence-backed health/corruption foundation for partition structure and selected filesystem metadata
 - ✅ user-facing text/JSON analysis report surface
-- 🚧 deeper independently bounded UDF reader path
+- ✅ bounded non-recursive UDF root-directory path for proven Type 1 physical mappings
 - ⬜ virtual guest-sector readers before filesystems inside sparse/compressed virtual disks can be analyzed
 
 **0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No format-specific UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** independently bounded UDF traversal where it can be proven safely, then truthful guest-sector reader foundations for sparse/compressed virtual disks and final 0.5 beta hardening/manual QA.
+**Next engineering focus:** truthful guest-sector reader foundations for sparse/compressed virtual disks, then final 0.5 beta hardening/manual QA.
 
 ---
 
