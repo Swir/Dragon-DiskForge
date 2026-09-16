@@ -1,5 +1,15 @@
 # Dragon DiskForge — Current Status
 
+## Current delivery work — 0.6.0-alpha.1
+
+Implemented: image-analysis UI / JSON export, shared registry factory, shared-Core CLI, SHA-512 and hash comparison,
+atomic RAW/VHD/VHDX creation, folder-to-ISO creation, standalone RAW/VHD/VHDX conversion, GZip and checksum-protected split/join.
+Dedicated regression suites cover source preservation, round trips, tampering, traversal, cancellation and output cleanup.
+Portable packaging includes runtime dependencies, CLI/GUI startup gates, ZIP/checksum creation and explicit release publication.
+The remaining filesystem-depth, physical-media, localization, signing and manual desktop items below are **not** marked complete.
+This is an alpha delivery; prior milestone percentage checkpoints are retained rather than inflated.
+
+
 ## Completed milestones
 
 **0.1 Foundation + Dragon Visual Identity — COMPLETE ✅**
@@ -12,7 +22,7 @@
 
 ## Current development version
 
-**0.5.0-alpha.1**
+**0.6.0-alpha.1**
 
 ## Overall project progress
 
