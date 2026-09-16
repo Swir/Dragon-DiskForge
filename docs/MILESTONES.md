@@ -74,7 +74,7 @@ The same project rule continues: no Explorer control becomes active before its b
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **38%**.
+Current milestone completion is approximately **45%**.
 
 ### Completed execution slices
 
@@ -109,16 +109,30 @@ Current milestone completion is approximately **38%**.
    - Direct Browse, Mount and Convert remain disabled until the real filesystem/native backends exist
    - dedicated IMA/floppy smoke tests in Windows CI
 
+4. **BIN / CUE track-layout provider** ✅
+   - read-only `.cue` and same-name companion `.bin` support
+   - `ITrackLayoutProvider` plus explicit `TrackLayout` capability
+   - BINARY CUE parsing for AUDIO, MODE1/2048, MODE1/2352, MODE2/2336 and MODE2/2352
+   - single-file and multi-file CUE layouts
+   - bounded CUE size, line count and track count
+   - referenced BIN existence, sector alignment, INDEX 00/01 ordering and track-range validation
+   - payload paths confined to the CUE directory
+   - mixed sector sizes within one BIN rejected instead of guessing offsets
+   - Direct Browse, Mount and Convert remain disabled until real backends exist
+   - dedicated BIN/CUE smoke tests in Windows CI
+
 ### Next execution slices
 
-- BIN/CUE provider
-- MDF/MDS and NRG optical-image providers
-- remaining optical/virtual-disk/container providers from `docs/ROADMAP.md`
+- MDF/MDS provider
+- NRG provider
+- CCD/IMG/SUB provider
+- remaining virtual-disk/container providers from `docs/ROADMAP.md`
 - continued hardening of the internal provider contract before any public plugin/API stability promise
 
 ### 0.4 validation checkpoints
 
 - PR #16 / run #153 — new RAW/IMG provider tests passed before the final UI/docs synchronization pass
 - PR #17 / run #165 — IMA/floppy provider plus full ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
+- PR #18 / run #172 — BIN/CUE provider plus all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 
 `docs/ROADMAP.md` remains the source of truth for exact provider order and completion state. A provider capability becomes user-visible only after its backing operation and tests exist.

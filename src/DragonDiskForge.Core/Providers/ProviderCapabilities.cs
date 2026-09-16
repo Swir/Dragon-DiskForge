@@ -9,7 +9,8 @@ public enum ProviderCapabilities
     Search = 1 << 2,
     CopyOut = 1 << 3,
     PartitionTable = 1 << 4,
-    MediaGeometry = 1 << 5
+    MediaGeometry = 1 << 5,
+    TrackLayout = 1 << 6
 }
 
 public static class ProviderCapabilityExtensions
@@ -31,6 +32,9 @@ public static class ProviderCapabilityExtensions
 
         if (provider is IMediaGeometryProvider)
             capabilities |= ProviderCapabilities.MediaGeometry;
+
+        if (provider is ITrackLayoutProvider)
+            capabilities |= ProviderCapabilities.TrackLayout;
 
         return capabilities;
     }

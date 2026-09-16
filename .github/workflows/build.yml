@@ -36,6 +36,9 @@ jobs:
       - name: IMA/floppy provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.Floppy.SmokeTests/DragonDiskForge.Floppy.SmokeTests.csproj -c Release
 
+      - name: BIN/CUE provider smoke tests
+        run: dotnet run --project tests/DragonDiskForge.BinCue.SmokeTests/DragonDiskForge.BinCue.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 

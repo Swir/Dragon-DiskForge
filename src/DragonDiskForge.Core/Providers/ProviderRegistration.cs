@@ -23,6 +23,7 @@ public sealed record ProviderDescriptor(
             IDirectBrowseProvider direct => direct.DisplayName,
             IPartitionTableProvider partitions => partitions.DisplayName,
             IMediaGeometryProvider media => media.DisplayName,
+            ITrackLayoutProvider tracks => tracks.DisplayName,
             _ => provider.Id
         };
 
