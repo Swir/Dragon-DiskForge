@@ -48,7 +48,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 55%.** Cross-provider partition intelligence, bounded filesystem recognition, and boot/installer intelligence are implemented and validated.
+**Current 0.5 completion: approximately 70%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, and the unified identity/health intelligence foundation are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
@@ -87,27 +87,45 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ bounded EFI fallback filename architecture hints
 - ✅ file markers never fabricate BIOS/UEFI bootability
 - ✅ dedicated smoke tests and full regression gate
-- ✅ PR #30 / run #240 passed the code slice plus the complete prior provider/native/build/artifact path before documentation synchronization
+- ✅ PR #30 / final docs-synchronized run #242 passed full Windows regression/build/artifact
 
 See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](BOOT-INSTALLER-INTELLIGENCE.md) for the evidence contract.
 
+### Unified identity + health intelligence foundation — ✅ complete
+- ✅ `ImageIntelligenceService` composes only already-proven provider/intelligence capabilities
+- ✅ partition names and filesystem labels/identifiers are aggregated with source + partition provenance
+- ✅ WIM/ESD container GUIDs and FFU PlatformIDs are exposed as bounded identity evidence
+- ✅ boot/installer architecture hints are normalized into the unified result
+- ✅ partition structural findings flow into a shared health model
+- ✅ exFAT `VolumeDirty` and `MediaFailure` flags become evidence-backed health findings
+- ✅ ext superblock clean/error state becomes evidence-backed health findings
+- ✅ NTFS primary/backup boot metadata is compared within the recognized filesystem region
+- ✅ FAT32 primary/backup boot metadata is compared within the recognized filesystem region
+- ✅ all health reads are bounded against both the recognized filesystem region and physical image
+- ✅ metadata-only sparse/compressed/container providers do not gain fake filesystem probing
+- ✅ generated exFAT, NTFS, ext, WIM and FFU fixtures plus byte-mapping and cancellation coverage
+- ✅ PR #31 / run #245 passed the complete code/test head plus provider/native/build/artifact regression before documentation synchronization
+
+See [`docs/IMAGE-INTELLIGENCE.md`](IMAGE-INTELLIGENCE.md) for the evidence and health contract.
+
 ### Filesystem family depth
 - 🚧 ISO9660/UDF — ISO direct browsing proven; bounded ISO/Joliet and UDF recognition proven; richer UDF metadata/traversal remains
-- 🚧 FAT/FAT32/exFAT — recognition/geometry proven; deeper reader functionality remains
-- 🚧 NTFS metadata — bounded boot metadata proven; deeper supported metadata remains
-- ✅ ext-family recognition — ext2/ext3/ext4 recognition and basic metadata proven
+- 🚧 FAT/FAT32/exFAT — recognition plus selected bounded boot/health metadata proven; deeper reader functionality remains
+- 🚧 NTFS metadata — bounded boot metadata plus backup-boot consistency proven; deeper supported metadata remains
+- ✅ ext-family recognition — ext2/ext3/ext4 recognition/basic metadata and bounded superblock state evidence proven
 
 ### Image-intelligence depth
 - ✅ bootability + BIOS/UEFI foundation through bounded El Torito evidence
 - ✅ Windows/Linux installer-recognition foundation through bounded Direct Browse file evidence
-- 🚧 architecture intelligence — bounded EFI and installer-directory hints exist; cross-source aggregation remains
-- ⬜ cross-source label/UUID/GUID aggregation
-- ⬜ health/corruption warnings grounded in proven metadata checks
+- ✅ cross-source identity aggregation foundation for partition names, filesystem labels/IDs and proven container/platform identifiers
+- ✅ bounded architecture-hint aggregation foundation
+- ✅ evidence-backed health/corruption foundation for partition structure and selected filesystem metadata
+- 🚧 deeper filesystem health coverage remains intentionally format-specific and evidence-gated
 - ⬜ virtual guest-sector readers before filesystems inside sparse/compressed virtual disks can be analyzed
 
 **0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No format-specific UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** cross-source metadata aggregation and evidence-backed health/corruption findings, while deepening filesystem reader paths without weakening byte-mapping boundaries.
+**Next engineering focus:** deepen bounded FAT/exFAT/NTFS/UDF readers and health evidence, then build independently tested guest-sector reader paths for sparse/compressed virtual disks before extending filesystem intelligence into those containers.
 
 ---
 

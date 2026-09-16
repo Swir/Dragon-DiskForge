@@ -8,17 +8,17 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 50% toward 1.0
+## Project progress — 52% toward 1.0
 
-`██████████░░░░░░░░░░ 50%`
+`██████████░░░░░░░░░░ 52%`
 
-**Overall completion:** **50%**
+**Overall completion:** **52%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~55%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **~70%** 🚧
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -36,7 +36,7 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## 0.5 Partitions + File Systems + Image Intelligence 🚧
 
-Three substantial 0.5 slices are now implemented and validated.
+Four substantial 0.5 slices are now implemented and validated.
 
 ### Cross-provider partition intelligence ✅
 
@@ -62,27 +62,39 @@ See [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md).
 
 ### Boot + installer intelligence foundation ✅
 
-- new `BootInstallerIntelligenceService` with explicit evidence models
+- `BootInstallerIntelligenceService` with explicit evidence models
 - bounded El Torito boot-record/catalog parsing and validation
-- validation-entry checksum, section headers, boot indicators and physical load ranges are checked before use
-- BIOS (`0x00`) and UEFI (`0xEF`) boot support is reported only from real boot-catalog entries
-- installer evidence is collected only through a truthful provider-backed Direct Browse path
-- traversal is bounded by directory, entry and depth limits and ignores reparse-point evidence
-- Windows install media recognition requires `setup.exe`, `sources/boot.wim` and a real install payload (`install.wim`, `install.esd` or `install.swm`)
-- Linux evidence covers casper, Debian-style and Anaconda-style installer/live layouts
-- EFI fallback filenames provide bounded architecture hints for x86, x86_64, ARM, ARM64 and RISC-V 64
+- BIOS and UEFI boot support only from real catalog evidence
+- bounded provider-backed Direct Browse traversal
+- conservative Windows and Linux installer recognition
+- EFI fallback architecture hints for x86, x86_64, ARM, ARM64 and RISC-V 64
 - filesystem marker files never fabricate bootability
-- PR #30 / run #240 passed the new intelligence gate plus all prior providers, Explorer/native Windows integration, Release x64 build and artifact publication before documentation synchronization ✅
+- PR #30 / run #242 passed the final docs-synchronized full Windows regression/build/artifact path ✅
 
 See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md).
+
+### Unified identity + health intelligence foundation ✅
+
+- new `ImageIntelligenceService` composes only already-proven provider/intelligence capabilities
+- cross-source partition names, filesystem labels/IDs, WIM container GUIDs and FFU PlatformIDs
+- architecture hints are carried from the bounded boot/installer evidence layer
+- partition structural findings are surfaced through one shared health model
+- exFAT dirty/media-failure flags become evidence-backed health findings
+- ext superblock state becomes evidence-backed clean/error findings
+- NTFS and FAT32 primary/backup boot-metadata consistency is checked inside bounded filesystem regions
+- metadata-only sparse/compressed/container providers are explicitly refused filesystem probing without a truthful guest-sector path
+- generated fixtures cover exFAT, NTFS, ext, WIM, FFU, byte-mapping refusal and cancellation
+- PR #31 / run #245 passed the code/test head plus all provider, Explorer/native Windows, Release x64 and artifact checks before documentation synchronization ✅
+
+See [`docs/IMAGE-INTELLIGENCE.md`](docs/IMAGE-INTELLIGENCE.md).
 
 ### Remaining 0.5 work
 
 - richer ISO9660/UDF metadata and UDF traversal where proven
-- FAT/FAT32/exFAT reader depth beyond recognition
+- FAT/FAT32/exFAT reader depth beyond recognition/health evidence
 - deeper supported NTFS metadata
-- cross-source architecture, labels and UUID/GUID aggregation beyond current bounded hints
-- health/corruption warnings backed by real metadata validation
+- stronger cross-source architecture reconciliation where multiple proven sources exist
+- additional health/corruption findings only where backed by proven metadata checks
 - virtual guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
@@ -103,7 +115,7 @@ Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution s
 - isolated Windows native-storage layer
 - hardened provider registry with explicit capabilities/fallback/failure isolation
 - bounded read-only partition, filesystem, optical-layout, virtual-disk and container metadata parsers
-- provider-agnostic partition, filesystem and boot/install intelligence services
+- provider-agnostic partition, filesystem, boot/install and unified image-intelligence services
 
 ## Build on Windows
 
@@ -113,13 +125,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition, boot/install intelligence, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition, boot/install intelligence, unified image intelligence, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Boot/install intelligence reports bootability only from validated boot metadata and installer families only from bounded file evidence. These services do not repair, execute, mount or mutate images.
+Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Boot/install intelligence reports bootability only from validated boot metadata and installer families only from bounded file evidence. Unified image intelligence aggregates proven evidence and adds bounded health findings; it does not repair or mutate images.
 
 VMDK, QCOW and DMG expose only proven metadata. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 
