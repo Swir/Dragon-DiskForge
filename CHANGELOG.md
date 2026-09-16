@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0-alpha.1
+- Expose existing metadata/health intelligence in the desktop Analyze dialog with JSON export.
+- Add SHA-512 and checksum comparison, shared-Core CLI, empty RAW/VHD/VHDX and data ISO creation.
+- Add bounded standalone RAW/VHD/VHDX conversion, GZip and checksum-protected split/join.
+- Commit new outputs only after success; refuse overwrites and clean failed/cancelled outputs.
+- Fix stale image-open results and misleading hash-calculation success text.
+- Add portable runtime-inclusive packaging, packaged-app startup validation, checksums and a gated prerelease workflow.
+- Alpha limitations and remaining 1.0 scope are listed in docs/RELEASE-NOTES.md.
+
+
 All notable changes to Dragon DiskForge are documented here.
 
 The project follows semantic versioning while it evolves toward 1.0.
