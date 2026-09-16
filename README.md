@@ -6,17 +6,17 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 54% toward 1.0
+## Project progress — 55% toward 1.0
 
-`███████████░░░░░░░░░ 54%`
+`███████████░░░░░░░░░ 55%`
 
-**Overall completion:** **54%**
+**Overall completion:** **55%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~82%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **~88%** 🚧
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -37,7 +37,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## 0.5 Partitions + File Systems + Image Intelligence 🚧
 
-Six substantial 0.5 slices are now implemented and validated.
+Seven substantial 0.5 slices plus beta-package preparation are now implemented and validated.
 
 ### Cross-provider partition intelligence ✅
 
@@ -90,18 +90,33 @@ Six substantial 0.5 slices are now implemented and validated.
 - UDF primary anchor validation at logical block 256
 - UDF descriptor-tag checksum/location/CRC validation with a 16 MiB descriptor-sequence inspection cap
 - validated UDF Primary/Logical Volume Descriptor d-strings become identity evidence
-- generated-fixture smoke tests cover valid/corrupt exFAT, FAT32 FSInfo, valid/corrupt UDF and cancellation
-- PR #33 / implementation run #262 passed the new depth gate plus all previous provider/Explorer/native Windows/Release x64/artifact checks before documentation synchronization
+- PR #33 / implementation run #262 passed the depth gate plus the full prior regression/build/artifact path
+
+### NTFS metadata + architecture reconciliation hardening ✅
+
+- bounded `NtfsMetadataDepthService` validates `$MFT` / `$MFTMirr` cluster locations and FILE-record sizing
+- NTFS FILE-record Update Sequence Array geometry and sector-trailer fixups are validated before mirror comparison
+- validated first `$MFT` / `$MFTMirr` records are compared after fixup normalization; corrupt or divergent evidence is reported without repair
+- `ArchitectureReconciliationService` preserves both boot-path and installer-path hints instead of silently choosing one
+- direct one-to-one architecture disagreement becomes an explicit warning while intentional multi-architecture boot evidence stays multi-architecture
+- generated fixtures cover healthy/corrupt NTFS metadata, out-of-range `$MFTMirr`, architecture conflicts and cancellation
+- PR #34 / implementation run #266 passed the new hardening gate plus the complete provider/Explorer/native Windows/Release x64 path
+
+### Beta package preparation ✅
+
+- Windows CI now creates a clean `DragonDiskForge-win-x64.zip` candidate in addition to the engineering artifact
+- public-package staging excludes `.pdb` and test-only files and requires exactly one `DragonDiskForge.App.exe` entry point
+- the package contains a deterministic package manifest and a generated SHA-256 file
+- run #266 package was independently downloaded and reviewed: checksum matched, one application EXE, zero PDB files and zero test-only files
+- this is beta-preparation evidence only; it does **not** replace clean-machine/manual beta gates
 
 See [`docs/FILESYSTEM-DEPTH.md`](docs/FILESYSTEM-DEPTH.md), [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md), [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md) and [`docs/IMAGE-INTELLIGENCE.md`](docs/IMAGE-INTELLIGENCE.md).
 
 ### Remaining 0.5 work
 
-- deeper supported NTFS metadata/evidence
-- stronger reconciliation when multiple independent architecture sources exist
 - further UDF traversal only after an independently bounded reader is proven
 - virtual guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
-- final 0.5 beta-scope hardening/documentation gate
+- final 0.5 beta-scope hardening/documentation and clean-machine/manual QA gate
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
 
@@ -130,13 +145,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition, filesystem-depth evidence, boot/install intelligence, unified image intelligence, image reporting, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish the engineering artifact plus a clean ZIP candidate with SHA-256.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Deeper filesystem checks never leave already-recognized physical regions. Boot/install intelligence reports bootability only from validated boot metadata and installer families only from bounded file evidence. Health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee.
+Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Deeper filesystem checks never leave already-recognized physical regions. NTFS depth checks validate metadata only and never repair, follow attributes or traverse directories. Architecture reconciliation preserves conflicting proven clues rather than guessing a winner. Health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee.
 
 VMDK, QCOW and DMG expose only proven metadata. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 

@@ -36,7 +36,7 @@ Closing 0.4 completes the internal engineering contract only. It does not declar
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **82%**.
+Current milestone completion is approximately **88%**.
 
 ### Completed execution slices
 
@@ -46,6 +46,8 @@ Current milestone completion is approximately **82%**.
 4. **Unified identity + health intelligence foundation** ✅
 5. **Windows Analyze + text/JSON reporting surface** ✅
 6. **Deeper bounded filesystem evidence** ✅
+7. **NTFS metadata + architecture-reconciliation hardening** ✅
+8. **Clean Windows x64 package-candidate path** ✅
 
 ### Cross-provider partition intelligence ✅
 
@@ -97,15 +99,32 @@ Current milestone completion is approximately **82%**.
 - UDF descriptor tag checksum/location/CRC validation
 - UDF main descriptor-sequence inspection capped at 16 MiB
 - validated UDF primary/logical volume identity strings flow into the analysis/report path
-- generated valid/corrupt exFAT, FAT32, UDF and cancellation smoke tests
-- PR #33 / run #262 implementation head passed new filesystem-depth gate plus complete prior regression/build/artifact before docs synchronization ✅
+- PR #33 / run #262 implementation head passed the new gate plus complete prior regression/build/artifact ✅
+
+### NTFS metadata + architecture reconciliation hardening ✅
+
+- bounded NTFS `$MFT` / `$MFTMirr` cluster/range validation
+- signed FILE-record size decoding with strict size bounds
+- Update Sequence Array geometry and sector-trailer validation
+- fixup-normalized first-record mirror comparison with explicit corruption/divergence findings
+- no NTFS repair, attribute following or directory traversal
+- boot-path + installer-path architecture hints are preserved and de-duplicated
+- direct single-source disagreement is surfaced as `ARCHITECTURE_EVIDENCE_CONFLICT`
+- generated valid/corrupt/out-of-range NTFS and architecture/cancellation tests
+- PR #34 / run #266 implementation head passed new hardening plus complete Windows regression/build path ✅
+
+### Clean Windows package candidate ✅
+
+- CI creates `DragonDiskForge-win-x64.zip` after the Release x64 build
+- package staging requires one application EXE and excludes PDB/test-only payloads
+- manifest + SHA-256 sidecar are emitted
+- run #266 package was downloaded and independently inspected: SHA-256 matched, one application EXE, zero PDB and zero test-only files
+- this remains a beta candidate, not a public release; clean-machine/manual/final-version gates remain
 
 ### Remaining execution slices
 
-- deeper supported NTFS metadata/evidence
-- stronger cross-source architecture reconciliation when multiple proven sources exist
 - independently bounded UDF traversal where justified
-- virtual guest-sector readers before inspecting filesystems inside sparse/compressed virtual disks
-- final 0.5 beta-scope hardening and documentation synchronization
+- truthful guest-sector reader foundations before sparse/compressed virtual-disk filesystem inspection
+- final 0.5 beta-scope hardening, final version metadata, clean-machine/manual QA and documentation synchronization
 
 A capability becomes user-visible only after its real backing path and tests exist.
