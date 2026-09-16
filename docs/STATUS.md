@@ -16,13 +16,13 @@ The 0.5 engineering scope is complete, but the public beta version suffix is int
 
 ## Overall project progress
 
-**64% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. Two verified 0.6 slices now provide dual SHA-256/SHA-512 verification and the reusable safe output transaction boundary required by future mutating pipelines. Public beta publication remains separately gated by clean-machine/manual validation and final package/version promotion.
+**66% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. Four of five top-level 0.6 deliverables are now proven: dual verification, the safe output transaction boundary, a real RAW creation/conversion pipeline, and pipeline-level cancellation/rollback behavior.
 
 ## Current milestone
 
 **0.6 Create + Convert + Verify — IN PROGRESS 🚧**
 
-Current 0.6 engineering completion is approximately **40%** (2 of 5 top-level roadmap deliverables).
+Current 0.6 engineering completion is approximately **80%** (4 of 5 top-level roadmap deliverables).
 
 ### Proven 0.6 slices
 
@@ -33,7 +33,7 @@ Current 0.6 engineering completion is approximately **40%** (2 of 5 top-level ro
    - dedicated `ComputeSha512Async` API is available
    - progress remains bounded/monotonic and cancellation propagates
    - generated smoke coverage includes multi-buffer input, empty files, missing files and pre-cancellation
-   - PR #41 implementation run #292 passed the new verification gate plus the complete Windows regression/build/package path
+   - PR #41 implementation run #292 passed the complete Windows regression/build/package path
 
 2. **Safe output transaction foundation** ✅
    - `SafeOutputService` creates a unique temporary output in the destination directory
@@ -42,18 +42,33 @@ Current 0.6 engineering completion is approximately **40%** (2 of 5 top-level ro
    - new-file move and existing-file replacement occur only after the writer finishes successfully
    - pre-existing and racing destinations are handled deterministically by policy
    - writer failure and cancellation preserve existing destinations and clean temporary output when possible
-   - missing parent directories and unknown overwrite policies fail closed
-   - PR #42 implementation run #296 and final synchronized run #297 passed the safe-output gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
+   - missing destination directories and unknown overwrite policies fail closed
+   - PR #42 implementation run #296 and final synchronized run #298 passed the safe-output gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
 
-### Remaining 0.6 roadmap deliverables
+3. **RAW creation + guest-to-RAW conversion foundation** ✅
+   - `RawImagePipelineService.CreateBlankAsync` creates explicit-length logical RAW output through `SafeOutputService`
+   - generic `ExportGuestToRawAsync` sequentially materializes any proven `IGuestByteReader` source with a bounded 1 MiB buffer
+   - explicit QCOW2 → RAW and hosted-sparse VMDK → RAW entry points reuse the already-proven reader subsets
+   - committed output length must equal the captured guest-visible source length
+   - source/destination identity is rejected for file-backed conversions
+   - progress reaches `1.0` only after transaction commit
+   - output sizes outside the current `FileStream` domain fail before mutation
+   - synthetic QCOW2/VMDK fixtures prove allocated plus proven zero/unallocated semantics
+   - PR #43 implementation run #300 passed the new RAW pipeline gate plus complete Windows regression/build/package verification and artifact publication
 
-- image creation and conversion pipeline
-- split/join and sparse/compression handling
-- cancellation/rollback safety for real mutating pipelines
+4. **Pipeline-level cancellation + rollback safety** ✅
+   - cancellation after a real guest read aborts before final commit
+   - guest-reader failure while replacing an existing destination preserves the previous file
+   - `FailIfExists` rejects an existing destination before consuming source bytes
+   - temporary transaction files are cleaned when possible after failure/cancellation
+   - unsupported QCOW2/VMDK states remain fail-closed in their reader layer
+   - no Create/Convert action is enabled in WinUI by this Core-only work
 
-### Next 0.6 priority
+### Remaining 0.6 roadmap deliverable
 
-Build the first real format-producing pipeline on top of `SafeOutputService`. A bounded guest-image-to-RAW export over the already proven QCOW2/VMDK guest readers is the strongest next conversion slice because it can exercise real progress, cancellation and rollback semantics without enabling unproven guest writes.
+- split/join and broader sparse/compression handling
+
+Materializing already-proven sparse guest mappings into flat RAW does not count as support for writing sparse container metadata or decoding compressed container payloads.
 
 ## Proven 0.5 slices
 
@@ -116,7 +131,8 @@ Build the first real format-producing pipeline on top of `SafeOutputService`. A 
 
 ### 0.6
 - PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification foundation + full Windows regression/build/package path
-- PR #42 / implementation run #296 and final run #297 — safe output transaction foundation + full Windows regression/build/package path
+- PR #42 / implementation run #296 and final run #298 — safe output transaction foundation + full Windows regression/build/package path
+- PR #43 / implementation run #300 — RAW creation/guest-to-RAW conversion + real pipeline cancellation/rollback verification + full Windows regression/build/package path
 
 ## Beta readiness
 
@@ -134,8 +150,8 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges and reject contradictory or unknown states instead of guessing.
 
-The 0.6 verification API is read-only. The new safe output transaction primitive is intentionally not exposed as a user-visible Create/Convert capability: it only establishes a file-producing transaction boundary so future writers can stage completed output, apply explicit overwrite policy and avoid intentionally publishing partial destinations on normal failure/cancellation paths.
+The 0.6 verification API is read-only. File-producing Core operations use the safe output transaction boundary, but no Create/Convert UI capability is enabled yet. The new RAW pipeline writes only the requested destination; source images and guest address spaces remain read-only. Pipeline cancellation and reader failures are validated to preserve existing destinations and avoid intentionally publishing partial output.
 
-The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may feed bounded guest partition/filesystem analysis, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately, and guest GPT checksum/EBR containment checks run before filesystem probing.
+The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may feed bounded guest partition/filesystem analysis and flat-RAW export, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately, and guest GPT checksum/EBR containment checks run before filesystem probing.
 
 Interactive UAC, clean-machine runtime and the real cross-process Explorer drag gesture remain manual QA gates.

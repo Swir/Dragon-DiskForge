@@ -6,18 +6,18 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 64% toward 1.0
+## Project progress — 66% toward 1.0
 
-`█████████████░░░░░░░ 64%`
+`█████████████░░░░░░░ 66%`
 
-**Overall completion:** **64%**
+**Overall completion:** **66%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
-- `0.6 Create + Convert + Verify` — **~40%** 🚧
+- `0.6 Create + Convert + Verify` — **~80%** 🚧
 - `0.7 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -32,6 +32,8 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - managed ISO9660/Joliet direct browsing without mounting
 - shared Core verification with SHA-256, SHA-512, progress/cancellation and exact hashed-byte reporting
 - reusable `SafeOutputService` transaction boundary with temporary output, explicit overwrite policy, same-directory finalization and failure/cancellation cleanup
+- first real Core image-producing pipeline: blank RAW creation plus proven QCOW2/VMDK guest-byte materialization to RAW
+- pipeline-level cancellation/reader-failure rollback tests that preserve existing destinations and do not publish partial output
 - hardened provider registry with truthful capabilities and deterministic resolution
 - bounded read-only partition, filesystem, boot/install and image-intelligence services
 - user-facing **Analyze** action with text/JSON reporting and Save JSON
@@ -42,7 +44,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## 0.6 Create + Convert + Verify — IN PROGRESS 🚧
 
-Two of five top-level 0.6 engineering deliverables are now implemented and validated. Mutating Create/Convert UI capabilities remain disabled until real format pipelines use the shared transaction boundary and prove pipeline-level rollback/cancellation behavior.
+Four of five top-level 0.6 engineering deliverables are now implemented and validated. The remaining top-level scope is split/join plus broader sparse/compression handling. Mutating Create/Convert UI capabilities remain disabled until their product UX and format-specific release gates are separately implemented and tested.
 
 ### Dual SHA-256/SHA-512 verification foundation ✅
 
@@ -64,13 +66,33 @@ Two of five top-level 0.6 engineering deliverables are now implemented and valid
 - cancellation/writer failure/failed commit preserve an existing destination and clean the temporary output when possible
 - missing destination directories and unknown overwrite policies fail closed
 - result metadata reports normalized destination path, committed byte count and whether replacement occurred
-- PR #42 implementation run #296 and final synchronized run #297 passed the safe-output gate plus the complete Windows regression/build/clean-package/artifact path
+- PR #42 implementation run #296 and final synchronized run #298 passed the safe-output gate plus the complete Windows regression/build/clean-package/artifact path
 
-**Current 0.6 engineering completion:** approximately **40%** based on 2 of 5 top-level roadmap deliverables.
+### RAW creation + guest-to-RAW conversion pipeline ✅
 
-**Next 0.6 priority:** build the first real format-producing pipeline on top of `SafeOutputService`, with bounded progress/cancellation and rollback tests, before any Create/Convert UI capability is enabled. The strongest candidate is a truthful guest-image-to-RAW export path over the already proven QCOW2/VMDK guest-byte readers, followed by additional creation/split-join/sparse-compression work.
+- `RawImagePipelineService.CreateBlankAsync` creates a zero-filled logical RAW image at an explicit byte length through the safe transaction boundary
+- `ExportGuestToRawAsync` materializes any proven `IGuestByteReader` source through bounded sequential 1 MiB transfers
+- explicit QCOW2 → RAW and hosted-sparse VMDK → RAW entry points reuse the already-proven guest-byte readers rather than reinterpreting container metadata
+- the committed output length must exactly match the captured guest-visible source length
+- source and destination paths must differ for file-backed conversions
+- virtual/output lengths beyond the current `FileStream` domain fail before mutation
+- progress remains below `1.0` while data is staged and reaches `1.0` only after transaction commit
+- generated tests prove blank RAW semantics, multi-buffer export, replacement/refusal, exact bytes, QCOW2 materialization and VMDK materialization
+- PR #43 implementation run #300 passed the new RAW pipeline gate plus the complete Windows regression/build/clean-package/artifact path
 
-See [`docs/OUTPUT-TRANSACTIONS.md`](docs/OUTPUT-TRANSACTIONS.md) for the shared mutation boundary.
+### Pipeline-level cancellation + rollback ✅
+
+- cancellation after a real guest read aborts before final commit and leaves no partial destination
+- guest-reader failure during replacement preserves the previous destination
+- transaction temporary files are cleaned when possible on cancellation/failure
+- pre-existing destination refusal happens before source consumption under `FailIfExists`
+- unsupported QCOW2/VMDK semantics still fail closed in their existing guest readers and do not gain a write path
+
+**Current 0.6 engineering completion:** approximately **80%** based on 4 of 5 top-level roadmap deliverables.
+
+**Next 0.6 priority:** implement safe split/join and explicitly bounded sparse/compression handling without weakening transactional rollback or truthful format support. No Create/Convert UI action should be enabled merely because the Core foundation exists.
+
+See [`docs/OUTPUT-TRANSACTIONS.md`](docs/OUTPUT-TRANSACTIONS.md) and [`docs/RAW-IMAGE-PIPELINES.md`](docs/RAW-IMAGE-PIPELINES.md).
 
 ## 0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅
 
@@ -210,17 +232,17 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, SHA-256/SHA-512 verification, safe output transactions, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
+CI validates Core, SHA-256/SHA-512 verification, safe output transactions, RAW creation/guest export pipelines, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
 
 ## Safety design
 
 Inspection and verification are read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-The first 0.6 mutation primitive is deliberately not user-visible: `SafeOutputService` writes through a temporary file in the destination directory and commits only completed output according to an explicit overwrite policy. Writer failure and cancellation preserve an existing destination and clean temporary output when possible. No Create/Convert capability is enabled merely because this shared transaction layer exists.
+0.6 file-producing Core operations are deliberately not user-visible yet. `SafeOutputService` writes through a temporary file in the destination directory and commits only completed output according to an explicit overwrite policy. `RawImagePipelineService` uses that boundary for blank RAW creation and proven guest-byte-to-RAW materialization. Source containers remain read-only; pipeline cancellation and reader failures are tested to preserve existing destinations and avoid intentionally publishing partial output.
 
 Partition/filesystem intelligence operates only on proven byte mappings. Physical and guest-relative offsets are modeled separately. Guest GPT checksums and EBR containment are validated before filesystem probing. UDF root traversal follows only validated Type 1 physical mappings and remains non-recursive. NTFS depth checks validate metadata only and never repair or traverse directories. Architecture reconciliation preserves conflicting evidence rather than guessing a winner.
 
-The QCOW2 guest reader currently translates only standard uncompressed v2/v3 cluster mappings with no backing file or encryption. The VMDK guest reader currently translates only clean hosted sparse v1 `monolithicSparse` mappings with one extent, no parent chain and no compressed/stream-optimized semantics. Unsupported states fail closed. The proven guest readers may feed bounded partition/filesystem analysis, but they still do not advertise Direct Browse, extraction or Mount.
+The QCOW2 guest reader currently translates only standard uncompressed v2/v3 cluster mappings with no backing file or encryption. The VMDK guest reader currently translates only clean hosted sparse v1 `monolithicSparse` mappings with one extent, no parent chain and no compressed/stream-optimized semantics. Unsupported states fail closed. The proven guest readers may feed bounded partition/filesystem analysis and the new flat-RAW export pipeline, but they still do not advertise Direct Browse, extraction or Mount.
 
 VMDK, QCOW and DMG provider surfaces remain capability-limited to what their tested engine paths actually support. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 
