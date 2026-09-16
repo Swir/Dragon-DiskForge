@@ -13,7 +13,7 @@ Dragon DiskForge separates **container metadata parsing** from **guest-visible b
 
 A reader must fail closed when the requested mapping cannot be translated truthfully. The existence of a reader does **not** automatically grant `DirectBrowse`, Mount, extraction, filesystem traversal or mutation capabilities.
 
-## QCOW2 first slice
+## QCOW2 proven slice
 
 `Qcow2GuestByteReader` currently supports a deliberately narrow QCOW2 v2/v3 subset:
 
@@ -25,20 +25,11 @@ A reader must fail closed when the requested mapping cannot be translated truthf
 - strict virtual-size and physical-file bounds
 - reserved-bit and cluster-alignment validation before following table entries
 
-The reader refuses rather than approximates:
+The reader refuses QCOW v1 guest mapping, backing-file chains, encryption, dirty active metadata, external data files, non-default compression state, extended L2 entries and compressed cluster descriptors.
 
-- QCOW v1 guest mapping
-- backing-file chains
-- encryption
-- dirty active QCOW2 metadata
-- external data files
-- non-default compression-type feature state
-- extended L2 entries
-- compressed cluster descriptors
+PR #37 implementation run #277 passed the QCOW2 guest-reader gate and the complete Windows regression/package path.
 
-PR #37 implementation run #277 passed the QCOW2 guest-reader gate and the complete existing Windows regression, Release x64 build, clean-package verification and artifact path.
-
-## VMDK hosted sparse first slice
+## VMDK hosted sparse proven slice
 
 `VmdkSparseGuestByteReader` supports a deliberately narrow hosted sparse v1 subset:
 
@@ -51,31 +42,34 @@ PR #37 implementation run #277 passed the QCOW2 guest-reader gate and the comple
 - unallocated grains only when no parent chain exists, in which case guest bytes are zero
 - reads that cross guest-grain boundaries
 - strict guest-capacity and physical-file bounds
-- grain-directory and grain-table confinement to declared metadata overhead
+- grain-directory/grain-table confinement to declared metadata overhead
 - allocated grain data must remain outside metadata overhead
 
-The reader refuses rather than approximates:
+The reader refuses split sparse create types, parent/backing chains, unclean metadata, compressed grains, stream-optimized markers, zeroed-grain-entry overloading and unknown sparse-header flag semantics.
 
-- split sparse create types
-- parent/backing chains
-- unclean sparse metadata
-- compressed grains
-- stream-optimized metadata markers
-- zeroed-grain-entry overloading
-- unknown sparse-header flag semantics
+PR #38 / run #284 passed the dedicated VMDK reader gate plus the complete Windows regression/build/package path.
 
-PR #38 implementation head passed the dedicated VMDK reader gate together with the existing provider/intelligence/native regression before documentation synchronization.
+## Common guest partition/filesystem intelligence
+
+The proven readers now feed a bounded analysis layer without changing their capability claims:
+
+- `GuestPartitionTableReader` reads guest-visible MBR, bounded EBR chains and GPT metadata
+- partition layouts reuse `PartitionIntelligenceService` geometry, overlap and range validation against the virtual guest size
+- `GuestFileSystemRecognitionService` recognizes FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS evidence in bounded guest regions
+- `GuestFileSystemDetectionInfo` uses `GuestOffsetBytes`; physical `FileSystemDetectionInfo.PhysicalOffsetBytes` is never reused for virtual offsets
+- `GuestImageIntelligenceService` selects only the explicitly proven QCOW2 and hosted-sparse VMDK reader implementations
+- `ImageReportService` exposes a separate `GuestAnalysis` JSON object and explicit guest-address-space sections in text reports
+- unsupported optional container semantics continue to fail at reader open/translation rather than being approximated
+
+PR #39 implementation run #286 passed generated QCOW2/VMDK MBR + FAT12 fixtures, out-of-range guest partition refusal, cancellation and the full Windows regression/package path.
 
 ## Validation
 
-Generated QCOW2 and VMDK smoke fixtures cover allocated guest data, zero/sparse mappings where semantically proven, cross-boundary reads, guest OOB access, physical OOB mappings, malformed table/directory entries, unsupported state refusal and cancellation. VMDK fixtures additionally verify active redundant/primary directory selection and metadata/data-region separation.
+Generated QCOW2 and VMDK smoke fixtures cover allocated guest data, zero/sparse mappings where semantically proven, cross-boundary reads, guest OOB access, physical OOB mappings, malformed table/directory entries, unsupported state refusal and cancellation. Guest-intelligence fixtures additionally prove that partition/filesystem evidence is derived from the virtual address space rather than physical container offsets.
 
-## Next steps
+## Capability boundary
 
-1. Introduce a common guest-byte source resolver that selects only proven readers.
-2. Allow partition/filesystem intelligence to operate over that abstraction without confusing guest offsets with physical container offsets.
-3. Add bounded integration fixtures proving the same partition/filesystem evidence through RAW, QCOW2 and VMDK byte sources.
-4. Keep Direct Browse and extraction disabled until filesystem traversal itself is separately implemented and tested for those guest mappings.
+Guest analysis is still **analysis-only**. It does not enable Direct Browse, extraction, Mount, repair or writes for QCOW2/VMDK. Filesystem traversal and any future compressed/backing variants require separate implementation, tests and truthful capability review.
 
 ## References
 

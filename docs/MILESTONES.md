@@ -28,7 +28,7 @@ Final checkpoints: PR #26 / run #226 FFU; PR #27 / run #228 provider-contract ha
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **97%**.
+Current milestone completion is approximately **99%**.
 
 ### Completed execution slices
 
@@ -44,25 +44,23 @@ Current milestone completion is approximately **97%**.
 10. **Bounded UDF root-directory traversal** ✅
 11. **Bounded QCOW2 standard guest-byte reader** ✅
 12. **Bounded hosted-sparse VMDK guest-byte reader** ✅
+13. **Common bounded guest partition/filesystem intelligence** ✅
 
-### VMDK guest-byte reader ✅
+### Common guest partition/filesystem intelligence ✅
 
-- shared generic read-only `IGuestByteReader` contract
-- hosted sparse v1 `monolithicSparse` only, one embedded extent
-- parent-free, clean, uncompressed mappings only
-- active redundant-vs-primary grain-directory selection
-- bounded grain-directory/grain-table translation
-- allocated reads, cross-grain reads and unallocated/no-parent zero semantics
-- guest capacity, physical range and metadata-overhead separation checks
-- parent chains, split create types, unclean images, compressed/stream-optimized/zeroed-entry/unknown flag semantics fail closed
-- cancellation propagation and generated malformed-pointer fixtures
-- no Direct Browse, filesystem traversal, extraction, Mount, repair or write path enabled
-- PR #38 implementation head passed the dedicated VMDK reader test and existing provider/intelligence/native regression before documentation synchronization ✅
+- `GuestPartitionTableReader` parses bounded guest MBR/EBR/GPT metadata through `IGuestByteReader`
+- existing partition-layout geometry/overlap/range hardening is reused against virtual guest size
+- `GuestFileSystemRecognitionService` scans bounded guest regions for FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS evidence
+- dedicated guest-relative detection models prevent physical/guest offset ambiguity
+- QCOW2 v2/v3 standard-uncompressed and VMDK hosted-sparse standard-uncompressed readers feed the common analysis path
+- text/JSON reports expose guest analysis separately from physical-container analysis
+- generated QCOW2/VMDK fixtures prove MBR + FAT12 recognition, OOB refusal and cancellation
+- no Direct Browse, filesystem traversal, extraction, Mount, repair or write path is enabled by this analysis surface
+- PR #39 implementation run #286 passed the new guest-intelligence gate and complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication ✅
 
 ### Remaining execution slices
 
-- common bounded guest-byte source integration into partition/filesystem intelligence
-- final 0.5 beta-scope hardening/documentation synchronization
+- final 0.5 beta-scope hardening/documentation and release-gate synchronization
 - clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA
 - promote to `0.5.0-beta.1` only when all release gates are actually satisfied
 
