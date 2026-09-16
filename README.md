@@ -6,17 +6,17 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 60% toward 1.0
+## Project progress — 61% toward 1.0
 
-`████████████░░░░░░░░ 60%`
+`████████████░░░░░░░░ 61%`
 
-**Overall completion:** **60%**
+**Overall completion:** **61%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~99%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -38,9 +38,9 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - truthful sparse-container guest-byte translation for standard QCOW2 and hosted sparse VMDK mappings
 - bounded guest-relative MBR/EBR/GPT and filesystem intelligence over those proven guest-byte readers
 
-## 0.5 Partitions + File Systems + Image Intelligence 🚧
+## 0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅
 
-Thirteen substantial 0.5 execution slices are implemented and validated.
+Fourteen substantial 0.5 execution slices are implemented and validated. The automated engineering scope is complete; public beta publication still has independent package/manual gates in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 ### Cross-provider partition intelligence ✅
 - provider-agnostic `PartitionIntelligenceService`
@@ -130,23 +130,32 @@ Thirteen substantial 0.5 execution slices are implemented and validated.
 - guest-relative offsets use dedicated models so they cannot be confused with physical container offsets
 - `ImageReportService` exposes a separate structured `GuestAnalysis` section in JSON and explicit **GUEST ADDRESS SPACE** sections in text reports
 - generated QCOW2/VMDK fixtures prove guest MBR + FAT12 recognition, out-of-range partition refusal and cancellation
-- PR #39 / implementation run #286 passed the new guest-intelligence gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
+- PR #39 / run #287 passed the guest-intelligence gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
+
+### Final guest partition structure hardening ✅
+- guest GPT primary-header CRC32 is validated before metadata is trusted
+- the declared GPT partition-entry-array CRC32 is verified with bounded streaming reads
+- GPT usable ranges, backup-header placement and primary entry-array placement are cross-checked against guest geometry
+- MBR/EBR boot-status bytes must be valid
+- EBR chains and logical partitions must remain inside the declared extended-partition container
+- generated fixtures cover valid GPT, corrupt header/table checksums, invalid MBR status and escaping EBR/logical ranges
+- PR #40 implementation run #289 passed the complete Windows regression/build/clean-package path
 
 Guest intelligence remains analysis-only. It does not enable Direct Browse, extraction, Mount or writes for QCOW2/VMDK; unsupported container semantics continue to fail closed at the guest-byte reader boundary.
 
 See [`docs/GUEST-BYTE-READERS.md`](docs/GUEST-BYTE-READERS.md), [`docs/FILESYSTEM-DEPTH.md`](docs/FILESYSTEM-DEPTH.md), [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md), [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md) and [`docs/IMAGE-INTELLIGENCE.md`](docs/IMAGE-INTELLIGENCE.md).
 
-### Remaining 0.5 work
+### Remaining release gates after 0.5 engineering completion
 
-- final 0.5 beta-scope hardening/documentation and release-gate synchronization
-- clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA
-- promote the verified version pipeline to `0.5.0-beta.1` only when the beta gate is complete
+- clean-machine launch/open/mount/explore/verify/analyze regression
+- normal-user UAC and real cross-process drag-out manual QA
+- promote the verified version/package pipeline to `0.5.0-beta.1` only when every beta gate is satisfied
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
 
 The provider foundation, **eleven additional image families**, and provider-contract hardening are proven: IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU.
 
-The planned first public GitHub beta remains **`0.5.0-beta.1`**. It will not be published until the final 0.5 hardening and independent gates in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) are complete.
+The planned first public GitHub beta remains **`0.5.0-beta.1`**. The 0.5 automated engineering scope is complete, but the independent manual/package gates in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) must pass before publication.
 
 Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md) and [`docs/MILESTONES.md`](docs/MILESTONES.md).
 
@@ -167,15 +176,15 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, physical and guest partition/filesystem intelligence, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
+CI validates Core, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-Partition/filesystem intelligence operates only on proven byte mappings. Physical and guest-relative offsets are modeled separately. UDF root traversal follows only validated Type 1 physical mappings and remains non-recursive. NTFS depth checks validate metadata only and never repair or traverse directories. Architecture reconciliation preserves conflicting evidence rather than guessing a winner.
+Partition/filesystem intelligence operates only on proven byte mappings. Physical and guest-relative offsets are modeled separately. Guest GPT checksums and EBR containment are validated before filesystem probing. UDF root traversal follows only validated Type 1 physical mappings and remains non-recursive. NTFS depth checks validate metadata only and never repair or traverse directories. Architecture reconciliation preserves conflicting evidence rather than guessing a winner.
 
-The QCOW2 guest reader currently translates only standard uncompressed v2/v3 cluster mappings with no backing file or encryption. The VMDK guest reader currently translates only clean hosted sparse v1 `monolithicSparse` mappings with one extent, no parent chain and no compressed/stream-optimized semantics. Unsupported states fail closed. The proven guest readers may now feed bounded partition/filesystem analysis, but they still do not advertise Direct Browse, extraction or Mount.
+The QCOW2 guest reader currently translates only standard uncompressed v2/v3 cluster mappings with no backing file or encryption. The VMDK guest reader currently translates only clean hosted sparse v1 `monolithicSparse` mappings with one extent, no parent chain and no compressed/stream-optimized semantics. Unsupported states fail closed. The proven guest readers may feed bounded partition/filesystem analysis, but they still do not advertise Direct Browse, extraction or Mount.
 
 VMDK, QCOW and DMG provider surfaces remain capability-limited to what their tested engine paths actually support. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 

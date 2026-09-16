@@ -25,36 +25,29 @@ The project follows semantic versioning while it evolves toward 1.0.
 - bounded non-recursive UDF Type 1 root-directory traversal
 - generic read-only `IGuestByteReader` engine contract
 - bounded `Qcow2GuestByteReader` for QCOW2 v2/v3 standard uncompressed active L1/L2 mappings
-- QCOW2 allocated, explicit-zero and unallocated/no-backing guest-byte semantics with strict virtual/physical bounds
-- generated QCOW2 guest-reader tests covering cross-cluster reads, OOB mappings, reserved bits, backing/encryption/dirty/compression/extended-state refusal and cancellation
 - bounded `VmdkSparseGuestByteReader` for clean single-extent hosted sparse v1 `monolithicSparse` images
-- VMDK active grain-directory/grain-table translation with redundant-directory selection, sparse/no-parent zero semantics and cross-grain reads
-- VMDK guest-reader tests covering active-directory selection, physical OOB pointers, metadata-overhead separation, unsupported parent/split/compressed/unclean states and cancellation
 - bounded `GuestPartitionTableReader` for guest-visible MBR/EBR/GPT metadata over proven `IGuestByteReader` sources
 - bounded `GuestFileSystemRecognitionService` for guest FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS evidence
-- dedicated guest-relative filesystem models so virtual offsets cannot be mistaken for physical container offsets
-- separate guest-address-space sections in text reports and structured `GuestAnalysis` in JSON reports
-- generated QCOW2/VMDK guest-intelligence fixtures covering MBR + FAT12 recognition, out-of-range partition refusal and cancellation
+- dedicated guest-relative filesystem models and separate guest sections in text/JSON reports
+- final guest GPT/EBR integrity hardening: GPT primary-header CRC32, partition-entry-array CRC32, GPT geometry/metadata placement validation, MBR/EBR status validation and extended-container containment
+- generated final-hardening fixtures covering valid GPT, corrupt GPT header/table checksums, invalid MBR status, escaping logical partitions and escaping EBR links
 
 ### Changed
-- development version remains **0.5.0-alpha.1** until the beta gate is complete
-- project progress advances to **60% toward 1.0** after validating common guest partition/filesystem intelligence
-- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **99%**
-- CI now gates QCOW2/VMDK guest-byte translation and common guest partition/filesystem analysis in addition to the complete provider/intelligence/Explorer/native/package regression path
-- next engineering focus is final 0.5 beta-scope hardening/documentation and the remaining manual release gates
+- development version remains **0.5.0-alpha.1** until the independent public-beta gate is complete
+- project progress advances to **61% toward 1.0** after validating the final 0.5 engineering hardening slice
+- **0.5 Partitions + File Systems + Image Intelligence** reaches **100% automated engineering completion**
+- next engineering milestone becomes **0.6 Create + Convert + Verify** after PR #40 final docs-synchronized CI/merge
+- beta publication remains blocked by final suffix/package promotion and clean-machine/UAC/cross-process drag-out/manual regression gates
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
 - guest-byte readers do not enable Direct Browse, extraction, Mount or write capabilities
 - common guest analysis consumes bytes only through proven bounded `IGuestByteReader` implementations
 - guest partition/filesystem offsets are modeled separately from physical container offsets
-- QCOW2 backing-file chains, encryption, dirty active metadata, external-data mode, non-default compression metadata, extended L2 entries and compressed-cluster descriptors fail closed
-- QCOW2 table entries are validated for reserved bits, alignment and physical bounds before use
-- unallocated QCOW2 clusters are treated as zeroes only because the current reader refuses backing files
-- VMDK parent chains, split create types, unclean images, compression, stream-optimized markers, zeroed-grain entry overloading and unknown flags fail closed
-- VMDK grain directories/tables must remain inside declared metadata overhead, while allocated grain data must remain outside it and within the physical file
-- unallocated VMDK grains are treated as zeroes only because the current reader refuses parent chains
-- guest MBR/EBR/GPT and filesystem ranges are bounded against virtual guest size before probing
+- guest GPT metadata is not trusted until header and partition-entry checksums validate
+- guest EBR links and logical partitions cannot escape the declared extended-partition container
+- QCOW2 unsupported backing/encryption/dirty/external-data/compressed/extended-L2 states fail closed
+- VMDK unsupported parent/split/unclean/compressed/stream-optimized states fail closed
 - existing filesystem/UDF/NTFS bounds, cancellation, failure-isolation and truthful-capability rules remain intact
 
 ### Verified
@@ -79,12 +72,14 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #34 / run #266 — NTFS/architecture hardening + clean-package foundation
 - PR #35 / run #270 — version metadata + strict package verification
 - PR #36 / run #274 — bounded UDF root traversal
-- PR #37 / run #277 — bounded QCOW2 standard guest-byte reader + complete regression/build/package-verification/artifact path
-- PR #38 / run #284 — bounded hosted-sparse VMDK guest-byte reader + complete Windows regression/build/package path
-- PR #39 / implementation run #286 — common guest partition/filesystem intelligence + complete regression/build/package-verification/artifact path
+- PR #37 / run #277 — bounded QCOW2 standard guest-byte reader
+- PR #38 / run #284 — bounded hosted-sparse VMDK guest-byte reader
+- PR #39 / run #287 — common guest partition/filesystem intelligence
+- PR #40 / implementation run #289 — final guest GPT/EBR integrity hardening + complete regression/build/package-verification/artifact path
 
 ### Planned
-- final 0.5 beta-scope hardening/documentation and clean-machine/manual QA
+- finish independent `0.5.0-beta.1` manual/package release gates without weakening the completed 0.5 engineering scope
+- begin 0.6 Create + Convert + Verify after PR #40 final CI/merge
 - promote to `0.5.0-beta.1` only when the independent beta gate is complete
 
 ## [0.3.0] - 2026-09-15

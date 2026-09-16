@@ -6,20 +6,23 @@
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
 - **0.3 Dragon Explorer — COMPLETE ✅**
 - **0.4 Extended Image Providers — COMPLETE ✅**
+- **0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅**
 
 ## Current development version
 
 **0.5.0-alpha.1**
 
+The 0.5 engineering scope is complete, but the public beta version suffix is intentionally not promoted until the independent beta release gate passes.
+
 ## Overall project progress
 
-**60% toward 1.0.** Milestones 0.1 through 0.4 are complete. Milestone 0.5 now includes validated partition intelligence, bounded physical and guest filesystem recognition, boot/installer intelligence, unified identity/health intelligence, Analyze/reporting, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation, bounded UDF root traversal, a verified clean Windows package-candidate path and truthful QCOW2 plus hosted-sparse VMDK guest-byte readers.
+**61% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. Public beta publication remains separately gated by clean-machine/manual validation and final package/version promotion.
 
-## Current milestone
+## Next milestone
 
-**0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧**
+**0.6 Create + Convert + Verify — NEXT 🚧**
 
-Current milestone completion is approximately **99%**.
+The first 0.6 implementation work may begin while beta manual gates remain open, provided no public beta is published prematurely and 0.5 release-critical regressions are fixed first.
 
 ## Proven 0.5 slices
 
@@ -36,19 +39,18 @@ Current milestone completion is approximately **99%**.
 11. Bounded QCOW2 standard guest-byte reader ✅
 12. Bounded hosted-sparse VMDK guest-byte reader ✅
 13. Common bounded guest partition/filesystem intelligence ✅
+14. Final guest partition structure hardening ✅
 
-### Guest partition/filesystem intelligence proven scope
+### Final guest partition hardening proven scope
 
-- shared read-only `IGuestByteReader` contract remains the only source of virtual guest bytes
-- `GuestPartitionTableReader` parses guest MBR/EBR/GPT structures with virtual-range bounds and safety limits
-- guest partition layouts reuse `PartitionIntelligenceService` geometry, overlap and range validation
-- `GuestFileSystemRecognitionService` supports FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS evidence
-- dedicated guest-relative models keep guest offsets distinct from physical container offsets
-- QCOW2 standard uncompressed and hosted-sparse VMDK standard uncompressed readers feed the common guest-analysis path
-- `ImageReportService` exposes guest analysis as a separate JSON object and explicit text-report section
-- generated fixtures validate QCOW2/VMDK MBR + FAT12 recognition, out-of-range partition refusal and cancellation
-- no Direct Browse, extraction, Mount, repair or write capability is enabled by guest analysis
-- PR #39 implementation run #286 passed the dedicated guest-intelligence gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
+- guest GPT primary-header CRC32 validation
+- bounded streaming validation of the complete declared GPT partition-entry-array CRC32
+- GPT usable ranges, backup-header placement and primary entry-array placement checked against virtual guest geometry
+- invalid MBR/EBR boot-status bytes rejected
+- EBR chain links and logical partitions constrained to the declared extended-partition container
+- generated tests include a valid GPT, corrupt header/table checksums, invalid MBR status and escaping EBR/logical ranges
+- no Direct Browse, extraction, Mount, repair or write capability is introduced
+- PR #40 implementation run #289 passed the dedicated guest-intelligence gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
 
 ## Proven validation checkpoints
 
@@ -78,18 +80,25 @@ Current milestone completion is approximately **99%**.
 - PR #36 / run #274 — bounded UDF root traversal
 - PR #37 / run #277 — bounded QCOW2 standard guest-byte reader implementation
 - PR #38 / run #284 — bounded hosted-sparse VMDK guest-byte reader + full Windows package path
-- PR #39 / implementation run #286 — common guest partition/filesystem intelligence + full Windows regression/package path
+- PR #39 / run #287 — common guest partition/filesystem intelligence + full Windows regression/package path
+- PR #40 / implementation run #289 — final guest GPT/EBR integrity hardening + full Windows regression/package path
 
-## Next engineering focus
+## Beta readiness
 
-**Final 0.5 beta-scope hardening and release-gate synchronization**, followed by the remaining clean-machine/manual QA checkpoints.
+The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated 0.5 engineering gates are complete. Remaining blockers are independent release gates:
 
-The planned first public beta remains `0.5.0-beta.1`. It is **not ready yet**: final 0.5 hardening remains unfinished, the version/package pipeline still carries `0.5.0-alpha.1`, and clean-machine/UAC/cross-process drag-out manual gates in `docs/BETA-RELEASE.md` remain open.
+- promote version/package metadata from `0.5.0-alpha.1` to the final beta suffix only at release time
+- launch and exercise the package on a clean supported Windows machine
+- confirm no developer SDK/Visual Studio requirement for a normal user
+- complete normal-user UAC validation
+- complete real cross-process Explorer drag-out validation
+- complete basic clean-machine launch/open/mount/explore/verify/analyze regression
+- publish the final package SHA-256 and GitHub pre-release only after those checks pass
 
 ## Current safety state
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges and reject contradictory or unknown states instead of guessing.
 
-The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may now feed bounded guest partition/filesystem analysis, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately.
+The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may feed bounded guest partition/filesystem analysis, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately, and guest GPT checksum/EBR containment checks now run before filesystem probing.
 
 Interactive UAC, clean-machine runtime and the real cross-process Explorer drag gesture remain manual QA gates.
