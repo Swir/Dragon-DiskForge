@@ -43,6 +43,7 @@ public sealed class ImageDetectionService
 
         if (StartsWithAscii(head, "vhdxfile")) return "VHDX";
         if (StartsWithAscii(head, "MSWIM\0\0\0")) return "WIM/ESD";
+        if (head.Length >= 16 && StartsWithAscii(head.AsSpan(4), "SignedImage ")) return "FFU";
         if (head.Length >= 4 && head[0] == 0x51 && head[1] == 0x46 && head[2] == 0x49 && head[3] == 0xFB) return "QCOW/QCOW2";
 
         // ISO-9660 primary volume descriptor starts at sector 16 + 1 byte.
