@@ -7,20 +7,7 @@ namespace DragonDiskForge.App;
 
 public sealed partial class MainWindow
 {
-    private readonly ProviderRegistry _providerRegistry = new([
-        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100),
-        new ProviderRegistration(new CcdImageProvider(), Priority: 95),
-        new ProviderRegistration(new RawPartitionImageProvider(), Priority: 90),
-        new ProviderRegistration(new FloppyImageProvider(), Priority: 80),
-        new ProviderRegistration(new CueSheetImageProvider(), Priority: 70),
-        new ProviderRegistration(new MdsImageProvider(), Priority: 60),
-        new ProviderRegistration(new NrgImageProvider(), Priority: 50),
-        new ProviderRegistration(new VmdkSparseImageProvider(), Priority: 40),
-        new ProviderRegistration(new QcowImageProvider(), Priority: 30),
-        new ProviderRegistration(new DmgUdifImageProvider(), Priority: 20),
-        new ProviderRegistration(new WimEsdImageProvider(), Priority: 10),
-        new ProviderRegistration(new FfuImageProvider(), Priority: 5)
-    ]);
+    private readonly ProviderRegistry _providerRegistry = DefaultProviderRegistry.Create();
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
 
