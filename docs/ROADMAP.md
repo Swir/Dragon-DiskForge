@@ -35,9 +35,9 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ---
 
-## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
+## 0.5 Partitions + File Systems + Image Intelligence — ✅ complete
 
-**Current 0.5 completion: approximately 99%.** Cross-provider partition intelligence, bounded physical and guest filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation, bounded UDF root traversal, a versioned clean Windows package-candidate path and truthful QCOW2 plus hosted-sparse VMDK guest-byte readers are implemented and validated. Final beta hardening/manual QA remains.
+**Required 0.5 automated engineering scope: 100%.** Cross-provider partition intelligence, bounded physical and guest filesystem recognition, boot/installer intelligence, unified identity/health intelligence, Windows analysis/reporting, deeper filesystem evidence, bounded UDF traversal, truthful QCOW2/VMDK guest readers, guest partition/filesystem integration and final guest partition integrity hardening are implemented and validated. Public beta release still has independent manual/package gates in `docs/BETA-RELEASE.md`.
 
 ### Provider-independent partition intelligence — ✅ complete
 - ✅ capability-driven `PartitionIntelligenceService`
@@ -86,16 +86,16 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ PDB/test-only content rejection
 - ✅ independent ZIP reopening/verification
 - ✅ run #270 full package gate and independent artifact review
-- 🚧 final beta suffix, clean-machine/manual QA and public Release remain separate gates
+- ⬜ final beta suffix, clean-machine/manual QA and public Release remain independent release gates
 
 ### Bounded UDF root-directory traversal — ✅ complete
 - ✅ validated physical Type 1 UDF partition maps only
 - ✅ bounded File Set Descriptor/root File Entry/FID validation
 - ✅ one recorded short root extent, max 8 MiB / 4096 entries, non-recursive
 - ✅ Type 2 virtual/sparable/metadata maps fail closed
-- ✅ PR #36 / implementation run #274 full regression/build/package path
+- ✅ PR #36 / run #274 full regression/build/package path
 
-### Guest-byte reader + intelligence foundation — ✅ complete for 0.5 scope
+### Guest-byte reader + intelligence foundation — ✅ complete
 
 #### QCOW2 standard uncompressed mappings — ✅ complete
 - ✅ generic read-only `IGuestByteReader` contract
@@ -103,10 +103,8 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ standard allocated cluster reads
 - ✅ explicit v3 zero clusters and unallocated/no-backing zero semantics
 - ✅ guest and physical bounds, reserved-bit and alignment validation
-- ✅ backing-file chains, encryption, dirty images, external-data mode, non-default compression metadata, extended L2 and compressed cluster descriptors fail closed
-- ✅ cross-cluster/OOB/reserved-state/cancellation fixtures
-- ✅ PR #37 / implementation run #277 passed the new reader test plus the complete provider, Explorer, native Windows, Release x64, clean-package verification and artifact path
-- ✅ no Direct Browse or filesystem capability is implied by the isolated reader itself
+- ✅ unsupported backing/encryption/dirty/external-data/compressed/extended-L2 states fail closed
+- ✅ PR #37 / run #277 complete regression/build/package path
 
 #### VMDK hosted sparse standard uncompressed mappings — ✅ complete
 - ✅ `VmdkSparseGuestByteReader` implements `IGuestByteReader`
@@ -114,31 +112,34 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ active redundant/primary grain-directory selection and grain-table translation
 - ✅ allocated reads, cross-grain reads and unallocated/no-parent zero semantics
 - ✅ guest/physical bounds plus directory/table/grain metadata-overhead separation
-- ✅ parent chains, split create types, unclean images, compressed/stream-optimized/zeroed-entry/unknown flag semantics fail closed
-- ✅ generated fixtures cover active-directory selection, OOB pointers, metadata/data separation and cancellation
-- ✅ PR #38 / run #284 passed the dedicated VMDK reader gate and complete Windows regression/build/package path
-- ✅ no Direct Browse, Mount or extraction capability is implied by the isolated reader itself
+- ✅ unsupported parent/split/unclean/compressed/stream-optimized states fail closed
+- ✅ PR #38 / run #284 complete Windows regression/build/package path
 
 #### Common guest partition/filesystem intelligence — ✅ complete
 - ✅ `GuestPartitionTableReader` parses MBR/EBR/GPT only from proven guest-visible bytes
-- ✅ guest partition layouts reuse the same geometry/bounds/overlap hardening as physical images
+- ✅ guest partition layouts reuse geometry/bounds/overlap hardening
 - ✅ `GuestFileSystemRecognitionService` recognizes FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS in bounded guest regions
 - ✅ dedicated guest-relative detection models prevent physical/guest offset ambiguity
 - ✅ QCOW2 and hosted-sparse VMDK feed the common guest-intelligence service
 - ✅ text/JSON reports expose guest analysis separately from physical-container evidence
-- ✅ generated QCOW2/VMDK fixtures cover MBR + FAT12, OOB guest partitions and cancellation
-- ✅ PR #39 / implementation run #286 passed the dedicated gate and the complete provider/intelligence/Explorer/native Windows/Release/clean-package verification path
+- ✅ PR #39 / run #287 complete Windows regression/build/package path
 
-#### Future optional guest-byte variants
-- ⬜ explicitly supported compressed/backing variants only after independent implementation/testing; never infer support
+#### Final guest partition structure hardening — ✅ complete
+- ✅ GPT primary-header CRC32 validation
+- ✅ bounded streaming validation of the declared GPT partition-entry-array CRC32
+- ✅ GPT backup/header/usable/table placement cross-checks against virtual guest geometry
+- ✅ MBR/EBR boot-status validation
+- ✅ EBR chain and logical-partition containment inside the declared extended partition
+- ✅ generated valid/corrupt GPT and escaping EBR/logical fixtures
+- ✅ PR #40 implementation run #289 complete Windows regression/build/package path
 
-### Filesystem family depth
-- 🚧 ISO9660/UDF — ISO direct browse proven; bounded UDF physical root traversal proven; generalized UDF Direct Browse and Type 2 mapping remain unsupported
-- 🚧 FAT/FAT32/exFAT — physical and proven guest recognition plus selected metadata-health evidence proven; deeper reader functionality remains
-- 🚧 NTFS metadata — boot + first-record metadata hardening proven; broader NTFS traversal remains unsupported
-- ✅ ext-family recognition — ext2/ext3/ext4 recognition/basic metadata and bounded superblock state evidence proven
+### Filesystem family depth at 0.5 exit
+- ✅ ISO9660/UDF beta scope — ISO direct browse proven; bounded physical UDF root traversal proven; generalized UDF Direct Browse and Type 2 mapping intentionally unsupported
+- ✅ FAT/FAT32/exFAT beta scope — physical and proven guest recognition plus selected metadata-health evidence proven; deeper traversal deferred
+- ✅ NTFS metadata beta scope — boot + first-record metadata hardening proven; broader NTFS traversal intentionally unsupported
+- ✅ ext-family beta scope — ext2/ext3/ext4 recognition/basic metadata and bounded superblock state evidence proven
 
-### Image-intelligence depth
+### Image-intelligence depth at 0.5 exit
 - ✅ bootability + BIOS/UEFI foundation
 - ✅ Windows/Linux installer-recognition foundation
 - ✅ cross-source identity aggregation
@@ -147,14 +148,13 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ user-facing text/JSON analysis reports
 - ✅ bounded non-recursive UDF Type 1 root traversal
 - ✅ QCOW2/VMDK guest-byte readers integrated into bounded partition/filesystem analysis
+- ✅ guest GPT/EBR integrity hardening before filesystem probing
 
-**0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No UI shortcut may imply access the Core cannot actually perform.
-
-**Next engineering focus:** final 0.5 beta-scope hardening/documentation synchronization and the remaining clean-machine/UAC/cross-process drag-out manual release gates.
+**0.5 exit criteria: PASSED for automated engineering scope.** Beta publication remains blocked until the independent release/manual gates in `docs/BETA-RELEASE.md` are satisfied.
 
 ---
 
-## 0.6 Create + Convert + Verify — ⬜ planned
+## 0.6 Create + Convert + Verify — 🚧 next
 - ⬜ image creation and conversion pipeline
 - ⬜ split/join and sparse/compression handling
 - ⬜ SHA-256/SHA-512 verification

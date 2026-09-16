@@ -12,7 +12,7 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] 0.3 Dragon Explorer complete
 - [x] 0.4 provider registry/fallback/isolation complete
 - [x] multiple additional 0.4 image providers proven by tests
-- [ ] 0.5 partition/filesystem/image-intelligence beta scope complete
+- [x] 0.5 partition/filesystem/image-intelligence beta engineering scope complete
 - [x] unsupported actions remain disabled rather than simulated
 
 ### Current 0.5 automated evidence
@@ -30,9 +30,9 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] bounded QCOW2 v2/v3 standard uncompressed guest-byte reader foundation
 - [x] bounded hosted sparse VMDK v1 standard uncompressed guest-byte reader foundation
 - [x] common guest-byte integration into bounded partition/filesystem intelligence
-- [ ] final 0.5 beta-scope hardening checkpoint
+- [x] final 0.5 beta-scope hardening checkpoint
 
-Latest validated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #37 / run #277, PR #38 / run #284 and PR #39 implementation run #286. The final documentation-synchronized PR #39 run must still be green before merge.
+Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #37 / run #277, PR #38 / run #284, PR #39 / run #287 and PR #40 implementation run #289. PR #40 documentation synchronization must still pass full CI before merge.
 
 ### Windows beta package
 - [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build
@@ -61,6 +61,7 @@ Latest validated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #3
 - [x] QCOW2 guest-byte reader gate green
 - [x] VMDK hosted sparse guest-byte reader gate green
 - [x] guest partition/filesystem intelligence gate green
+- [x] guest GPT/EBR integrity hardening gate green
 - [x] ISO direct-browse integration green
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
@@ -80,7 +81,7 @@ Latest validated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #3
 
 ## Current beta readiness
 
-**NOT READY.** Automated Windows CI now proves the provider/intelligence regression path, bounded UDF root traversal, clean-package verification, truthful QCOW2 plus hosted-sparse VMDK guest-byte readers, and common bounded guest partition/filesystem analysis. Remaining blockers are the final 0.5 beta-scope hardening checkpoint, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
+**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. Remaining blockers are independent release gates: final `0.5.0-beta.1` suffix/package promotion, clean-machine launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
 
 ## Rule
 

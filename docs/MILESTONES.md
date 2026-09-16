@@ -24,11 +24,11 @@ Completed provider/foundation slices: registry foundation, IMG/RAW, IMA/floppy, 
 
 Final checkpoints: PR #26 / run #226 FFU; PR #27 / run #228 provider-contract hardening.
 
-## 0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧
+## 0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅
 
-Development version: **0.5.0-alpha.1**.
+Development version remains **0.5.0-alpha.1** until the independent public-beta gate is satisfied.
 
-Current milestone completion is approximately **99%**.
+Required automated engineering scope: **100% complete**.
 
 ### Completed execution slices
 
@@ -45,23 +45,31 @@ Current milestone completion is approximately **99%**.
 11. **Bounded QCOW2 standard guest-byte reader** ✅
 12. **Bounded hosted-sparse VMDK guest-byte reader** ✅
 13. **Common bounded guest partition/filesystem intelligence** ✅
+14. **Final guest partition structure hardening** ✅
 
-### Common guest partition/filesystem intelligence ✅
+### Final guest partition structure hardening ✅
 
-- `GuestPartitionTableReader` parses bounded guest MBR/EBR/GPT metadata through `IGuestByteReader`
-- existing partition-layout geometry/overlap/range hardening is reused against virtual guest size
-- `GuestFileSystemRecognitionService` scans bounded guest regions for FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS evidence
-- dedicated guest-relative detection models prevent physical/guest offset ambiguity
-- QCOW2 v2/v3 standard-uncompressed and VMDK hosted-sparse standard-uncompressed readers feed the common analysis path
-- text/JSON reports expose guest analysis separately from physical-container analysis
-- generated QCOW2/VMDK fixtures prove MBR + FAT12 recognition, OOB refusal and cancellation
-- no Direct Browse, filesystem traversal, extraction, Mount, repair or write path is enabled by this analysis surface
-- PR #39 implementation run #286 passed the new guest-intelligence gate and complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication ✅
+- validates primary GPT header CRC32 before trusting guest metadata
+- validates the declared GPT partition-entry-array CRC32 with bounded streaming reads
+- cross-checks GPT usable range, backup-header placement and primary entry-array placement against guest geometry
+- rejects invalid MBR/EBR boot-status bytes
+- constrains EBR links and logical partitions to the declared extended-partition container
+- generated fixtures cover valid GPT, corrupt header/table checksums, invalid MBR status and escaping EBR/logical ranges
+- no Direct Browse, extraction, Mount, repair or write path is enabled
+- PR #40 implementation run #289 passed the guest-intelligence gate and complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication ✅
 
-### Remaining execution slices
+### 0.5 exit
 
-- final 0.5 beta-scope hardening/documentation and release-gate synchronization
-- clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA
-- promote to `0.5.0-beta.1` only when all release gates are actually satisfied
+The automated engineering exit criteria are satisfied. Public beta publication remains a separate release decision gated by `docs/BETA-RELEASE.md`: clean-machine launch/regression, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and Release checksum publication.
+
+## 0.6 Create + Convert + Verify — NEXT 🚧
+
+Next engineering milestone after the final PR #40 docs-synchronized CI/merge:
+
+- image creation/conversion pipeline
+- split/join and sparse/compression handling
+- SHA-256/SHA-512 verification
+- temporary output + atomic finalization
+- cancellation/rollback safety
 
 A capability becomes user-visible only after its real backing path and tests exist.
