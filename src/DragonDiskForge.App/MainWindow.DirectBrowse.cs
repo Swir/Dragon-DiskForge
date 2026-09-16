@@ -14,7 +14,8 @@ public sealed partial class MainWindow
         new ProviderRegistration(new FloppyImageProvider(), Priority: 80),
         new ProviderRegistration(new CueSheetImageProvider(), Priority: 70),
         new ProviderRegistration(new MdsImageProvider(), Priority: 60),
-        new ProviderRegistration(new NrgImageProvider(), Priority: 50)
+        new ProviderRegistration(new NrgImageProvider(), Priority: 50),
+        new ProviderRegistration(new VmdkSparseImageProvider(), Priority: 40)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
@@ -138,6 +139,11 @@ public sealed partial class MainWindow
         if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.TrackLayout) == true)
         {
             return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its optical track layout. Direct filesystem browsing stays disabled until filesystem support is implemented and tested.";
+        }
+
+        if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.VirtualDiskMetadata) == true)
+        {
+            return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its virtual-disk metadata. Direct filesystem browsing stays disabled until extent translation and filesystem support are implemented and tested.";
         }
 
         var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
