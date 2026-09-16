@@ -6,18 +6,19 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 61% toward 1.0
+## Project progress — 63% toward 1.0
 
-`████████████░░░░░░░░ 61%`
+`█████████████░░░░░░░ 63%`
 
-**Overall completion:** **61%**
+**Overall completion:** **63%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
-- `0.6 → 1.0` — planned / future milestones
+- `0.6 Create + Convert + Verify` — **~20%** 🚧
+- `0.7 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
 
@@ -29,7 +30,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - Recent Images, Favorites, mount history and multi-image workspace
 - safe Copy-only drag-out to Windows Explorer/Desktop
 - managed ISO9660/Joliet direct browsing without mounting
-- shared Core SHA-256 verification with progress/cancellation
+- shared Core verification with SHA-256, SHA-512, progress/cancellation and exact hashed-byte reporting
 - hardened provider registry with truthful capabilities and deterministic resolution
 - bounded read-only partition, filesystem, boot/install and image-intelligence services
 - user-facing **Analyze** action with text/JSON reporting and Save JSON
@@ -37,6 +38,25 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - versioned, checksum-verified clean Windows x64 package candidate pipeline
 - truthful sparse-container guest-byte translation for standard QCOW2 and hosted sparse VMDK mappings
 - bounded guest-relative MBR/EBR/GPT and filesystem intelligence over those proven guest-byte readers
+
+## 0.6 Create + Convert + Verify — IN PROGRESS 🚧
+
+The first 0.6 engineering slice is implemented and validated. Mutating create/convert capabilities remain disabled until the safe output pipeline, rollback/cancellation behavior and format-specific writers are proven.
+
+### Dual SHA-256/SHA-512 verification foundation ✅
+
+- `ImageVerificationInfo` reports SHA-256, SHA-512 and the exact number of hashed bytes
+- combined verification computes both digests in one bounded sequential file pass
+- existing `ComputeSha256Async` callers remain compatible
+- dedicated `ComputeSha512Async` API
+- bounded monotonic progress and cancellation propagation
+- generated smoke coverage for multi-buffer input, empty files, missing files and pre-cancellation
+- explicit Windows CI gate
+- PR #41 implementation run #292 passed the verification gate plus the complete Windows regression/build/package path
+
+**Current 0.6 engineering completion:** approximately **20%** based on 1 of 5 top-level roadmap deliverables.
+
+**Next 0.6 priority:** establish a reusable safe output-transaction layer with temporary output, explicit overwrite policy, same-volume atomic finalization where supported, cleanup on cancellation/failure and rollback-oriented tests before enabling any Create/Convert UI action.
 
 ## 0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅
 
@@ -176,11 +196,11 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
+CI validates Core, SHA-256/SHA-512 verification, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
 
 ## Safety design
 
-Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
+Inspection and verification are read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
 Partition/filesystem intelligence operates only on proven byte mappings. Physical and guest-relative offsets are modeled separately. Guest GPT checksums and EBR containment are validated before filesystem probing. UDF root traversal follows only validated Type 1 physical mappings and remains non-recursive. NTFS depth checks validate metadata only and never repair or traverse directories. Architecture reconciliation preserves conflicting evidence rather than guessing a winner.
 

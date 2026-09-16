@@ -4,6 +4,8 @@ The first public GitHub beta is targeted for **0.5.0-beta.1**.
 
 A workflow artifact is useful engineering evidence, but it is **not automatically a public beta**. The beta must be independently downloadable, reproducible through the documented pipeline, tested on the supported Windows path and documented with truthful limitations.
 
+0.6 engineering may continue while these independent 0.5 beta release gates remain open, but that work does not waive or substitute any beta requirement below.
+
 ## Required before 0.5.0-beta.1
 
 ### Product capability
@@ -32,7 +34,7 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] common guest-byte integration into bounded partition/filesystem intelligence
 - [x] final 0.5 beta-scope hardening checkpoint
 
-Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #37 / run #277, PR #38 / run #284, PR #39 / run #287 and PR #40 implementation run #289. PR #40 documentation synchronization must still pass full CI before merge.
+Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #37 / run #277, PR #38 / run #284, PR #39 / run #287 and PR #40 / implementation run #289. PR #40 was merged after the final documentation-synchronized CI checkpoint, closing the automated 0.5 engineering scope.
 
 ### Windows beta package
 - [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build

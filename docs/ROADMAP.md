@@ -154,12 +154,29 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ---
 
-## 0.6 Create + Convert + Verify — 🚧 next
+## 0.6 Create + Convert + Verify — 🚧 in progress
+
+**Current 0.6 engineering completion: approximately 20%.** One of five top-level roadmap deliverables is implemented and validated.
+
 - ⬜ image creation and conversion pipeline
 - ⬜ split/join and sparse/compression handling
-- ⬜ SHA-256/SHA-512 verification
+- ✅ SHA-256/SHA-512 verification
 - ⬜ temporary output + atomic finalization
 - ⬜ cancellation/rollback safety
+
+### SHA-256/SHA-512 verification — ✅ complete foundation
+- ✅ `ImageVerificationInfo` returns SHA-256, SHA-512 and exact hashed byte count
+- ✅ combined verification computes both digests in one bounded sequential file pass
+- ✅ existing `ComputeSha256Async` API remains compatible
+- ✅ dedicated `ComputeSha512Async` API
+- ✅ monotonic bounded progress and cancellation propagation
+- ✅ generated multi-buffer, empty-file, missing-file and cancellation smoke coverage
+- ✅ explicit Windows CI verification gate
+- ✅ PR #41 implementation run #292 passed the complete Windows regression/build/package path
+
+### Next 0.6 engineering priority
+
+Establish a reusable safe output-transaction layer before exposing image creation/conversion: temporary output in the destination directory, explicit overwrite policy, same-volume atomic finalization where supported, cleanup on cancellation/failure, and rollback-oriented tests. Mutating UI capabilities remain disabled until the full backing pipeline is proven.
 
 ## 0.7 Physical Media Tools — ⬜ planned
 Future physical-media functionality remains gated behind dedicated safety design, explicit user confirmation, device identity checks and independent validation before it becomes user-visible.
