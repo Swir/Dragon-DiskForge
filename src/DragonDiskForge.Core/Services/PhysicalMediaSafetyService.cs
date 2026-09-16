@@ -26,7 +26,7 @@ public sealed class PhysicalMediaSafetyService
         if (string.Equals(fullSourcePath, destination.DevicePath, StringComparison.OrdinalIgnoreCase))
             refusalReasons.Add("Source and destination resolve to the same physical device.");
 
-        if (!destination.HasStableIdentity)
+        if (!destination.HasStableIdentity || string.IsNullOrWhiteSpace(destination.StableId))
             refusalReasons.Add("Destination does not expose a stable hardware identity; destructive operations are refused.");
 
         if (destination.IsSystemDisk)
