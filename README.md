@@ -6,21 +6,21 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current version — 0.4.0-alpha.1
+## Current version — 0.4.0-alpha.2
 
-## Project progress — 31% toward 1.0
+## Project progress — 32% toward 1.0
 
-`██████░░░░░░░░░░░░░░ 31%`
+`██████░░░░░░░░░░░░░░ 32%`
 
-**Overall completion:** **31%**
+**Overall completion:** **32%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~10%** 🚧
+- `0.4 Extended Image Providers` — **~20%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
-> This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
+> This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap slices and proven functionality, not CI count alone.
 
 ### 0.1 Foundation + Dragon Visual Identity ✅
 
@@ -48,79 +48,48 @@ Implemented and proven on Windows CI:
 
 ### 0.3 Dragon Explorer ✅
 
-Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
+Dragon Explorer is complete for the 0.3 scope and includes:
 
-**Mounted-volume Explorer**
-
-- real `IExplorerService` contract in Core
-- in-app browsing of mounted ISO/VHD/VHDX volumes
-- folders-first listing, Up navigation and breadcrumb/address display
-- recursive search with cancellation and result limits
-- safe **Copy out** to a user-selected destination
-- overwrite protection and reparse-point/junction safety
-- trust warning before opening executable/script content
-- real Windows integration: mounted ISO → list → search → Copy out → content verification
-
-**Preview + Image Library**
-
-- bounded read-only text preview with truncation indication
-- image preview rendered inside Dragon Explorer without shell execution
-- PDF and media metadata-only preview modes
-- binary/unsupported metadata fallback
-- preview cancellation so stale selections cannot replace the newest selection
-- local Recent Images + Favorites with atomic JSON persistence
-- real Images view with Open / Favorite / Unfavorite / Remove actions
-
-**Mounted history + multi-image workspace**
-
-- local mounted-history service with atomic persistence
-- distinct Mount / Unmount events and bounded newest-first retention
-- live Windows mounted state kept separate from local history metadata
-- Mounted dashboard with a dedicated history section and safe Clear History behavior
-- multi-image Dragon Explorer workspace using WinUI tabs
-- each mounted image opens in an independent read-only Explorer tab
-- reopening the same image/root activates the existing tab instead of duplicating it
-- closing a tab never unmounts the image
-- successful unmount closes tabs backed by that image
-- stale Explorer tabs are pruned if their Windows drive root disappears
-
-**Safe drag-out to Windows Explorer**
-
-- mounted Explorer files/folders can be dragged directly to Windows Explorer/Desktop as **Copy-only** storage items
-- the source is revalidated against the mounted root immediately before transfer
-- stale sources, path escapes, reparse points and junctions are blocked
-- runtime filesystem attributes are rechecked so stale UI state cannot bypass the safety gate
-- drag data is prepared asynchronously through the WinUI `DragStarting` deferral
-- dedicated drag-out safety smoke tests run in CI
-
-**Provider-backed ISO direct browsing**
-
-- managed read-only ISO9660/Joliet provider
-- list folders/files directly from ISO extents without `Mount-DiskImage`
-- navigate nested folders and search recursively
-- safe file/folder Copy out with progress and cancellation
-- overwrite, path-traversal, extent-boundary and Windows filename safety checks
-- dedicated WinUI **Direct ISO** tabs marked **NO MOUNT**
-- `Explore directly` is enabled only after the provider positively recognizes the current ISO
-- real IMAPI-generated ISO integration proves list/search/Copy out while the image remains detached
+- mounted-volume Explorer for ISO/VHD/VHDX
+- navigation, metadata, recursive search and safe Copy out
+- Preview + Recent Images + Favorites
+- mounted history kept separate from live Windows state
+- multi-image WinUI tab workspace
+- safe Copy-only drag-out to Windows Explorer/Desktop
+- managed ISO9660/Joliet direct browsing without mounting
+- direct list/navigation/search/Copy out with cancellation and overwrite/path/extent safety
+- real IMAPI-generated ISO integration proving direct browsing leaves the image detached
 
 ### 0.4 Extended Image Providers 🚧
 
-The first 0.4 architecture slice is complete and proven:
+The provider foundation and the first new format family are now proven.
+
+**Provider foundation — complete ✅**
 
 - central Core `ProviderRegistry`
 - explicit provider capability reporting
 - deterministic priority and extension-first selection
-- signature/provider fallback when an extension candidate does not accept the image
-- probe-failure and inspection-failure isolation so one parser cannot break the provider chain
+- provider/signature fallback
+- probe-failure and inspection-failure isolation
 - cancellation remains a hard stop rather than being swallowed as a parser error
 - provider diagnostics for future UI/CLI reporting
 - duplicate provider-ID protection
-- existing ISO9660/Joliet direct browsing now resolves through the registry instead of hardcoded `.iso` UI logic
-- dedicated provider-registry smoke tests in CI
-- full run #145: registry + direct ISO + native ISO/VHD/VHDX regression + restore + WinUI Release x64 + artifact ✅
+- ISO9660/Joliet direct browsing resolved through the registry rather than hardcoded `.iso` UI logic
+- dedicated provider-registry smoke tests
+- PR #14 / run #146 full Windows regression + WinUI Release x64 + artifact ✅
 
-The next 0.4 work adds the first new image family. No format-specific UI is enabled until its real provider path and tests exist.
+**IMG / RAW provider — complete for 0.4 scope ✅**
+
+- read-only `.img` / `.raw` provider
+- minimum size and 512-byte sector-alignment validation
+- structured-signature guard preventing renamed ISO/VHD/VHDX/QCOW2/WIM/DMG images from being misclaimed as RAW
+- read-only inspection with source-byte SHA-256 before/after verification in tests
+- registry fallback proving a valid ISO renamed to `.img` is rejected by RAW and picked up by the ISO provider
+- cancellation coverage
+- Browse/Mount/Convert intentionally remain disabled until real backends exist
+- PR #15 / run #151 full Windows regression + WinUI Release x64 + artifact ✅
+
+Next 0.4 work: **IMA / floppy images**. No format-specific capability is enabled before its real provider path and tests exist.
 
 The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
@@ -156,13 +125,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, provider-registry smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, provider-registry smoke tests, IMG/RAW provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview, mounted-volume browsing and provider-backed direct ISO browsing are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing and provider-backed direct ISO browsing are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. Provider failures are isolated and do not silently turn into unsupported UI capabilities. IMG/RAW inspection is read-only and does not pretend to expose partitions or filesystems before milestone 0.5 implements those layers. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 

@@ -16,60 +16,50 @@ The visible normal-user UAC prompt remains a manual desktop QA case in `docs/MAN
 
 Released version: **0.3.0**.
 
-### Completed execution slices
+Completed execution slices:
 
-1. **Mounted-volume Explorer** ✅
-   - Core Explorer contract and filesystem-backed service
-   - listing/navigation/breadcrumbs/metadata
-   - recursive search with cancellation
-   - safe Copy out with overwrite and reparse-point protection
-   - real mounted-ISO integration coverage
+1. Mounted-volume Explorer ✅
+2. Preview + Image Library ✅
+3. Mounted history + multi-image workspace ✅
+4. Safe Copy-only drag-out to Windows Explorer ✅
+5. Provider-backed ISO9660/Joliet direct browsing without mounting ✅
 
-2. **Preview + Image Library** ✅
-   - bounded text Preview, safe image Preview, PDF/media metadata modes
-   - cancellation-safe selection Preview
-   - Recent Images + Favorites with atomic local persistence
-   - real Images view and missing-file handling
+0.3 remains protected by Core/history/drag-out/direct-ISO/native-mount regression gates in CI.
 
-3. **Mounted history + multi-image workspace** ✅
-   - atomic local Mount/Unmount history with bounded retention
-   - history metadata kept separate from live Windows mount state
-   - dedicated Mounted history UI and safe Clear History
-   - dedicated history smoke tests
-   - WinUI TabView workspace with one Explorer session per mounted image/root
-   - duplicate-tab prevention, stale-tab pruning and safe tab close semantics
-   - successful unmount closes only workspace tabs backed by that image
+## 0.4 Extended Image Providers — IN PROGRESS 🚧
 
-4. **Safe drag-out to Windows Explorer** ✅
-   - mounted files/folders expose native WinUI drag-out
-   - `DataPackage` advertises Copy only; Dragon never requests Move
-   - source path is revalidated against the mounted root before transfer
-   - stale sources and path escapes are rejected
-   - listed/runtime reparse points and junctions are rejected
-   - async StorageItem resolution uses the WinUI DragStarting deferral
-   - dedicated drag-out safety smoke tests are part of CI
+Current development version: **0.4.0-alpha.2**.
 
-5. **Provider-backed direct ISO browsing** ✅
-   - `IDirectBrowseProvider` provider contract
-   - managed read-only ISO9660/Joliet parser
-   - virtual-path list/navigation/search directly from image extents
-   - safe Copy out without mounting
-   - overwrite, path-traversal, filename and extent-boundary validation
-   - dedicated `Direct ISO` WinUI tabs marked `NO MOUNT`
-   - provider capability is checked before `Explore directly` becomes active
-   - real IMAPI integration proves list/search/Copy out while the ISO stays detached
+### Slice 1 — Provider foundation ✅
 
-### 0.3 validation checkpoints
+- central Core `ProviderRegistry`
+- provider descriptors, explicit capabilities and priorities
+- deterministic extension-first selection with fallback
+- probe and inspection failure isolation
+- provider diagnostics
+- cancellation as a hard stop
+- duplicate provider-ID protection
+- existing ISO direct-browse path migrated into the registry
+- dedicated provider-registry smoke tests
+- PR #14 / run #146 full Windows regression + Release x64 artifact
 
-- PR #5 / run #56 — first mounted Explorer slice
-- PR #6 / run #72 — Preview + Image Library
-- PR #7 / run #86 — Mounted history + multi-image workspace
-- PR #10 / run #103 — safe drag-out and artifact publication
-- PR #12 / run #128 — direct ISO integration, native mount regression, WinUI Release and artifact
-- PR #12 / run #131 — same full path remains green after README progress synchronization
+### Slice 2 — IMG / RAW ✅
 
-The same project rule continues: no Explorer control becomes active before its backing operation exists and is tested. Human cross-process drag and normal-user UAC prompts remain explicit manual desktop QA cases rather than fabricated CI claims.
+- conservative read-only `.img` / `.raw` provider
+- minimum-size and 512-byte sector-alignment validation
+- known structured-image signature guard
+- renamed ISO `.img` fallback proven through the registry
+- read-only SHA-256 before/after verification
+- cancellation coverage
+- no fake Browse/Mount/Convert capability
+- PR #15 / run #151 full Windows regression + Release x64 artifact
 
-## 0.4 Extended Image Providers — NEXT 🚧
+### Next slice
 
-Next execution focuses on expanding the provider architecture beyond ISO while keeping capability reporting, isolation and read-only safety explicit. `docs/ROADMAP.md` remains the source of truth for the exact provider order and completion state.
+**IMA / floppy images**.
+
+The same execution rule continues: implement a real provider path, add failure/cancellation tests, run the complete Windows regression, update docs/progress, then merge. 0.5 filesystem/partition interpretation is not pulled forward into 0.4 merely to make RAW appear more capable.
+
+## Beta target
+
+The first public GitHub beta is targeted for **`0.5.0-beta.1`**. Before that release, the required 0.4 provider families and the agreed 0.5 partition/filesystem/image-intelligence beta scope must pass their automated and manual release gates from `docs/BETA-RELEASE.md`.

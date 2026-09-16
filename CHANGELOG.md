@@ -6,9 +6,37 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ## [Unreleased]
 
-### Planned
-- 0.4 Extended Image Providers
-- broader provider capability reporting, fallback and isolation
+### Added
+- central provider registry with explicit capabilities and priority
+- deterministic extension-first provider selection and fallback
+- provider probe/inspection failure isolation with diagnostics
+- dedicated provider-registry smoke tests
+- conservative read-only IMG/RAW provider
+- 512-byte alignment and known-structured-signature guards for IMG/RAW
+- dedicated IMG/RAW provider smoke tests
+- beta release gate documentation for planned `0.5.0-beta.1`
+
+### Changed
+- development version advanced to `0.4.0-alpha.2`
+- overall project progress advanced to 32% after proven 0.4 foundation + IMG/RAW slices
+- ISO direct browsing now resolves through the central provider registry
+- direct-browse UI distinguishes a recognized provider from a provider that actually exposes DirectBrowse
+- IMG/RAW keeps Browse/Mount/Convert disabled until real backends exist
+
+### Fixed
+- one provider probe failure no longer blocks fallback discovery
+- one provider inspection failure no longer blocks fallback inspection
+- RAW provider refuses known structured image signatures renamed to `.img`/`.raw`
+- RAW provider refuses implausibly small or non-512-byte-aligned candidates
+
+### Verified
+- PR #14 / run #146 — provider registry, direct ISO/native mount regression, WinUI Release x64 and artifact
+- PR #15 / run #151 — IMG/RAW provider, registry fallback, full regression, WinUI Release x64 and artifact
+
+### Planned next
+- IMA / floppy-image provider
+- remaining 0.4 image families
+- `0.5.0-beta.1` only after required 0.4 providers + agreed 0.5 beta-scope intelligence pass the release gate
 
 ## [0.3.0] - 2026-09-15
 
@@ -30,9 +58,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ### Changed
 - project version advanced to `0.3.0`
-- milestone 0.3 is complete
-- 0.4 Extended Image Providers is the next milestone
-- direct ISO tabs are independent from Mount/Unmount state
+- milestone 0.3 completed
+- direct ISO tabs made independent from Mount/Unmount state
 - Explorer actions remain enabled only when their real backend exists
 
 ### Fixed
@@ -47,13 +74,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #6 / run #72 — Preview + Image Library
 - PR #7 / run #86 — Mounted history + multi-image workspace
 - PR #10 / run #103 — safe drag-out + Windows x64 artifact
-- PR #10 / run #111 — final drag-out docs/version regression
 - PR #12 / run #128 — direct ISO browsing + native mount regression + WinUI build + artifact
-- PR #12 / run #131 — full regression remained green after README progress synchronization
+- PR #12 / run #131 — full regression after README progress synchronization
 
 ### Manual QA notes
 - normal-user UAC interaction remains documented in `docs/MANUAL-VALIDATION.md`
-- the real cross-process pointer drag gesture remains a manual desktop QA case
+- real cross-process pointer drag remains a manual desktop QA case
 
 ## [0.2.0] - 2026-09-14
 

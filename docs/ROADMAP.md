@@ -69,7 +69,6 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Integration validation that mounted images appear in inventory and disappear after unmount
 - ✅ Cancellation-safety validation proving a pre-cancelled mount does not alter storage state
 - ✅ Unsupported-format friendly-error validation
-- ✅ Full Windows x64 Release CI green on current main through run #46
 
 **Manual QA note:** GitHub-hosted Windows runners execute as administrators, so the visible normal-user UAC prompt cannot be faithfully exercised in CI. The implemented elevation path has a required desktop checklist in `docs/MANUAL-VALIDATION.md` before public beta packaging.
 
@@ -99,7 +98,6 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Global Explorer navigation backed by a real mounted-volume service
 - ✅ Core automated tests for listing, metadata, search, path safety, copy-out, overwrite protection and cancellation
 - ✅ Windows integration coverage on a real IMAPI-generated mounted ISO: list → search → copy-out → content verification
-- ✅ Full Windows x64 Release validation for the first Explorer slice in PR #5 / run #56
 
 ### Preview + Image Library slice — ✅ complete
 - ✅ Bounded `FilePreviewService` in Core with cancellation
@@ -110,73 +108,73 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ Binary/unsupported metadata fallback
 - ✅ Preview pane follows the current Explorer selection
 - ✅ Stale preview cancellation prevents an older selection from replacing a newer preview
-- ✅ Folder and reparse-point metadata preview with safety messaging
-- ✅ Recent Images stored locally for the current Windows profile
-- ✅ Favorites stored locally for the current Windows profile
-- ✅ Atomic JSON persistence with Windows case-insensitive path deduplication
-- ✅ Recent-list pruning preserves Favorites
+- ✅ Recent Images + Favorites with atomic JSON persistence
 - ✅ Real Images view with Open / Favorite / Unfavorite / Remove actions
-- ✅ Missing-file state disables Open rather than failing silently
-- ✅ Successfully opened images are recorded best-effort without blocking the core open flow
-- ✅ Core automated tests for preview classification, bounded reads, cancellation, persistence, deduplication, favorites, removal and pruning
-- ✅ Real mounted-ISO integration proving Dragon Preview reads exact text directly from the mounted image
-- ✅ PR #6 / run #72 passes Core, real Windows ISO/VHD/VHDX + Explorer + Preview integration, restore and full WinUI `Release|x64` build
-- ✅ Main regression run #73 passes the same path after merge
 
 ### Mounted history + multi-image workspace slice — ✅ complete
 - ✅ Local mounted-history contract and atomic JSON persistence
 - ✅ Bounded newest-first history with distinct Mount / Unmount events
-- ✅ Successful native Mount/Unmount operations recorded only after Windows confirms the state transition
 - ✅ Live Windows mount state remains authoritative and independent from history metadata
-- ✅ Mounted dashboard shows live state and local history as separate sections
-- ✅ Clear History never changes live Windows mount state
+- ✅ Mounted dashboard history section + safe Clear History
 - ✅ Dedicated mount-history smoke tests in CI
 - ✅ Multi-image Dragon Explorer workspace using WinUI tabs
-- ✅ Each mounted image opens in an independent Explorer tab
-- ✅ Reopening the same image/root activates the existing tab instead of duplicating it
-- ✅ Closing an Explorer tab never unmounts the image
+- ✅ Duplicate-tab prevention and stale-tab pruning
+- ✅ Closing a tab never unmounts the image
 - ✅ Successful Forge unmount closes tabs backed by that image
-- ✅ Stale tabs are pruned when their Windows drive root disappears
-- ✅ PR #7 / run #86 passes Core, mounted-history tests, real Windows mount/Explorer/Preview integration, restore and full WinUI `Release|x64` build
 
 ### Safe drag-out slice — ✅ complete
 - ✅ Native drag-out from mounted Explorer files/folders to Windows Explorer/Desktop
 - ✅ WinUI `DragStarting` deferral used for asynchronous StorageItem resolution
 - ✅ Windows transfer payload uses `StorageFile` / `StorageFolder`
 - ✅ `DataPackageOperation.Copy` is the only requested/allowed operation; Dragon never advertises Move
-- ✅ Dedicated Core `ExplorerDragOutValidator`
-- ✅ Mounted-root containment revalidated immediately before transfer
-- ✅ Stale or missing sources rejected before transfer
-- ✅ Listed reparse points/junctions rejected
-- ✅ Runtime filesystem reparse attributes rechecked before transfer
+- ✅ Mounted-root containment and reparse-point safety revalidated immediately before transfer
 - ✅ Dedicated drag-out safety smoke tests
 - ✅ Cross-process human gesture retained as an explicit manual desktop QA case
-- ✅ PR #10 / run #103 passes Core, mounted-history, drag-out safety, real Windows mount/Explorer/Preview integration, restore, full WinUI `Release|x64` build and Windows x64 artifact publishing before the docs/version pass
 
 ### Provider-backed direct browsing slice — ✅ complete
-- ✅ `IDirectBrowseProvider` extends the provider architecture for read-only browsing without mounting
+- ✅ `IDirectBrowseProvider` provider contract
 - ✅ managed ISO9660/Joliet direct-browse provider
 - ✅ direct directory/file enumeration from ISO extents
 - ✅ virtual `/` path navigation with path-traversal rejection
 - ✅ recursive direct search with cancellation and result limits
-- ✅ safe direct file/folder Copy out with progress and cancellation
+- ✅ safe file/folder Copy out with progress and cancellation
 - ✅ silent-overwrite protection and Windows filename validation
 - ✅ ISO extent/bounds checks and directory safety limits
 - ✅ dedicated `Direct ISO` WinUI tab marked `NO MOUNT`
 - ✅ `Explore directly` enabled only after positive provider capability detection
-- ✅ direct tabs coexist with mounted-volume tabs and are independent from Mount/Unmount lifecycle
-- ✅ real Windows IMAPI fixture proves list → nested navigation → search → file/folder Copy out while the ISO remains detached
-- ✅ fake `.iso` extension rejection and pre-cancelled search validation
-- ✅ PR #12 / run #128 passes direct-browse integration, native mount regression, restore, full WinUI `Release|x64` build and x64 artifact
-- ✅ PR #12 / run #131 passes the same full regression path after the README progress-bar checkpoint
+- ✅ real Windows IMAPI fixture proves list → search → Copy out while the ISO remains detached
 
-**Exit criteria — passed on the feature branch before merge:** a user can inspect and extract useful content from supported images without leaving Dragon DiskForge; ISO9660/Joliet can also be browsed directly without mounting, and the full 0.3 Windows regression path is green.
+**Exit criteria — passed:** a user can inspect and extract useful content from supported images without leaving Dragon DiskForge; ISO9660/Joliet can also be browsed directly without mounting.
 
 ---
 
-## 0.4 Extended Image Providers — 🚧 next
+## 0.4 Extended Image Providers — 🚧 in progress
 
-- ⬜ IMG / RAW partition parser
+### Provider foundation — ✅ complete
+- ✅ Central `ProviderRegistry`
+- ✅ Stable provider registration/selection contract for the current 0.4 scope
+- ✅ Explicit capability reporting per provider
+- ✅ Deterministic priority and extension-first selection
+- ✅ Provider/signature fallback chain
+- ✅ Probe failure isolation
+- ✅ Inspection failure isolation with continued fallback
+- ✅ Cancellation preserved as a hard stop
+- ✅ Provider diagnostics for future UI/CLI reporting
+- ✅ Duplicate provider-ID protection
+- ✅ Existing ISO9660/Joliet direct-browse path migrated into the registry
+- ✅ Dedicated registry/fallback/isolation smoke tests
+- ✅ PR #14 / run #146 full regression, WinUI Release x64 and artifact
+
+### Format providers
+- ✅ **IMG / RAW** — conservative read-only identification + inspection provider; partition/filesystem interpretation intentionally belongs to 0.5
+  - ✅ `.img` / `.raw` provider registration
+  - ✅ minimum-size + 512-byte sector-alignment checks
+  - ✅ structured-signature guard for renamed ISO/VHD/VHDX/QCOW2/WIM/DMG images
+  - ✅ registry fallback proves a valid ISO renamed to `.img` is not misclaimed as RAW
+  - ✅ read-only SHA-256 before/after test proves inspection does not modify source bytes
+  - ✅ cancellation coverage
+  - ✅ Browse/Mount/Convert remain disabled because no real backend exists yet
+  - ✅ PR #15 / run #151 full regression, WinUI Release x64 and artifact
 - ⬜ IMA / floppy images
 - ⬜ BIN/CUE
 - ⬜ MDF/MDS
@@ -187,12 +185,10 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ DMG
 - ⬜ WIM/ESD
 - ⬜ FFU
-- ⬜ Stable provider/plugin contract
-- ⬜ Capability reporting per provider
-- ⬜ Provider fallback chain
-- ⬜ Provider isolation/error containment
 
-**Exit criteria:** providers expose consistent capabilities without turning Core into one monolithic parser.
+**Next vertical slice:** IMA / floppy images.
+
+**Exit criteria:** providers expose consistent capabilities without turning Core into one monolithic parser; each supported family has a real read-only provider path and tests, or is explicitly deferred with a documented technical reason.
 
 ---
 
@@ -211,6 +207,8 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ Architecture detection: x86/x64/ARM64 where discoverable
 - ⬜ Volume labels, UUID/GUID and filesystem metadata
 - ⬜ Image health/corruption warnings
+
+**Beta target:** the first public GitHub beta is planned as **`0.5.0-beta.1`** after the required 0.4 provider work and the agreed 0.5 beta-scope intelligence features are proven. See `docs/BETA-RELEASE.md`.
 
 ---
 
