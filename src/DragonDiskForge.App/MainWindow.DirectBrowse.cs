@@ -120,6 +120,11 @@ public sealed partial class MainWindow
 
     private static string BuildProviderUnavailableMessage(ProviderResolution resolution)
     {
+        if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.PartitionTable) == true)
+        {
+            return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its partition table. Direct filesystem browsing stays disabled until filesystem support is implemented and tested.";
+        }
+
         var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
         return failed > 0
             ? $"No direct-browse provider accepted this image. {failed} provider probe(s) failed safely; native Mount may still be available."
