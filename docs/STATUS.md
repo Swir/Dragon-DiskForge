@@ -14,13 +14,13 @@
 
 ## Overall project progress
 
-**37% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus five additional image families implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
+**38% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus six additional image families implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
 
 ## Current milestone
 
 **0.4 Extended Image Providers — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **59%**.
+Current milestone completion is approximately **65%**.
 
 ### Proven 0.4 slices
 
@@ -108,6 +108,21 @@ Current milestone completion is approximately **59%**.
 - no fake Direct Browse, Mount or Convert capability
 - dedicated NRG v1/v2 smoke tests in Windows CI
 
+**CCD / IMG / SUB track-layout provider**
+
+- read-only CloneCD `.ccd`, same-name `.img` and validated `.sub` provider
+- reuses `ITrackLayoutProvider` and explicit `TrackLayout`
+- `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
+- INDEX 0/1 parsing with INDEX 1 as the logical track start
+- same-name IMG must be non-empty and aligned to 2352-byte raw sectors
+- optional same-name SUB must be exactly 96 bytes per IMG sector
+- descriptor byte size, line count and line length are bounded
+- CloneCD versions outside the currently proven 1–3 range are rejected
+- missing/duplicate/non-increasing INDEX 1, INDEX 0 after INDEX 1, unsupported modes and out-of-range metadata are rejected rather than guessed
+- CCD provider priority is above RAW only after a same-name CCD descriptor validates; ordinary `.img` remains available to the RAW provider
+- no fake Direct Browse, Mount or Convert capability
+- dedicated CCD/IMG/SUB smoke tests in Windows CI
+
 ### Proven 0.3 slices
 
 **Mounted-volume Explorer**
@@ -178,10 +193,11 @@ Current milestone completion is approximately **59%**.
 - PR #18 / run #172 — BIN/CUE provider, full prior-provider regression, Release x64 build and artifact all passed
 - PR #19 / run #182 — final MDF/MDS CD branch head, explicit DVD-scope rejection, full provider/native regression, Release x64 build and artifact all passed
 - PR #20 / run #185 — NRG v1/v2 provider, full prior-provider regression, Release x64 build and artifact all passed before documentation synchronization
+- PR #21 / run #193 — CCD/IMG/SUB provider, `.img` ambiguity fallback, full provider/native regression, Release x64 build and artifact all passed before documentation synchronization
 
 ### Next 0.4 provider
 
-**CCD/IMG/SUB** — CloneCD descriptor/track/subchannel inspection without claiming direct browsing, mounting or extraction until those paths are real and tested.
+**VMDK** — start with bounded sparse-extent/header and descriptor inspection, without claiming filesystem browsing or full virtual-disk I/O until grain-directory/data paths are implemented and proven.
 
 ### Current safety state
 
@@ -200,6 +216,8 @@ BIN/CUE inspection confines referenced payloads to the CUE directory, validates 
 MDF/MDS inspection bounds descriptor structures and MDF track ranges, confines footer-resolved payloads to the descriptor directory and accepts only the CD-style layout currently proven by tests. DVD-style MDS remains disabled rather than being interpreted through CD assumptions.
 
 NRG inspection bounds metadata before the `NERO`/`NER5` footer, decodes CUES and CUEX according to their distinct formats, validates DAOI/DAOX byte ranges and requires cue/DAO agreement. It never falls back to guessed track positions when metadata is missing or contradictory.
+
+CCD/IMG/SUB inspection uses validated CloneCD TRACK MODE/INDEX metadata, enforces raw IMG sector alignment and optional SUB length, and never lets an unproven `.ccd` steal a generic `.img` from the RAW provider.
 
 Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state.
 
