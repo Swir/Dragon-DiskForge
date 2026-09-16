@@ -10,7 +10,8 @@ public enum ProviderCapabilities
     CopyOut = 1 << 3,
     PartitionTable = 1 << 4,
     MediaGeometry = 1 << 5,
-    TrackLayout = 1 << 6
+    TrackLayout = 1 << 6,
+    VirtualDiskMetadata = 1 << 7
 }
 
 public static class ProviderCapabilityExtensions
@@ -35,6 +36,9 @@ public static class ProviderCapabilityExtensions
 
         if (provider is ITrackLayoutProvider)
             capabilities |= ProviderCapabilities.TrackLayout;
+
+        if (provider is IVirtualDiskMetadataProvider)
+            capabilities |= ProviderCapabilities.VirtualDiskMetadata;
 
         return capabilities;
     }
