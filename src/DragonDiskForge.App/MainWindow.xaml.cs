@@ -93,7 +93,7 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
-            if (tag == "tools")
+            if (tag is "tools" or "convert")
             {
                 item.IsEnabled = true;
                 ToolTipService.SetToolTip(item, "Checksums, RAW creation, compression and split/join");
@@ -114,8 +114,9 @@ public sealed partial class MainWindow : Window
     private async void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         var tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag?.ToString();
-        if (tag == "tools")
+        if (tag is "tools" or "convert")
         {
+            if (tag == "convert") _toolsView.SelectConversion();
             _mainScroll.Content = _toolsView;
             return;
         }
