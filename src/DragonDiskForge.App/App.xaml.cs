@@ -12,6 +12,7 @@ public partial class App : Application
     {
         var mainWindow = new MainWindow();
         mainWindow.EnableDirectBrowseUi();
+        mainWindow.ConfigureBrandingFooter();
         _window = mainWindow;
         _window.Activate();
     }
