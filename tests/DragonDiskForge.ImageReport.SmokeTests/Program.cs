@@ -9,7 +9,7 @@ try
     var unknown = Path.Combine(root, "unknown.payload");
     await File.WriteAllBytesAsync(unknown, new byte[64]);
 
-    var service = new ImageReportService(new ProviderRegistry([]));
+    var service = new ImageReportService(new ProviderRegistry(Array.Empty<ProviderRegistration>()));
     var report = await service.AnalyzeAsync(unknown);
     Require(report.Image.FileName == "unknown.payload", "Report must retain the inspected file name.");
     Require(report.Image.Format == "Unknown image", "Unknown input must not gain a fabricated format.");
