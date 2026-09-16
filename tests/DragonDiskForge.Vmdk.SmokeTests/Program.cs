@@ -149,9 +149,10 @@ static void CreateSparseVmdk(
     string descriptorVersion = "1",
     bool includeCreateType = true)
 {
+    const int sectorSize = 512;
     const int physicalSectors = 16;
-    var bytes = new byte[physicalSectors * SectorSize];
-    var header = bytes.AsSpan(0, SectorSize);
+    var bytes = new byte[physicalSectors * sectorSize];
+    var header = bytes.AsSpan(0, sectorSize);
 
     BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(0, 4), 0x564D444B);
     BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(4, 4), 1);
@@ -183,9 +184,9 @@ static void CreateSparseVmdk(
         descriptor.AppendLine("RW 1024 SPARSE \"valid-sparse.vmdk\"");
 
         var encoded = Encoding.UTF8.GetBytes(descriptor.ToString());
-        if (encoded.Length >= 2 * SectorSize)
+        if (encoded.Length >= 2 * sectorSize)
             throw new InvalidOperationException("Synthetic VMDK descriptor exceeded its fixture allocation.");
-        encoded.CopyTo(bytes, SectorSize);
+        encoded.CopyTo(bytes, sectorSize);
     }
 
     File.WriteAllBytes(path, bytes);
