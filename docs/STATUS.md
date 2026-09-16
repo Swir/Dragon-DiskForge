@@ -10,89 +10,57 @@
 
 ## Current version
 
-**0.3.0**
+**0.4.0-alpha.2**
 
 ## Overall project progress
 
-**30% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven. The visible README progress bar must be updated whenever real roadmap progress changes.
+**32% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete. Milestone 0.4 is active with its provider foundation and IMG/RAW provider proven. The visible README progress bar is updated only after real roadmap/test progress.
 
-## Next milestone
+## Current milestone
 
-**0.4 Extended Image Providers — NEXT 🚧**
+**0.4 Extended Image Providers — IN PROGRESS 🚧**
 
-### Proven 0.3 slices
+### Completed 0.4 slices
 
-**Mounted-volume Explorer**
+**Provider foundation ✅**
 
-- real Core Explorer contract and filesystem-backed service
-- mounted ISO/VHD/VHDX browsing
-- folders-first listing, navigation, breadcrumbs and metadata
-- recursive search with cancellation and result limits
-- safe Copy out with overwrite protection and reparse-point safety
-- trust warning before shell-opening executable/script content
-- real mounted-ISO integration coverage
+- central Core `ProviderRegistry`
+- explicit provider capabilities
+- deterministic extension-first selection and priority
+- fallback to additional providers when a candidate does not accept the image
+- probe and inspection failure isolation with diagnostics
+- cancellation preserved as a hard stop
+- duplicate provider-ID protection
+- existing ISO9660/Joliet direct browsing resolves through the registry
+- dedicated registry/fallback/isolation smoke tests
+- PR #14 / run #146 full Windows regression and x64 artifact
 
-**Preview + Image Library**
+**IMG / RAW provider ✅**
 
-- bounded read-only text Preview with cancellation and truncation indication
-- safe image Preview without shell execution
-- PDF/media metadata-only Preview
-- binary/unsupported metadata fallback
-- local Recent Images + Favorites
-- atomic JSON persistence with Windows path deduplication
-- real Images view with Open / Favorite / Unfavorite / Remove actions
+- conservative read-only `.img` / `.raw` provider
+- minimum 512-byte size and 512-byte sector-alignment guard
+- structured-signature guard so known ISO/VHD/VHDX/QCOW2/WIM/DMG content is not incorrectly claimed as RAW
+- registry fallback proves a real ISO renamed to `.img` is handed to the ISO provider
+- source SHA-256 before/after proves inspection is read-only
+- cancellation coverage
+- unsupported Browse/Mount/Convert remain disabled
+- PR #15 / run #151 full functional regression, WinUI Release x64 and artifact
 
-**Mounted history + multi-image workspace**
+### Next 0.4 slice
 
-- local mounted-history contract and atomic JSON persistence
-- distinct Mount/Unmount history events with bounded newest-first retention
-- live Windows mount state kept independent from history metadata
-- separate Mounted dashboard history section
-- Clear History cannot alter live mounted state
-- dedicated mounted-history smoke tests in CI
-- multi-image Dragon Explorer workspace using WinUI tabs
-- one independent Explorer session per mounted image/root
-- duplicate-tab prevention and stale-tab pruning
-- closing a tab never unmounts the image
-- successful unmount closes tabs backed by the image
+**IMA / floppy images** — planned next. It must receive its own provider and tests before any capability is enabled.
 
-**Safe drag-out to Windows Explorer**
+## Beta direction
 
-- mounted Explorer rows expose native WinUI drag-out
-- drag payload uses Windows Storage items and advertises Copy only
-- root containment is revalidated immediately before transfer
-- stale/missing sources are blocked
-- listed and runtime reparse points/junctions are blocked
-- asynchronous StorageItem resolution uses a `DragStarting` deferral
-- dedicated drag-out safety smoke tests are green
+The first public GitHub beta is targeted as **`0.5.0-beta.1`** after the required 0.4 providers and the agreed 0.5 partition/filesystem/image-intelligence beta scope are proven. The release gate is tracked in `docs/BETA-RELEASE.md`.
 
-**Provider-backed direct ISO browsing**
-
-- `IDirectBrowseProvider` provider contract
-- managed ISO9660/Joliet parser
-- list, nested navigation and recursive search directly from ISO extents
-- file/folder Copy out without mounting
-- cancellation, overwrite, path traversal, filename and extent-boundary safety
-- dedicated **Direct ISO** workspace tab marked **NO MOUNT**
-- direct capability button enabled only after positive provider detection
-- real IMAPI integration proves the image stays detached through browse/search/Copy out
-
-### Proven checkpoints
-
-- PR #5 / run #56 — first mounted Explorer slice
-- PR #6 / run #72 — Preview + Image Library
-- PR #7 / run #86 — Mounted history + multi-image workspace
-- PR #10 / run #103 — safe drag-out + x64 artifact
-- PR #12 / run #128 — provider-backed ISO direct browse + native mount regression + WinUI build + artifact
-- PR #12 / run #131 — full regression remained green after README project-progress synchronization
-
-### Current safety state
+## Current safety state
 
 Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
 
-Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during mounted-volume search, Copy out or drag-out.
+The IMG/RAW provider is inspection-only in 0.4. It does not pretend to expose partitions, filesystems, browsing, mounting or conversion before those backends exist.
 
-Direct ISO browsing uses virtual `/` paths and validates metadata extents against the image bounds. Direct mode does not expose Open/Preview/drag-out until provider-backed implementations exist for those actions.
+Provider failures are isolated from other provider candidates. Cancellation is not converted into a parser failure. Unsupported capabilities remain disabled.
 
 Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state.
 
