@@ -52,5 +52,14 @@ public sealed partial class MainWindow
         }
     }
 
-    public Task OpenPathAsync(string path) => LoadImageAsync(path);
+    public void OpenInitialPath(string path)
+    {
+        RoutedEventHandler? handler = null;
+        handler = async (_, _) =>
+        {
+            RootLayout.Loaded -= handler;
+            await LoadImageAsync(path);
+        };
+        RootLayout.Loaded += handler;
+    }
 }
