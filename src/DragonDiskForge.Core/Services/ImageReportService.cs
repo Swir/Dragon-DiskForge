@@ -38,7 +38,16 @@ public sealed class ImageReportService
                 {
                     var depth = await new FileSystemDepthService().AnalyzeAsync(path, fileSystems, cancellationToken);
                     analysis = MergeDepthEvidence(analysis, depth);
+
+                    if (fileSystems.Detections.Any(x => x.Kind == FileSystemKind.Ntfs))
+                    {
+                        var ntfsDepth = await new NtfsMetadataDepthService().AnalyzeAsync(path, fileSystems, cancellationToken);
+                        analysis = MergeDepthEvidence(analysis, ntfsDepth);
+                    }
                 }
+
+                var architecture = new ArchitectureReconciliationService().Analyze(analysis.BootInstaller);
+                analysis = MergeArchitectureEvidence(analysis, architecture);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { diagnostics.Add($"Analysis incomplete: {ex.Message}"); }
@@ -112,8 +121,29 @@ public sealed class ImageReportService
             .ThenBy(x => x.Value, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var health = analysis.HealthFindings
-            .Concat(depth.HealthFindings)
+        var health = NormalizeHealth(analysis.HealthFindings.Concat(depth.HealthFindings));
+
+        return analysis with
+        {
+            Identity = Array.AsReadOnly(identity),
+            HealthFindings = Array.AsReadOnly(health)
+        };
+    }
+
+    private static ImageIntelligenceInfo MergeArchitectureEvidence(
+        ImageIntelligenceInfo analysis,
+        ArchitectureReconciliationResult reconciliation)
+    {
+        var health = NormalizeHealth(analysis.HealthFindings.Concat(reconciliation.HealthFindings));
+        return analysis with
+        {
+            ArchitectureHints = Array.AsReadOnly(reconciliation.ArchitectureHints.ToArray()),
+            HealthFindings = Array.AsReadOnly(health)
+        };
+    }
+
+    private static ImageHealthFinding[] NormalizeHealth(IEnumerable<ImageHealthFinding> findings)
+        => findings
             .GroupBy(
                 x => $"{x.Code}\u001f{x.PartitionIndex?.ToString() ?? string.Empty}\u001f{x.Message}",
                 StringComparer.Ordinal)
@@ -122,11 +152,4 @@ public sealed class ImageReportService
             .ThenBy(x => x.Code, StringComparer.Ordinal)
             .ThenBy(x => x.PartitionIndex ?? int.MinValue)
             .ToArray();
-
-        return analysis with
-        {
-            Identity = Array.AsReadOnly(identity),
-            HealthFindings = Array.AsReadOnly(health)
-        };
-    }
 }

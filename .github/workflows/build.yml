@@ -39,6 +39,9 @@ jobs:
       - name: Filesystem depth smoke tests
         run: dotnet run --project tests/DragonDiskForge.FileSystemDepth.SmokeTests/DragonDiskForge.FileSystemDepth.SmokeTests.csproj -c Release
 
+      - name: 0.5 intelligence hardening smoke tests
+        run: dotnet run --project tests/DragonDiskForge.IntelligenceHardening.SmokeTests/DragonDiskForge.IntelligenceHardening.SmokeTests.csproj -c Release
+
       - name: Boot + installer intelligence smoke tests
         run: dotnet run --project tests/DragonDiskForge.BootInstallerIntelligence.SmokeTests/DragonDiskForge.BootInstallerIntelligence.SmokeTests.csproj -c Release
 
@@ -102,7 +105,21 @@ jobs:
       - name: Build
         run: msbuild DragonDiskForge.sln /m /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=false
 
-      - name: Publish Windows x64 artifact
+      - name: Build clean Windows x64 package
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+
+      - name: Publish clean Windows x64 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: DragonDiskForge-win-x64-package
+          path: |
+            artifacts/windows/DragonDiskForge-win-x64.zip
+            artifacts/windows/DragonDiskForge-win-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish Windows x64 engineering artifact
         uses: actions/upload-artifact@v4
         with:
           name: DragonDiskForge-win-x64
