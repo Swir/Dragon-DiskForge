@@ -10,6 +10,8 @@ namespace DragonDiskForge.Core.Services;
 public sealed class GzipImagePipelineService
 {
     private const int BufferSize = 1024 * 1024;
+    private const int MinimumGzipLength = 18;
+    private const int FixedHeaderLength = 10;
     private const double DataStageProgressCeiling = 0.99d;
 
     private readonly SafeOutputService _safeOutputService;
@@ -96,7 +98,7 @@ public sealed class GzipImagePipelineService
         var fullSourcePath = Path.GetFullPath(sourcePath);
         if (!File.Exists(fullSourcePath))
             throw new FileNotFoundException("Gzip source file was not found.", fullSourcePath);
-        await ValidateGzipSignatureAsync(fullSourcePath, cancellationToken);
+        await ValidateGzipHeaderAsync(fullSourcePath, cancellationToken);
 
         var sourceLength = checked((ulong)new FileInfo(fullSourcePath).Length);
         cancellationToken.ThrowIfCancellationRequested();
@@ -151,8 +153,12 @@ public sealed class GzipImagePipelineService
         return result;
     }
 
-    private static async Task ValidateGzipSignatureAsync(string path, CancellationToken cancellationToken)
+    private static async Task ValidateGzipHeaderAsync(string path, CancellationToken cancellationToken)
     {
+        var fileLength = new FileInfo(path).Length;
+        if (fileLength < MinimumGzipLength)
+            throw new InvalidDataException("Gzip stream is shorter than the minimum header and trailer length.");
+
         await using var input = new FileStream(
             path,
             FileMode.Open,
@@ -160,10 +166,22 @@ public sealed class GzipImagePipelineService
             FileShare.Read,
             bufferSize: 4096,
             options: FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var signature = new byte[2];
-        var read = await input.ReadAsync(signature.AsMemory(), cancellationToken);
-        if (read != 2 || signature[0] != 0x1F || signature[1] != 0x8B)
+        var header = new byte[FixedHeaderLength];
+        var totalRead = 0;
+        while (totalRead < header.Length)
+        {
+            var read = await input.ReadAsync(header.AsMemory(totalRead), cancellationToken);
+            if (read == 0)
+                throw new InvalidDataException("Gzip fixed header is truncated.");
+            totalRead += read;
+        }
+
+        if (header[0] != 0x1F || header[1] != 0x8B)
             throw new InvalidDataException("Input is not a gzip stream.");
+        if (header[2] != 8)
+            throw new InvalidDataException("Gzip compression method is unsupported.");
+        if ((header[3] & 0xE0) != 0)
+            throw new InvalidDataException("Gzip header uses reserved flag bits.");
     }
 
     private static void ValidateDistinctPaths(string sourcePath, string destinationPath)
