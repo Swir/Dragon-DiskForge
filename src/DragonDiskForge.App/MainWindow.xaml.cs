@@ -24,6 +24,8 @@ public sealed partial class MainWindow : Window
     private readonly ImagesView _imagesView;
     private readonly MountedView _mountedView;
     private readonly ExplorerWorkspaceView _explorerWorkspace;
+    private readonly ToolsView _toolsView;
+    private long _loadGeneration;
     private DiskImageInfo? _current;
     private MountState? _mountState;
     private CancellationTokenSource? _verificationCts;
@@ -41,12 +43,16 @@ public sealed partial class MainWindow : Window
         _imagesView = new ImagesView(_imageLibrary);
         _mountedView = new MountedView();
         _explorerWorkspace = new ExplorerWorkspaceView(WindowNative.GetWindowHandle(this));
+        _toolsView = new ToolsView(WindowNative.GetWindowHandle(this));
         _imagesView.OpenRequested += ImagesView_OpenRequested;
         _mountedView.ExploreRequested += MountedView_ExploreRequested;
         MountButton.Click += Mount_Click;
         ShellNav.SelectionChanged += ShellNav_SelectionChanged;
         Closed += (_, _) =>
         {
+            _analysisCts?.Cancel();
+            _verificationCts?.Cancel();
+            _mountCts?.Cancel();
             _imageLibrary.Dispose();
             _mountedView.Dispose();
         };
@@ -87,6 +93,13 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
+            if (tag == "tools")
+            {
+                item.IsEnabled = true;
+                ToolTipService.SetToolTip(item, "Checksums, RAW creation, compression and split/join");
+                continue;
+            }
+
             item.IsEnabled = false;
             var milestone = tag switch
             {
@@ -101,6 +114,11 @@ public sealed partial class MainWindow : Window
     private async void ShellNav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         var tag = (args.SelectedItemContainer as NavigationViewItem)?.Tag?.ToString();
+        if (tag == "tools")
+        {
+            _mainScroll.Content = _toolsView;
+            return;
+        }
         if (string.Equals(tag, "images", StringComparison.OrdinalIgnoreCase))
         {
             if (!ReferenceEquals(_mainScroll.Content, _imagesView))
@@ -196,7 +214,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyResponsiveLayout(double width)
     {
-        var compact = width < 980;
+        var compact = width < 1200;
         var narrow = width < 700;
 
         MainContentGrid.Padding = compact
@@ -292,12 +310,16 @@ public sealed partial class MainWindow : Window
 
     private async Task LoadImageAsync(string path)
     {
+        var generation = ++_loadGeneration;
+        _analysisCts?.Cancel();
         _verificationCts?.Cancel();
         _mountCts?.Cancel();
 
         try
         {
-            _current = await _detector.InspectAsync(path);
+            var inspected = await _detector.InspectAsync(path);
+            if (generation != _loadGeneration) return;
+            _current = inspected;
             _mountState = null;
             ImageNameText.Text = _current.FileName;
             ImagePathText.Text = _current.Path;
@@ -322,6 +344,9 @@ public sealed partial class MainWindow : Window
         {
             MountButton.IsEnabled = false;
             MountButton.Content = "Mount";
+            if (generation != _loadGeneration) return;
+            _current = null;
+            ResultCard.Visibility = Visibility.Collapsed;
             await ShowDialogAsync("Could not open image", ex.Message);
         }
     }
@@ -554,7 +579,7 @@ public sealed partial class MainWindow : Window
         try
         {
             var value = await _verification.ComputeSha256Async(imagePath, progress, cts.Token);
-            verifyButton.Content = "Verified ✓";
+            verifyButton.Content = "Hash calculated";
             await ShowDialogAsync("SHA-256", value);
         }
         catch (OperationCanceledException)
