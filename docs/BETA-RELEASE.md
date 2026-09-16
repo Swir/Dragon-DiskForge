@@ -29,10 +29,10 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] independently bounded UDF root-directory traversal for validated Type 1 physical mappings
 - [x] bounded QCOW2 v2/v3 standard uncompressed guest-byte reader foundation
 - [x] bounded hosted sparse VMDK v1 standard uncompressed guest-byte reader foundation
-- [ ] common guest-byte integration into bounded partition/filesystem intelligence
+- [x] common guest-byte integration into bounded partition/filesystem intelligence
 - [ ] final 0.5 beta-scope hardening checkpoint
 
-Latest validated checkpoints include PR #35 / run #270, PR #36 / implementation run #274, PR #37 / implementation run #277 and the PR #38 VMDK guest-reader implementation head. The final documentation-synchronized PR #38 run must still be green before merge.
+Latest validated checkpoints include PR #35 / run #270, PR #36 / run #274, PR #37 / run #277, PR #38 / run #284 and PR #39 implementation run #286. The final documentation-synchronized PR #39 run must still be green before merge.
 
 ### Windows beta package
 - [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build
@@ -60,6 +60,7 @@ Latest validated checkpoints include PR #35 / run #270, PR #36 / implementation 
 - [x] NTFS/architecture hardening gate green
 - [x] QCOW2 guest-byte reader gate green
 - [x] VMDK hosted sparse guest-byte reader gate green
+- [x] guest partition/filesystem intelligence gate green
 - [x] ISO direct-browse integration green
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
@@ -79,7 +80,7 @@ Latest validated checkpoints include PR #35 / run #270, PR #36 / implementation 
 
 ## Current beta readiness
 
-**NOT READY.** Automated Windows CI now proves the existing provider/intelligence regression path, bounded UDF root traversal, clean-package verification and truthful QCOW2 plus hosted-sparse VMDK guest-byte readers. Remaining blockers are common guest-byte integration into partition/filesystem intelligence, final 0.5 beta-scope hardening, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
+**NOT READY.** Automated Windows CI now proves the provider/intelligence regression path, bounded UDF root traversal, clean-package verification, truthful QCOW2 plus hosted-sparse VMDK guest-byte readers, and common bounded guest partition/filesystem analysis. Remaining blockers are the final 0.5 beta-scope hardening checkpoint, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
 
 ## Rule
 

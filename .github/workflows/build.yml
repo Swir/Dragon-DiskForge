@@ -84,6 +84,9 @@ jobs:
       - name: QCOW2 guest-byte reader smoke tests
         run: dotnet run --project tests/DragonDiskForge.QcowGuestReader.SmokeTests/DragonDiskForge.QcowGuestReader.SmokeTests.csproj -c Release
 
+      - name: Guest partition/filesystem intelligence smoke tests
+        run: dotnet run --project tests/DragonDiskForge.GuestIntelligence.SmokeTests/DragonDiskForge.GuestIntelligence.SmokeTests.csproj -c Release
+
       - name: DMG / UDIF metadata smoke tests
         run: dotnet run --project tests/DragonDiskForge.Dmg.SmokeTests/DragonDiskForge.Dmg.SmokeTests.csproj -c Release
 
