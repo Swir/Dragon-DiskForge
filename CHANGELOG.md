@@ -7,82 +7,50 @@ The project follows semantic versioning while it evolves toward 1.0.
 ## [Unreleased]
 
 ### Added
-- first non-ISO 0.4 image provider: read-only IMG/RAW partition inspection
-- MBR primary-partition parsing with boot flags and common partition-type names
-- bounded EBR traversal for logical partitions with loop and image-boundary protection
-- GPT parsing with 512/4096-byte logical-sector probing, entry-count/size limits and partition-name/type decoding
-- `IPartitionTableProvider` contract and `PartitionTable` provider capability
-- `.dd` raw-image extension support
-- dedicated RAW/IMG smoke tests covering valid MBR/EBR/GPT images, malformed images, cancellation and registry capability resolution
-- read-only IMA/FLP media-geometry provider for standard floppy capacities from 160 KB through 2.88 MB
-- `IMediaGeometryProvider` contract and `MediaGeometry` provider capability
-- FAT-style BPB metadata parsing with capacity, sectors/track, head-count and CHS consistency validation
-- safe blank/unformatted floppy recognition based on exact standard media size
-- dedicated IMA/floppy smoke tests covering FAT12 metadata, blank media, bad capacity, bad CHS, foreign extension isolation and cancellation
-- read-only BIN/CUE track-layout provider
-- `ITrackLayoutProvider` contract and `TrackLayout` provider capability
-- BINARY CUE parsing for AUDIO, MODE1/2048, MODE1/2352, MODE2/2336 and MODE2/2352 tracks
-- single-file and multi-file BIN/CUE layout validation with INDEX 00/01 metadata and bounded track ranges
-- same-name CUE companion resolution for `.bin` inputs
-- dedicated BIN/CUE smoke tests covering mixed-mode, multi-file, missing payload, traversal, index ordering, unsupported FILE types, orphan BINs and cancellation
-- read-only MDF/MDS CD track-layout provider using the shared `TrackLayout` capability
-- MDS `MEDIA DESCRIPTOR` header/version/medium/session/track validation
-- explicit MDF byte-offset handling for mixed-sector CD layouts
-- same-name MDF and footer-based ASCII/UTF-16 payload resolution, including `*.mdf`
-- dedicated MDF/MDS smoke tests covering mixed-sector tracks, corrupt signatures/offsets, missing payloads, unsupported sectors, traversal, wildcard/UTF-16 footers, DVD rejection, foreign extensions and cancellation
-- read-only Nero NRG v1/v2 track-layout provider using the shared `TrackLayout` capability
-- classic `NERO` v1 footer parsing with 32-bit chunk offsets and `NER5` v2 footer parsing with 64-bit chunk offsets
-- CUES v1 BCD MSF-to-LBA decoding and CUEX v2 signed-LBA decoding
-- DAOI v1 and DAOX v2 track-table parsing with explicit byte-range validation
-- dedicated NRG smoke tests covering v1/v2, mixed audio/data, CUES MSF conversion, bad footer/offset, missing `END!`, missing cue metadata, unknown modes, cue/DAO mismatch, metadata overlap, foreign extensions and cancellation
-- read-only CloneCD CCD/IMG/SUB track-layout provider using the shared `TrackLayout` capability
-- CloneCD `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
-- bounded INDEX 0/1 parsing against same-name 2352-byte-sector `.img` payloads
-- optional same-name `.sub` validation at exactly 96 bytes per IMG sector
-- dedicated CCD/IMG/SUB smoke tests covering valid mixed audio/data, direct CCD/IMG/SUB inputs, missing/unaligned IMG, invalid SUB length, unsupported mode/version, missing/duplicate/non-increasing indexes, INDEX 0 ordering, foreign extensions, cancellation and CCD-vs-RAW `.img` resolution
+- read-only IMG/RAW partition inspection with MBR, bounded EBR and GPT parsing
+- `IPartitionTableProvider` and explicit `PartitionTable` capability
+- read-only IMA/FLP media-geometry inspection with FAT-style BPB validation
+- `IMediaGeometryProvider` and explicit `MediaGeometry` capability
+- read-only BIN/CUE, MDF/MDS CD, NRG v1/v2 and CCD/IMG/SUB optical track-layout providers
+- `ITrackLayoutProvider` and explicit `TrackLayout` capability
+- read-only VMware hosted sparse VMDK v1 metadata provider
+- `IVirtualDiskMetadataProvider`, `VirtualDiskMetadataInfo` and explicit `VirtualDiskMetadata` capability
+- VMDK sparse-header parsing for magic, version, flags, virtual capacity, grain size, embedded descriptor location, grain-table entry count, redundant grain-directory offset, grain-directory offset, metadata overhead, unclean-shutdown state, newline metadata and compression algorithm
+- bounded embedded VMDK descriptor parsing for descriptor `version`, `createType`, `CID`, `parentCID` and extent declaration count
+- dedicated VMDK smoke tests covering valid sparse v1 metadata, absent embedded descriptor, bad magic/version, invalid grain/capacity metadata, descriptor bounds, grain-directory bounds, newline/compression inconsistency, malformed descriptor metadata, text-only descriptors, foreign extensions, cancellation and provider capability resolution
 
 ### Changed
-- the application provider registry now includes ISO9660/Joliet, CCD/IMG/SUB, RAW partition, IMA/floppy, BIN/CUE, MDF/MDS and NRG providers
-- valid CloneCD image sets are resolved ahead of generic RAW for ambiguous `.img` only after a same-name `.ccd` descriptor positively validates; ordinary `.img` files still fall through to RAW
-- RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
-- IMA/FLP images can be positively recognized by media geometry without enabling fake filesystem browsing
-- BIN/CUE, MDF/MDS, NRG and CCD/IMG/SUB images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
-- Direct Browse tooltip explains when a provider recognized only a non-browse inspection capability
-- project progress advances to 38% toward 1.0 after the sixth real additional 0.4 image family
-- 0.4 milestone completion advances to approximately 65%
+- application provider registry now includes ISO9660/Joliet, CCD/IMG/SUB, RAW, IMA/floppy, BIN/CUE, MDF/MDS, NRG and VMDK metadata providers
+- Direct Browse capability messaging now distinguishes virtual-disk metadata inspection from filesystem browsing
+- project progress advances to **39% toward 1.0** after the seventh real additional 0.4 image family
+- 0.4 milestone completion advances to approximately **71%**
+- the next planned 0.4 provider is **QCOW/QCOW2**
 
 ### Safety
-- RAW/IMG parsing is read-only and validates every referenced partition range against the image length
-- EBR traversal is bounded and loop-protected
-- GPT entry count and entry size are bounded before allocation/iteration
-- invalid `.img`/`.raw` extensions alone never make an image supported
-- IMA/FLP parsing is read-only and rejects unsupported sizes, inconsistent BPB capacity and contradictory CHS geometry
-- BIN/CUE parsing is read-only, bounds CUE size/line/track counts and validates every referenced BIN against real file length and sector alignment
-- CUE payload paths must remain under the CUE directory; absolute/path-traversal references are rejected
-- mixed sector sizes inside one BIN are rejected rather than producing guessed byte offsets
-- a standalone `.bin` is not claimed without a same-name CUE that actually references it
-- MDF/MDS parsing bounds descriptor tables, footer strings, MDF start offsets and computed track ranges against the real files
-- MDS footer payload paths are confined to the descriptor directory; rooted/traversal paths are rejected
-- mixed-sector MDF layouts use explicit MDS byte offsets rather than inferred offsets
-- DVD-style MDS media is deliberately rejected until its separate layout is implemented and tested
-- NRG parsing bounds every chunk before the footer, requires a terminating empty `END!` chunk and rejects trailing metadata
-- NRG DAO track ranges must end before the chunk table; unknown modes, malformed BCD/MSF positions and missing/ambiguous cue metadata are rejected
-- NRG cue audio/data control must agree with the DAO track mode rather than being guessed
-- CCD/IMG/SUB parsing bounds descriptor size/line count/line length, validates IMG alignment/ranges and rejects invalid SUB sidecar size
-- CloneCD MODE or INDEX metadata that is missing, unsupported, duplicate, out of order or out of bounds is rejected rather than guessed
-- a `.img` is claimed as CloneCD only after its same-name CCD descriptor validates; otherwise provider fallback remains available
-- RAW/IMG, IMA/FLP, BIN/CUE, MDF/MDS, NRG and CCD/IMG/SUB `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+- provider parsing remains read-only and bounded against real file sizes
+- RAW validates partition ranges and protects EBR traversal from loops
+- floppy rejects unsupported sizes and contradictory BPB/CHS metadata
+- BIN/CUE confines payload paths and rejects ambiguous mixed-sector offsets
+- MDF/MDS bounds descriptor/payload structures and explicitly rejects unproven DVD-style handling
+- NRG requires consistent cue/DAO metadata and a terminating empty `END!` chunk
+- CCD/IMG/SUB validates IMG sector alignment, SUB length and CloneCD MODE/INDEX metadata; generic `.img` fallback remains available when CCD validation fails
+- VMDK claims only `.vmdk` files with the supported sparse-header magic/version and structurally valid metadata
+- VMDK descriptor, redundant grain-directory, grain-directory and overhead offsets are overflow-checked and bounded against the physical file
+- VMDK capacity/grain metadata, newline bytes and compression state must be internally consistent
+- embedded VMDK descriptors are limited to 1 MiB with bounded lines/line lengths; conflicting duplicate metadata is rejected
+- text-only descriptor VMDKs, unproven sparse-header versions, grain-table translation, virtual-sector reads, Direct Browse, Mount and Convert remain outside this slice
 
 ### Verified
-- RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
-- PR #17 / run #165 passed Core, provider-registry, RAW/IMG, IMA/floppy, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
-- PR #18 / run #172 passed Core, provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
-- PR #19 / run #182 passed the final MDF/MDS branch head with all provider smoke tests, ISO/native regression, WinUI Release x64 build and artifact publication
-- PR #20 / run #185 passed NRG v1/v2 smoke tests, all previous provider tests, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication before the documentation synchronization pass
-- PR #21 / run #193 passed CCD/IMG/SUB smoke tests, all previous provider tests, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication before the documentation synchronization pass
+- PR #16 / run #153 — RAW/IMG provider smoke tests passed before final UI/docs synchronization
+- PR #17 / run #165 — IMA/floppy provider plus full regression, Release x64 build and artifact publication passed
+- PR #18 / run #172 — BIN/CUE provider plus full prior-provider regression, Release x64 build and artifact publication passed
+- PR #19 / run #182 — final MDF/MDS CD branch head plus full provider/native regression, Release x64 build and artifact publication passed
+- PR #20 / run #185 — NRG v1/v2 provider plus full prior-provider regression, Release x64 build and artifact publication passed before documentation synchronization
+- PR #21 / run #198 — final CCD/IMG/SUB branch head passed all provider tests, ISO/native Windows integration, Release x64 build and artifact publication
+- PR #22 / run #200 — VMDK sparse metadata tests, all previous provider tests, mounted-history/drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication all passed before documentation synchronization
 
 ### Planned
-- remaining 0.4 image providers: VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 
@@ -94,94 +62,35 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Mounted history kept separate from live Windows state
 - multi-image Explorer workspace with WinUI tabs
 - safe Copy-only drag-out to Windows Explorer/Desktop
-- provider-backed direct browsing contract
-- managed read-only ISO9660/Joliet direct-browse provider
-- direct ISO navigation, search and Copy out without mounting
-- dedicated `Direct ISO` tabs marked `NO MOUNT`
-- direct ISO integration tests using a disposable Windows IMAPI image
+- provider-backed managed ISO9660/Joliet direct browsing without mounting
 - Windows x64 artifact publishing
-- README project progress bar synchronized with the roadmap
 
 ### Changed
 - project version advanced to `0.3.0`
-- milestone 0.3 is complete
-- 0.4 Extended Image Providers is the next milestone
-- direct ISO tabs are independent from Mount/Unmount state
-- Explorer actions remain enabled only when their real backend exists
-
-### Fixed
-- WinUI namespace/path naming conflicts found by CI
-- Mounted history remains independent from live Windows inventory
-- direct ISO parser compilation issue found by CI
-- direct ISO IMAPI test fixture compatibility issue found by CI
-- deterministic UTF-8 test fixture output
+- milestone 0.3 completed and 0.4 became active
 
 ### Verified
-- PR #5 / run #56 — mounted Explorer slice
+- PR #5 / run #56 — mounted Explorer
 - PR #6 / run #72 — Preview + Image Library
 - PR #7 / run #86 — Mounted history + multi-image workspace
-- PR #10 / run #103 — safe drag-out + Windows x64 artifact
-- PR #10 / run #111 — final drag-out docs/version regression
-- PR #12 / run #128 — direct ISO browsing + native mount regression + WinUI build + artifact
-- PR #12 / run #131 — full regression remained green after README progress synchronization
-
-### Manual QA notes
-- normal-user UAC interaction remains documented in `docs/MANUAL-VALIDATION.md`
-- the real cross-process pointer drag gesture remains a manual desktop QA case
+- PR #10 / run #103 — safe drag-out + x64 artifact
+- PR #12 / run #128 and #131 — direct ISO browsing, native regression, WinUI Release build and progress synchronization
 
 ## [0.2.0] - 2026-09-14
 
 ### Added
-- `IMountService` contract in Core
-- isolated Windows service layer
-- native ISO, VHD and VHDX mount/unmount
+- native Windows ISO/VHD/VHDX mount/unmount service
 - read-only-first mount requests
 - drive-letter and attached-state detection
-- Mount/Unmount progress and cancellation
-- live Mounted dashboard backed by Windows state
-- stale-state recovery by re-querying Windows
-- friendly native-operation errors
-- disposable VHD/VHDX and IMAPI ISO integration tests
-- manual non-admin/UAC checklist
-
-### Changed
-- Mount controls are enabled only for proven native paths
-- Mounted navigation is a real working view
-- Windows owns mounted state; the app does not trust stale session cache
-- project version advanced to `0.2.0`
-
-### Fixed
-- replaced unreliable direct mounted-image class enumeration with the Windows Storage volume pipeline
-- corrected integration-test imports
-
-### Verified
-- ISO, VHD and VHDX mount/unmount paths pass Windows CI
-- read-only state, drive detection and mounted inventory are validated
-- cancellation safety and unsupported-format errors are validated
+- progress/cancellation and live Mounted state
+- VHD/VHDX/ISO integration tests
 
 ## [0.1.0] - 2026-09-14
 
 ### Added
 - initial WinUI 3 / .NET 10 application shell
 - separate Core project
-- drag-and-drop image loading and file picker
-- supported-format catalogue and signature detection
-- SHA-256 verification with progress and cancellation
-- Dragon visual design system and custom sigil
-- responsive dashboard and startup overlay
-- light/dark/High Contrast resources
-- final Windows application icon
-- Core smoke-test harness
-- GitHub Actions Windows x64 validation
-- roadmap, milestone, status and testing documentation
-
-### Fixed
-- solution platform mappings for `Release|x64`
-- verification smoke-test delegate
-- startup overlay stacking
-- Windows icon resource packaging
-
-### Verified
-- Core smoke tests pass
-- full WinUI `Release|x64` CI passes
-- milestone 0.1 exit criteria passed on `main`
+- disk-image catalogue and signature detection
+- SHA-256 verification with progress/cancellation
+- Dragon visual system, responsive UI and final Windows icon
+- Core smoke tests and Windows x64 CI
