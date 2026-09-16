@@ -117,19 +117,23 @@ See `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md` and `docs/SPLIT
 
 ---
 
-## 0.7 Physical Media Tools — ⬜ planned
+## 0.7 Physical Media Tools — 🚧 in progress
 
-High-impact physical-media operations remain deliberately gated. Development should begin with non-destructive discovery/safety infrastructure before any write path.
+**Current required 0.7 engineering scope: 5/7 = ~71%.** The first safety foundation is implemented and passed full Windows CI in PR #45 implementation run #310. Development remains deliberately non-destructive until the remaining safety gates are proven.
 
-- ⬜ read-only physical disk inventory with stable device identity
-- ⬜ capacity/bus/removable/system-disk evidence
-- ⬜ explicit system-disk and ambiguous-device refusal policy
-- ⬜ write-plan preview with source/destination identity checks
-- ⬜ destructive-action confirmation contract
+- ✅ read-only physical disk inventory with serial-backed stable device identity when available
+- ✅ capacity/bus/removable/system-disk evidence
+- ✅ explicit system-disk and ambiguous-device refusal policy
+- ✅ write-plan preview with source/destination identity checks
+- ✅ destructive-action confirmation contract bound to destination identity
 - ⬜ progress/cancellation/rollback-or-fail-safe design where technically possible
 - ⬜ separately validated physical write path only after safety gates are proven
 
-No physical-device write capability is user-visible today.
+The current inventory opens Windows physical disks query-only and records evidence rather than guessing. Missing stable identity, unknown capacity, system-disk targets, invalid/physical-device sources and oversized source images fail closed before any destructive operation can exist.
+
+See `docs/PHYSICAL-MEDIA-SAFETY.md`.
+
+**No physical-device write capability is user-visible today.**
 
 ## 0.8 Windows Integration + Power Tools — ⬜ planned
 - ⬜ file associations/context menu
