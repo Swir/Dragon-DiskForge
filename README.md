@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 41% toward 1.0
+## Project progress — 42% toward 1.0
 
-`████████░░░░░░░░░░░░ 41%`
+`████████░░░░░░░░░░░░ 42%`
 
-**Overall completion:** **41%**
+**Overall completion:** **42%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~83%** 🚧
+- `0.4 Extended Image Providers` — **~89%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > The progress indicator changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -34,12 +34,12 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## 0.4 Extended Image Providers 🚧
 
-The provider foundation and **nine additional image families** are now implemented and proven.
+The provider foundation and **ten additional image families** are now implemented and proven.
 
 ### Provider architecture
 
 - central Core `ProviderRegistry`
-- explicit capabilities
+- explicit truthful capabilities
 - deterministic priority/extension-first resolution
 - provider/signature fallback
 - probe and inspection failure isolation
@@ -48,8 +48,8 @@ The provider foundation and **nine additional image families** are now implement
 
 ### Proven provider slices
 
-- **IMG / RAW** ✅ — MBR, bounded EBR and GPT inspection; `PartitionTable` capability
-- **IMA / floppy** ✅ — standard geometry + FAT-style BPB validation; `MediaGeometry` capability
+- **IMG / RAW** ✅ — MBR, bounded EBR and GPT inspection; `PartitionTable`
+- **IMA / floppy** ✅ — standard geometry + FAT-style BPB validation; `MediaGeometry`
 - **BIN / CUE** ✅ — bounded BINARY CUE AUDIO/MODE1/MODE2 track layout
 - **MDF / MDS CD** ✅ — bounded descriptor/session/track parsing with explicit MDF byte offsets
 - **NRG v1/v2** ✅ — NERO/NER5, CUES/CUEX and DAOI/DAOX track metadata
@@ -57,25 +57,26 @@ The provider foundation and **nine additional image families** are now implement
 - **VMDK sparse v1** ✅ — VMware hosted sparse header + bounded embedded descriptor metadata
 - **QCOW / QCOW2** ✅ — QCOW v1 and QCOW2 v2/v3 big-endian container metadata
 - **DMG / UDIF** ✅ — bounded `koly` trailer and XML plist metadata
+- **WIM / ESD** ✅ — bounded 208-byte header and resource metadata; `ContainerMetadata`
 
-### DMG / UDIF metadata provider ✅
+### WIM / ESD metadata provider ✅
 
-- dedicated `IDmgMetadataProvider` + `DmgMetadataInfo`
-- reports the shared `VirtualDiskMetadata` capability
-- validates the trailing 512-byte big-endian `koly` trailer and UDIF version 4/header size
-- parses flags, running/data/resource fork metadata, segment metadata, checksum metadata, XML plist location, image variant and sector count
-- physical data/resource/XML ranges are bounded before reads and cannot overlap the final trailer
-- sector count provides the logical 512-byte-sector virtual size
-- single-file UDIF images are supported; multi-segment images are explicitly rejected until companion-segment handling exists
-- XML plist reads are bounded to 16 MiB with DTD and external entity resolution disabled
-- `blkx` dictionary entries are counted without decoding `mish` block maps or touching compressed partition data
-- malformed XML, invalid trailer/ranges, unsafe checksum-size metadata and foreign extensions are rejected
-- block-map decompression, guest-sector translation, filesystem browsing, Mount and Convert remain disabled
-- PR #24 / run #214 passed DMG tests, all previous provider tests, ISO/native Windows regression, Release x64 build and artifact publication ✅
+- dedicated `IWimMetadataProvider` + `WimMetadataInfo`
+- introduces the truthful `ContainerMetadata` capability instead of mislabeling WIM as a virtual disk
+- validates the 208-byte little-endian `MSWIM\0\0\0` header
+- supports standard WIM version `68864` and solid/ESD version `3584` metadata
+- parses flags, chunk size, GUID, part number, total parts, image count and boot index
+- parses lookup-table, XML, boot-metadata and integrity resource descriptors
+- resource stored size uses the lower 56 bits while resource flags use the upper byte
+- all resource offsets/ranges are bounded against the physical container before use
+- standalone Part 1/1 images are supported; split/spanned WIM is rejected until companion-part handling exists
+- `WRITE_IN_PROGRESS`, unknown flags, invalid chunk geometry, invalid BootIndex and out-of-file resources are rejected rather than guessed
+- resource decompression, XML/file-tree parsing, extraction, encrypted ESD handling, Direct Browse, Mount and Convert remain disabled
+- PR #25 / run #222 passed WIM/ESD tests, all previous provider tests, Explorer safety, ISO/native Windows regression, Release x64 build and artifact publication ✅
 
 ### Next 0.4 provider
 
-**WIM / ESD** — bounded read-only WIM container/header/resource metadata inspection first. File extraction, resource decompression and encrypted ESD handling stay disabled until independently implemented and tested.
+**FFU** — bounded read-only Full Flash Update metadata inspection first. Payload writing, physical-device flashing and destructive operations stay disabled until separately implemented and tested.
 
 The cross-process human drag gesture and normal-user UAC prompt remain manual QA gates in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md).
 
@@ -90,7 +91,7 @@ Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution s
 - shared Core engine for GUI and future CLI
 - isolated Windows native-storage layer
 - provider registry with explicit capabilities/fallback/failure isolation
-- bounded read-only partition, floppy, optical-layout and virtual-disk metadata parsers
+- bounded read-only partition, floppy, optical-layout, virtual-disk and container metadata parsers
 
 ## Build on Windows
 
@@ -100,13 +101,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2 and DMG/UDIF; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF and WIM/ESD; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-VMDK, QCOW and DMG currently expose only proven metadata. They do **not** translate guest data structures, expose virtual sectors, browse filesystems, mount these formats, or convert them. DMG XML parsing disables DTD/external resolution and does not decode `blkx` block maps yet.
+VMDK, QCOW and DMG expose only proven metadata. WIM/ESD exposes container metadata only; it does not decompress resources, traverse image file trees, extract payloads, browse directly, mount or convert them.
 
 ## Project rule
 

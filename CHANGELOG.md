@@ -13,24 +13,27 @@ The project follows semantic versioning while it evolves toward 1.0.
 - read-only VMware hosted sparse VMDK v1 metadata provider
 - read-only QCOW v1 and QCOW2 v2/v3 metadata provider
 - read-only Apple DMG / UDIF metadata provider
-- `IDmgMetadataProvider` and `DmgMetadataInfo`, mapped to the shared `VirtualDiskMetadata` capability
-- big-endian 512-byte `koly` trailer parsing for version, flags, fork metadata, segment metadata, checksums, XML plist location, image variant and sector count
-- bounded XML plist parsing with DTD/external resolution disabled and `blkx` entry counting without `mish` block-map decoding
-- dedicated DMG smoke tests covering valid UDIF metadata, XML/no-XML images, malformed trailer/ranges/XML, segmentation, checksum bounds, foreign extensions, cancellation and registry capabilities
+- read-only WIM / ESD container metadata provider
+- `IWimMetadataProvider` + `WimMetadataInfo`
+- truthful `ContainerMetadata` capability for archive/container formats such as WIM/ESD
+- little-endian 208-byte `MSWIM\0\0\0` header parsing for version, flags, chunk size, GUID, part/image counts and boot index
+- bounded lookup-table, XML, boot-metadata and integrity resource-descriptor parsing
+- dedicated WIM/ESD smoke tests covering standard WIM, solid/ESD, invalid magic/header/version, split/spanned images, write-in-progress state, BootIndex, resource bounds/flags, chunk size, cancellation and registry capabilities
 
 ### Changed
-- application registry now includes DMG / UDIF metadata after QCOW/QCOW2
-- project progress advances to **41% toward 1.0** after the ninth real additional 0.4 image family
-- 0.4 milestone completion advances to approximately **83%**
-- next 0.4 provider becomes **WIM/ESD**
+- application registry now includes WIM / ESD metadata after DMG / UDIF
+- project progress advances to **42% toward 1.0** after the tenth real additional 0.4 image family
+- 0.4 milestone completion advances to approximately **89%**
+- next 0.4 provider becomes **FFU**
 
 ### Safety
 - all provider paths remain read-only-first
-- DMG physical data/resource/XML ranges are bounded before reads and may not extend into the final `koly` trailer
-- DMG XML metadata is limited to 16 MiB; DTD and external entity resolution are disabled
-- multi-segment DMGs are rejected until companion-segment handling is implemented
-- malformed/unsupported UDIF trailers, unsafe checksum sizes and malformed plist/blkx structure are rejected rather than guessed
-- no DMG `blkx`/`mish` block decompression, guest-sector translation, Direct Browse, Mount or Convert is exposed
+- WIM/ESD resource descriptors are bounded against the physical file before use
+- split/spanned WIM is rejected until companion-part handling exists
+- `WRITE_IN_PROGRESS`, unknown flags, invalid chunk geometry and invalid BootIndex are rejected rather than guessed
+- WIM/ESD resources are not decompressed and embedded image file trees are not traversed or extracted
+- encrypted ESD payloads are not decrypted
+- no WIM/ESD Direct Browse, Mount or Convert is exposed
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -40,11 +43,13 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #20 / run #185 — NRG + full regression/build/artifact
 - PR #21 / run #198 — final CCD/IMG/SUB head + full regression/build/artifact
 - PR #22 / run #205 — final VMDK head + full provider/native regression/build/artifact
-- PR #23 / run #212 — final QCOW/QCOW2 head + all previous provider tests, ISO/native Windows integration, Release x64 build and artifact publication
-- PR #24 / run #214 — DMG/UDIF tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication all passed before docs synchronization
+- PR #23 / run #212 — final QCOW/QCOW2 head + full regression/build/artifact
+- PR #24 / run #219 — final DMG/UDIF head + full regression/build/artifact
+- PR #25 / run #222 — WIM/ESD metadata tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication
 
 ### Planned
-- remaining 0.4 image providers: WIM/ESD and FFU
+- remaining 0.4 image provider: FFU
+- provider-contract hardening before any public stability promise
 
 ## [0.3.0] - 2026-09-15
 

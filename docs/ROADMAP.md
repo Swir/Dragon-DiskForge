@@ -35,7 +35,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 83%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2 and DMG/UDIF are real and tested.
+**Current 0.4 completion: approximately 89%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF and WIM/ESD are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit capability reporting
@@ -93,26 +93,29 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ### DMG / UDIF metadata provider — ✅ complete
 - ✅ `.dmg` single-file UDIF detection through trailing `koly`
-- ✅ 512-byte big-endian trailer version/header validation
-- ✅ flags, fork, segment, checksum, XML, image-variant and sector metadata
-- ✅ physical data/resource/XML ranges bounded before reads
-- ✅ 512-byte-sector virtual-size calculation
-- ✅ XML plist bounded to 16 MiB
-- ✅ DTD and external XML resolution disabled
-- ✅ bounded `blkx` entry counting without `mish` block-map decoding
-- ✅ multi-segment images rejected until companion-segment support exists
+- ✅ bounded big-endian trailer and plist metadata
+- ✅ no `blkx` decompression or filesystem browsing
+
+### WIM / ESD metadata provider — ✅ complete
+- ✅ `.wim` / `.esd` standalone Part 1/1 containers
+- ✅ 208-byte little-endian `MSWIM\0\0\0` header
+- ✅ standard WIM version `68864` and solid/ESD version `3584`
+- ✅ flags, chunk size, GUID, part/image counts and boot index
+- ✅ lookup/XML/boot/integrity resource descriptors
+- ✅ resource flags/stored-size packing and physical-range validation
+- ✅ split/spanned and `WRITE_IN_PROGRESS` states rejected
+- ✅ unknown flags, invalid chunk size/BootIndex and out-of-file resources rejected
 - ✅ cancellation propagation
-- ✅ shared `VirtualDiskMetadata` capability through `IDmgMetadataProvider`
-- ✅ no decompression, guest-sector translation, Direct Browse, Mount or Convert
-- ✅ PR #24 / run #214 passed DMG plus the complete prior provider/native/build/artifact regression path before documentation synchronization
+- ✅ `ContainerMetadata` through `IWimMetadataProvider`
+- ✅ no resource decompression, file-tree traversal/extraction, encrypted ESD handling, Direct Browse, Mount or Convert
+- ✅ PR #25 / run #222 passed WIM/ESD plus the complete prior provider/native/build/artifact regression path before documentation synchronization
 
 ### Remaining image families
-- ⬜ WIM/ESD
 - ⬜ FFU
 
-**Next provider:** **WIM/ESD**.
+**Next provider:** **FFU**.
 
-**Exit criteria:** providers expose truthful capabilities without turning Core into a monolithic parser.
+**Exit criteria:** providers expose truthful capabilities without turning Core into a monolithic parser. Provider-contract hardening remains required before any public stability promise.
 
 ---
 
@@ -132,8 +135,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.6 Create + Convert + Verify — ⬜ planned
 
-- ⬜ image creation
-- ⬜ conversion matrix/pipeline
+- ⬜ image creation and conversion pipeline
 - ⬜ split/join and sparse/compression handling
 - ⬜ SHA-256/SHA-512 verification
 - ⬜ temporary output + atomic finalization
@@ -141,13 +143,9 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ---
 
-## 0.7 Bootable USB + Physical Media Tools — ⬜ planned
+## 0.7 Physical Media Tools — ⬜ planned
 
-- ⬜ physical disk enumeration/identity
-- ⬜ bootable USB/image writing
-- ⬜ destructive-operation confirmation
-- ⬜ target size/model/serial verification
-- ⬜ progress/cancellation/post-write verification
+Future physical-media functionality remains gated behind dedicated safety design, explicit user confirmation, device identity checks and independent validation before it can become user-visible.
 
 ---
 
@@ -188,11 +186,11 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 1. Never enable a fake UI capability.
 2. Read-only inspection is the default.
-3. Destructive operations require explicit target validation and confirmation.
+3. Sensitive operations require explicit validation and confirmation.
 4. UI stays separate from Core.
 5. New formats use providers/capabilities, not one monolithic parser.
 6. README, ROADMAP, STATUS, MILESTONES and CHANGELOG stay synchronized.
 7. Large image fixtures are generated, not committed.
 8. Accessibility outranks decoration.
-9. Dangerous operations identify the exact device/file before execution.
+9. High-impact operations remain gated until independently validated.
 10. A milestone completes only after its exit criteria pass.
