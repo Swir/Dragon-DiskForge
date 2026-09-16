@@ -17,7 +17,8 @@ public sealed partial class MainWindow
         new ProviderRegistration(new NrgImageProvider(), Priority: 50),
         new ProviderRegistration(new VmdkSparseImageProvider(), Priority: 40),
         new ProviderRegistration(new QcowImageProvider(), Priority: 30),
-        new ProviderRegistration(new DmgUdifImageProvider(), Priority: 20)
+        new ProviderRegistration(new DmgUdifImageProvider(), Priority: 20),
+        new ProviderRegistration(new WimEsdImageProvider(), Priority: 10)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
@@ -129,24 +130,19 @@ public sealed partial class MainWindow
     private static string BuildProviderUnavailableMessage(ProviderResolution resolution)
     {
         if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.PartitionTable) == true)
-        {
             return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its partition table. Direct filesystem browsing stays disabled until filesystem support is implemented and tested.";
-        }
 
         if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.MediaGeometry) == true)
-        {
             return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its media geometry. Direct filesystem browsing stays disabled until filesystem support is implemented and tested.";
-        }
 
         if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.TrackLayout) == true)
-        {
             return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its optical track layout. Direct filesystem browsing stays disabled until filesystem support is implemented and tested.";
-        }
 
         if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.VirtualDiskMetadata) == true)
-        {
             return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its virtual-disk metadata. Direct filesystem browsing stays disabled until extent translation and filesystem support are implemented and tested.";
-        }
+
+        if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.ContainerMetadata) == true)
+            return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its container metadata. Direct browsing stays disabled until resource decompression and file-tree support are implemented and tested.";
 
         var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
         return failed > 0
