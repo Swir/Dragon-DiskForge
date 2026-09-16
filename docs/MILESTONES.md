@@ -74,7 +74,7 @@ The same project rule continues: no Explorer control becomes active before its b
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **30%**.
+Current milestone completion is approximately **38%**.
 
 ### Completed execution slices
 
@@ -98,15 +98,27 @@ Current milestone completion is approximately **30%**.
    - Direct Browse, Mount and Convert remain disabled because those backends are not implemented for RAW
    - dedicated RAW/IMG smoke tests in Windows CI
 
+3. **IMA / floppy media provider** ✅
+   - read-only `.ima` and `.flp` support
+   - standard raw floppy capacities from 160 KB through 2.88 MB
+   - exact geometry metadata
+   - FAT-style BPB parsing where present
+   - BPB capacity and CHS validation against the physical image geometry
+   - blank/unformatted standard-size images supported without fabricated filesystem claims
+   - explicit `MediaGeometry` capability
+   - Direct Browse, Mount and Convert remain disabled until the real filesystem/native backends exist
+   - dedicated IMA/floppy smoke tests in Windows CI
+
 ### Next execution slices
 
-- IMA / floppy-image provider
 - BIN/CUE provider
+- MDF/MDS and NRG optical-image providers
 - remaining optical/virtual-disk/container providers from `docs/ROADMAP.md`
 - continued hardening of the internal provider contract before any public plugin/API stability promise
 
 ### 0.4 validation checkpoints
 
 - PR #16 / run #153 — new RAW/IMG provider tests passed before the final UI/docs synchronization pass
+- PR #17 / run #165 — IMA/floppy provider plus full ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 
 `docs/ROADMAP.md` remains the source of truth for exact provider order and completion state. A provider capability becomes user-visible only after its backing operation and tests exist.
