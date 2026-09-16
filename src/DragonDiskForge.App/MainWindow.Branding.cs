@@ -28,7 +28,7 @@ public sealed partial class MainWindow
         };
         AutomationProperties.SetName(link, "Open Swir GitHub profile");
         link.Click += async (_, _) =>
-            await Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/Swir"));
+            await global::Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/Swir"));
         footer.Children.Add(credit);
         footer.Children.Add(link);
         ShellNav.PaneFooter = footer;
