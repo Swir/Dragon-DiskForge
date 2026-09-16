@@ -27,6 +27,7 @@ public sealed record ProviderDescriptor(
             IVirtualDiskMetadataProvider virtualDisk => virtualDisk.DisplayName,
             IQcowMetadataProvider qcow => qcow.DisplayName,
             IDmgMetadataProvider dmg => dmg.DisplayName,
+            IWimMetadataProvider wim => wim.DisplayName,
             _ => provider.Id
         };
 
