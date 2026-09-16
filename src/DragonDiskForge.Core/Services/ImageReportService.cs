@@ -17,10 +17,13 @@ public sealed class ImageReportService
         Converters = { new JsonStringEnumConverter() }
     };
     private readonly ProviderRegistry _registry;
-    public ImageReportService(ProviderRegistry? registry = null) => _registry = registry ?? DefaultProviderRegistry.Create();
+
+    public ImageReportService(ProviderRegistry registry)
+        => _registry = registry ?? throw new ArgumentNullException(nameof(registry));
 
     public async Task<ImageReport> AnalyzeAsync(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var image = await new ImageDetectionService().InspectAsync(path, cancellationToken);
         var resolution = await _registry.ResolveAsync(path, cancellationToken);
         var diagnostics = resolution.Diagnostics.Where(x => !string.IsNullOrWhiteSpace(x.ErrorMessage))
@@ -46,7 +49,7 @@ public sealed class ImageReportService
         var b = new StringBuilder();
         b.AppendLine(report.Image.FileName).AppendLine($"{report.Image.Format} | {report.Image.SizeDisplay}");
         b.AppendLine($"Provider: {report.Provider ?? "not available"}");
-        b.AppendLine($"Available operations: {string.Join(", ", report.Capabilities)}");
+        b.AppendLine($"Available capabilities: {string.Join(", ", report.Capabilities)}");
         if (report.Analysis is { } a)
         {
             if (a.PartitionLayout is { } p)

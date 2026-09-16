@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DragonDiskForge.Core.Providers;
 using DragonDiskForge.Core.Services;
 
 var root = Path.Combine(Path.GetTempPath(), "dragon-diskforge-report-tests-" + Guid.NewGuid().ToString("N"));
@@ -8,7 +9,7 @@ try
     var unknown = Path.Combine(root, "unknown.payload");
     await File.WriteAllBytesAsync(unknown, new byte[64]);
 
-    var service = new ImageReportService();
+    var service = new ImageReportService(new ProviderRegistry([]));
     var report = await service.AnalyzeAsync(unknown);
     Require(report.Image.FileName == "unknown.payload", "Report must retain the inspected file name.");
     Require(report.Image.Format == "Unknown image", "Unknown input must not gain a fabricated format.");
