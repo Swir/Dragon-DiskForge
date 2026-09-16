@@ -36,6 +36,9 @@ jobs:
       - name: RAW creation + guest export smoke tests
         run: dotnet run --project tests/DragonDiskForge.RawPipeline.SmokeTests/DragonDiskForge.RawPipeline.SmokeTests.csproj -c Release
 
+      - name: Split/join + gzip pipeline smoke tests
+        run: dotnet run --project tests/DragonDiskForge.SplitCompression.SmokeTests/DragonDiskForge.SplitCompression.SmokeTests.csproj -c Release
+
       - name: Provider registry smoke tests
         run: dotnet run --project tests/DragonDiskForge.ProviderRegistry.SmokeTests/DragonDiskForge.ProviderRegistry.SmokeTests.csproj -c Release
 
