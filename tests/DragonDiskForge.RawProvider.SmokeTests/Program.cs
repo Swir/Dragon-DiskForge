@@ -12,16 +12,19 @@ try
     var imgPath = Path.Combine(root, "disk.img");
     var rawPath = Path.Combine(root, "disk.raw");
     var tinyPath = Path.Combine(root, "tiny.img");
+    var misalignedPath = Path.Combine(root, "misaligned.img");
     var renamedIsoPath = Path.Combine(root, "renamed.img");
 
     await File.WriteAllBytesAsync(imgPath, Enumerable.Range(0, 4096).Select(i => (byte)(i % 251)).ToArray());
     await File.WriteAllBytesAsync(rawPath, new byte[2048]);
     await File.WriteAllBytesAsync(tinyPath, new byte[128]);
+    await File.WriteAllBytesAsync(misalignedPath, new byte[513]);
     await File.WriteAllBytesAsync(renamedIsoPath, CreateMinimalIsoImage());
 
     Check(await provider.CanHandleAsync(imgPath), "provider accepts a flat .img image");
     Check(await provider.CanHandleAsync(rawPath), "provider accepts a flat .raw image");
     Check(!await provider.CanHandleAsync(tinyPath), "provider rejects implausibly small raw images");
+    Check(!await provider.CanHandleAsync(misalignedPath), "provider rejects images not aligned to 512-byte sectors");
     Check(!await provider.CanHandleAsync(renamedIsoPath), "provider rejects a structured ISO renamed to .img");
     Check(!await provider.CanHandleAsync(Path.Combine(root, "missing.img")), "provider safely rejects missing images during probing");
 
@@ -31,6 +34,8 @@ try
 
     Check(info.Format == "IMG raw disk image", "IMG inspection reports the provider-backed format");
     Check(info.SizeBytes == 4096, "inspection preserves the exact source size");
+    Check(info.DetectionMethod.Contains("512-byte alignment", StringComparison.Ordinal),
+        "inspection reports the sector-alignment guard");
     Check(info.CanVerify, "raw images remain verifiable");
     Check(!info.CanExplore && !info.CanMount && !info.CanConvert,
         "unimplemented RAW browse/mount/convert capabilities stay disabled");
