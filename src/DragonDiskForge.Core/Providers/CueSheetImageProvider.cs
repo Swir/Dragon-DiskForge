@@ -317,7 +317,7 @@ public sealed class CueSheetImageProvider : ITrackLayoutProvider
 
     private static bool IsSupportedMetadataOrGapDirective(string line)
     {
-        var keyword = line.Split(' ', '\t', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        var keyword = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         return keyword is not null && keyword.ToUpperInvariant() is
             "TITLE" or "PERFORMER" or "SONGWRITER" or "CATALOG" or "ISRC" or "FLAGS" or "PREGAP" or "POSTGAP" or "CDTEXTFILE";
     }
