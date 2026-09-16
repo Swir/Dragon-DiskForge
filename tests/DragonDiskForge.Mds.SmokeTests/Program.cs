@@ -16,7 +16,7 @@ try
         new TrackSpec(1, 0xA9, 0x00, 2352, 0, 0),
         new TrackSpec(2, 0xAA, 0x04, 2048, 10, 2352L * 10));
 
-    Expect(await provider.CanHandleAsync(validMds), "Valid MDS should be recognized.");
+    Expect(await provider.CanHandleAsync(validMds), "Valid CD MDS should be recognized.");
     Expect(await provider.CanHandleAsync(validMdf), "Same-name MDF with valid MDS companion should be recognized.");
 
     var layout = await provider.ReadTrackLayoutAsync(validMds);
@@ -61,6 +61,12 @@ try
     CreatePayload(unsupportedSectorMdf, 4096L * 4);
     CreateMds(unsupportedSectorMds, new TrackSpec(1, 0xAA, 0x04, 4096, 0, 0));
     Expect(!await provider.CanHandleAsync(unsupportedSectorMds), "Unsupported MDS sector sizes must be rejected.");
+
+    var dvdMds = Path.Combine(root, "dvd.mds");
+    var dvdMdf = Path.Combine(root, "dvd.mdf");
+    CreatePayload(dvdMdf, 2048L * 8);
+    CreateDvdMds(dvdMds, new TrackSpec(1, 0xAA, 0x04, 2048, 0, 0));
+    Expect(!await provider.CanHandleAsync(dvdMds), "DVD-style MDS media must stay disabled until its layout is separately implemented and tested.");
 
     var traversalMds = Path.Combine(root, "traversal.mds");
     var traversalPayload = Path.Combine(root, "traversal.mdf");
@@ -122,12 +128,15 @@ static void CreatePayload(string path, long length)
 }
 
 static void CreateMds(string path, params TrackSpec[] tracks)
-    => CreateMdsCore(path, tracks, footerName: null, wideFooter: false);
+    => CreateMdsCore(path, tracks, footerName: null, wideFooter: false, mediumType: 0);
+
+static void CreateDvdMds(string path, params TrackSpec[] tracks)
+    => CreateMdsCore(path, tracks, footerName: null, wideFooter: false, mediumType: 0x10);
 
 static void CreateMdsWithFooter(string path, string footerName, bool wide, params TrackSpec[] tracks)
-    => CreateMdsCore(path, tracks, footerName, wide);
+    => CreateMdsCore(path, tracks, footerName, wide, mediumType: 0);
 
-static void CreateMdsCore(string path, TrackSpec[] tracks, string? footerName, bool wideFooter)
+static void CreateMdsCore(string path, TrackSpec[] tracks, string? footerName, bool wideFooter, ushort mediumType)
 {
     const int headerSize = 92;
     const int sessionSize = 24;
@@ -155,7 +164,7 @@ static void CreateMdsCore(string path, TrackSpec[] tracks, string? footerName, b
     Encoding.ASCII.GetBytes("MEDIA DESCRIPTOR").CopyTo(bytes, 0);
     bytes[16] = 1;
     bytes[17] = 0;
-    BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(18, 2), 0);
+    BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(18, 2), mediumType);
     BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(20, 2), 1);
     BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(80, 4), (uint)sessionOffset);
 
