@@ -134,7 +134,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 45%.** Provider foundation plus IMG/RAW, IMA/floppy and BIN/CUE families are real and tested.
+**Current 0.4 completion: approximately 52%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE and MDF/MDS CD families are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit provider capability reporting
@@ -193,8 +193,26 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ dedicated Windows CI smoke tests
 - ✅ PR #18 / run #172 passes BIN/CUE plus the complete previous provider/native/build/artifact regression path
 
+### MDF / MDS CD track-layout provider — ✅ complete
+- ✅ `.mds` plus same-name/descriptor-referenced companion `.mdf` resolution
+- ✅ reuses `ITrackLayoutProvider` and explicit `TrackLayout` capability
+- ✅ `MEDIA DESCRIPTOR` signature and version validation
+- ✅ medium-type validation with explicit DVD-style MDS rejection in this CD-only slice
+- ✅ bounded session-table and track-block parsing
+- ✅ user-track number, sector-size, start-sector and explicit MDF byte-offset parsing
+- ✅ mixed-sector CD layouts through explicit byte offsets rather than guessed sector math
+- ✅ same-name MDF fallback plus footer-based ASCII/UTF-16 payload names
+- ✅ `*.mdf` wildcard footer resolution to the descriptor basename
+- ✅ MDS footer, filename and MDF track ranges bounded against real file sizes
+- ✅ payload paths confined to the MDS directory
+- ✅ rooted/path-traversal and non-MDF payload references rejected
+- ✅ missing/empty payload, unsupported sector size, duplicate track and malformed range rejection
+- ✅ cancellation propagation
+- ✅ no fake Direct Browse, Mount or Convert
+- ✅ dedicated Windows CI smoke tests
+- ✅ PR #19 / run #181 passes MDF/MDS plus all previous provider/native/build/artifact regression gates
+
 ### Remaining image families
-- ⬜ MDF/MDS
 - ⬜ NRG
 - ⬜ CCD/IMG/SUB
 - ⬜ VMDK
@@ -203,7 +221,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ WIM/ESD
 - ⬜ FFU
 
-**Next provider:** **MDF/MDS**.
+**Next provider:** **NRG**.
 
 **Exit criteria:** providers expose consistent, truthful capabilities without turning Core into one monolithic parser.
 

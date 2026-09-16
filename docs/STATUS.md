@@ -14,13 +14,13 @@
 
 ## Overall project progress
 
-**35% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus three additional image families implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
+**36% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus four additional image families implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
 
 ## Current milestone
 
 **0.4 Extended Image Providers — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **45%**.
+Current milestone completion is approximately **52%**.
 
 ### Proven 0.4 slices
 
@@ -76,6 +76,21 @@ Current milestone completion is approximately **45%**.
 - unsupported FILE/track modes and mixed sector sizes within one BIN rejected rather than guessed
 - no fake Direct Browse, Mount or Convert capability
 - dedicated BIN/CUE smoke tests in Windows CI
+
+**MDF / MDS CD track-layout provider**
+
+- read-only `.mds` and companion `.mdf` provider
+- reuses `ITrackLayoutProvider` and the explicit `TrackLayout` capability
+- validates the `MEDIA DESCRIPTOR` signature, version, medium type and session/track tables
+- parses track number, sector size, start sector and explicit MDF byte offset
+- supports mixed-sector CD layouts without guessed offsets
+- resolves same-name MDF payloads plus footer names in ASCII or UTF-16, including `*.mdf`
+- descriptor offsets, footer strings and track ranges are bounded against the real files
+- payload paths are confined to the MDS directory; rooted and traversal paths are rejected
+- missing/empty MDF files, unsupported sector sizes, duplicate tracks and malformed metadata are rejected
+- DVD-style MDS media is explicitly rejected until its distinct layout is separately implemented and tested
+- no fake Direct Browse, Mount or Convert capability
+- dedicated MDF/MDS smoke tests in Windows CI
 
 ### Proven 0.3 slices
 
@@ -145,14 +160,15 @@ Current milestone completion is approximately **45%**.
 - PR #16 / run #153 — RAW/IMG provider smoke tests passed before final UI/docs synchronization
 - PR #17 / run #165 — IMA/floppy provider, full regression, Release x64 build and artifact all passed
 - PR #18 / run #172 — BIN/CUE provider, full prior-provider regression, Release x64 build and artifact all passed
+- PR #19 / run #181 — MDF/MDS CD provider, explicit DVD-scope rejection, full provider/native regression, Release x64 build and artifact all passed
 
 ### Next 0.4 provider
 
-**MDF/MDS** — optical metadata/layout inspection without claiming mount or filesystem browsing until those paths are real.
+**NRG** — Nero v1/v2 optical track-layout inspection through bounded `NERO`/`NER5` footer and DAOI/DAOX chunk parsing, without claiming extraction, mounting or filesystem browsing until those paths are real.
 
 ### Current safety state
 
-Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection, BIN/CUE track-layout inspection, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
+Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection, optical track-layout inspection, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
 
 Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during mounted-volume search, Copy out or drag-out.
 
@@ -162,7 +178,9 @@ RAW parsing validates MBR/EBR/GPT metadata against the file boundary, bounds ext
 
 Floppy inspection validates exact standard media size and, when a BPB exists, verifies capacity and CHS geometry before exposing metadata. It does not expose FAT directory/file browsing yet.
 
-BIN/CUE inspection confines referenced payloads to the CUE directory, validates BIN existence/alignment and track/index ranges, and refuses ambiguous mixed-sector offsets instead of inventing them. It does not expose filesystem or audio extraction yet.
+BIN/CUE inspection confines referenced payloads to the CUE directory, validates BIN existence/alignment and track/index ranges, and refuses ambiguous mixed-sector offsets instead of inventing them.
+
+MDF/MDS inspection bounds descriptor structures and MDF track ranges, confines footer-resolved payloads to the descriptor directory and accepts only the CD-style layout currently proven by tests. DVD-style MDS remains disabled rather than being interpreted through CD assumptions.
 
 Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state.
 
