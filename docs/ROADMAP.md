@@ -33,18 +33,23 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ---
 
-## 0.4 Extended Image Providers — 🚧 in progress
+## 0.4 Extended Image Providers — ✅ complete
 
-**Current 0.4 completion: approximately 95%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU are real and tested.
+**Required 0.4 engineering scope: 100%.** Provider foundation, eleven additional image families and provider-contract hardening are real and tested.
 
-### Provider foundation — ✅ complete
+### Provider foundation + hardening — ✅ complete
 - ✅ explicit capability reporting
 - ✅ deterministic priority/extension-first resolution
+- ✅ deterministic provider-ID tie-breaking for equal priorities
 - ✅ signature/provider fallback
 - ✅ probe/inspection failure isolation
 - ✅ cancellation hard stop
 - ✅ diagnostics and duplicate-ID protection
-- 🚧 provider-contract hardening remains the final 0.4 gate before any stability promise
+- ✅ provider descriptor snapshots at registration time
+- ✅ validated provider IDs and extension declarations
+- ✅ immutable normalized descriptor extensions
+- ✅ intentional signature-only provider support
+- ✅ safe display-name fallback
 
 ### IMG / RAW partition provider — ✅ complete
 - ✅ MBR/EBR/GPT
@@ -97,43 +102,29 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ no `blkx` decompression or filesystem browsing
 
 ### WIM / ESD metadata provider — ✅ complete
-- ✅ `.wim` / `.esd` standalone Part 1/1 containers
-- ✅ 208-byte little-endian `MSWIM\0\0\0` header
-- ✅ standard WIM version `68864` and solid/ESD version `3584`
-- ✅ flags, chunk size, GUID, part/image counts and boot index
-- ✅ lookup/XML/boot/integrity resource descriptors
-- ✅ resource flags/stored-size packing and physical-range validation
-- ✅ split/spanned and `WRITE_IN_PROGRESS` states rejected
-- ✅ unknown flags, invalid chunk size/BootIndex and out-of-file resources rejected
-- ✅ cancellation propagation
-- ✅ `ContainerMetadata` through `IWimMetadataProvider`
-- ✅ no resource decompression, file-tree traversal/extraction, encrypted ESD handling, Direct Browse, Mount or Convert
+- ✅ standalone Part 1/1 WIM/ESD metadata
+- ✅ bounded 208-byte header and resource descriptors
+- ✅ `ContainerMetadata`
+- ✅ no resource decompression/file-tree extraction
 
 ### FFU metadata provider — ✅ complete
-- ✅ `.ffu` common-header recognition
-- ✅ 32-byte `SignedImage ` security header
-- ✅ 24-byte `ImageFlash ` + NUL image header
-- ✅ SHA-256 metadata id `0x0000800C`
-- ✅ chunk geometry/alignment validation
-- ✅ bounded catalog/hash and manifest regions
-- ✅ common 248-byte store metadata
-- ✅ PlatformID, block size and descriptor count/length validation
-- ✅ all declared metadata regions bounded against the physical file
-- ✅ `ContainerMetadata` through `IFfuMetadataProvider`
-- ✅ no write-descriptor destination interpretation
-- ✅ no physical-device access, sector writing, image application, Direct Browse, Mount or Convert
-- ✅ PR #26 / run #225 passed FFU plus the complete prior provider/native/build/artifact regression path before documentation synchronization
+- ✅ bounded common `SignedImage ` / `ImageFlash ` metadata
+- ✅ chunk/catalog/hash/manifest/store bounds
+- ✅ `ContainerMetadata`
+- ✅ no write-destination interpretation or device writes
 
-### Remaining 0.4 work
-- 🚧 provider-contract hardening
+### Final 0.4 contract gate — ✅ complete
+- ✅ invalid provider declarations fail fast
+- ✅ descriptor metadata is snapshotted and immutable for resolution
+- ✅ equal-priority selection is deterministic
+- ✅ existing fallback, diagnostics, failure isolation and cancellation remain proven
+- ✅ PR #27 / run #228 passed the full provider/native/build/artifact regression path before documentation synchronization
 
-**Next gate:** **provider-contract hardening**.
-
-**Exit criteria:** provider registration, descriptor normalization, capability reporting and deterministic resolution obey explicit tested invariants without turning Core into a monolithic parser. Completion of this gate closes the required 0.4 engineering scope; it does not declare a stable public plugin API.
+**0.4 exit criteria: PASSED.** Closing this milestone hardens the internal provider contract; it does not promise a stable public plugin API.
 
 ---
 
-## 0.5 Partitions + File Systems + Image Intelligence — ⬜ planned
+## 0.5 Partitions + File Systems + Image Intelligence — ⬜ next
 
 - ⬜ cross-provider partition intelligence
 - ⬜ ISO9660/UDF
@@ -144,6 +135,8 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ⬜ Windows/Linux installer recognition
 - ⬜ architecture, labels and UUID/GUID metadata
 - ⬜ health/corruption warnings
+
+**0.5 entry rule:** build on provider capabilities rather than format-specific UI shortcuts. New filesystem/intelligence features remain disabled until their real engine path and tests exist.
 
 ---
 

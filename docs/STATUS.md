@@ -8,21 +8,21 @@
 
 **0.3 Dragon Explorer — COMPLETE ✅**
 
-## Current version
+**0.4 Extended Image Providers — COMPLETE ✅**
+
+## Current development version
 
 **0.4.0-alpha.1**
 
 ## Overall project progress
 
-**43% toward 1.0** — 0.1, 0.2 and 0.3 are complete. Milestone 0.4 now has its provider foundation plus eleven additional image families implemented and validated.
+**44% toward 1.0** — milestones 0.1 through 0.4 have completed their required engineering scope.
 
-## Current milestone
+## 0.4 final state
 
-**0.4 Extended Image Providers — IN PROGRESS 🚧**
+**100% complete.** The provider foundation, eleven additional image families and the provider-contract hardening gate are implemented and validated.
 
-Current milestone completion is approximately **95%**.
-
-## Proven 0.4 slices
+### Proven 0.4 slices
 
 1. Provider registry foundation ✅
 2. IMG/RAW partition provider ✅
@@ -36,22 +36,18 @@ Current milestone completion is approximately **95%**.
 10. DMG/UDIF metadata provider ✅
 11. WIM/ESD metadata provider ✅
 12. FFU metadata provider ✅
+13. Provider-contract hardening ✅
 
-### FFU proven scope
+### Provider-contract hardening proven scope
 
-- standalone `.ffu` containers in the proven common-header slice
-- `IFfuMetadataProvider` + `FfuMetadataInfo`
-- truthful `ContainerMetadata` capability
-- common 32-byte `SignedImage ` security header validation
-- common 24-byte `ImageFlash ` + NUL image-header validation
-- SHA-256 algorithm metadata id `0x0000800C`
-- chunk-size and chunk-alignment validation
-- bounded catalog/hash-table and image/manifest regions
-- common 248-byte store metadata parsing
-- bounded PlatformID, block size and descriptor count/length metadata
-- all declared metadata regions bounded before use
-- no write-descriptor destination interpretation
-- no payload-to-device mapping, physical-device access, sector writing, image application, Direct Browse, Mount or Convert
+- provider descriptor snapshot created at registration time
+- provider IDs validated as stable restricted identifiers
+- null, empty, path-like and duplicate normalized extensions rejected
+- intentional signature-only providers with zero extensions preserved
+- blank capability-specific display names fall back to provider ID
+- registry matching uses immutable normalized descriptor extensions
+- equal-priority providers are ordered deterministically by ID
+- extension-first resolution, fallback, failure isolation and cancellation behavior preserved
 
 ## Proven validation checkpoints
 
@@ -61,20 +57,23 @@ Current milestone completion is approximately **95%**.
 - PR #19 / run #182 — MDF/MDS
 - PR #20 / run #185 — NRG
 - PR #21 / run #198 — CCD/IMG/SUB
-- PR #22 / run #205 — final VMDK head + full regression/build/artifact
-- PR #23 / run #212 — final QCOW/QCOW2 head + full regression/build/artifact
-- PR #24 / run #219 — final DMG/UDIF head + full regression/build/artifact
-- PR #25 / run #222 — WIM/ESD + all previous providers, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
-- PR #26 / run #225 — FFU + all previous providers, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
+- PR #22 / run #205 — VMDK
+- PR #23 / run #212 — QCOW/QCOW2
+- PR #24 / run #219 — DMG/UDIF
+- PR #25 / run #222 — WIM/ESD
+- PR #26 / run #226 — final FFU head + full regression/build/artifact
+- PR #27 / run #228 — provider-contract hardening + complete provider/native/build/artifact regression
 
-## Remaining 0.4 gate
+## Next milestone
 
-**Provider-contract hardening** — tighten registry, descriptor, capability and deterministic-ordering invariants before 0.4 can close. This does not declare a stable public plugin API.
+**0.5 Partitions + File Systems + Image Intelligence — NEXT**
+
+The first 0.5 work will build cross-provider image intelligence on the hardened 0.4 contract. The planned first public beta remains `0.5.0-beta.1` and is not considered ready until the agreed 0.5 scope and beta gates are proven.
 
 ## Current safety state
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
 
-VMDK, QCOW and DMG expose metadata only. WIM/ESD and FFU expose bounded container metadata only. FFU never interprets write destinations or performs device writes.
+Closing 0.4 does not create a stable public plugin API and does not enable any new destructive operation.
 
 Interactive UAC and the real cross-process Explorer drag gesture remain manual QA cases in `docs/MANUAL-VALIDATION.md`.

@@ -9,6 +9,10 @@ await File.WriteAllBytesAsync(samplePath, new byte[128]);
 try
 {
     ValidateCapabilities();
+    ValidateRegistrationContract();
+    ValidateDisplayNameFallback();
+    await ValidateDescriptorSnapshotAsync(samplePath);
+    await ValidateDeterministicTieBreakAsync(samplePath);
     await ValidateExtensionPreferenceAsync(samplePath);
     await ValidateFallbackAsync(samplePath);
     await ValidateFailureIsolationAsync(samplePath);
@@ -39,6 +43,89 @@ static void ValidateCapabilities()
     Check(descriptor.Capabilities.HasFlag(ProviderCapabilities.DirectBrowse), "direct provider reports direct-browse capability");
     Check(descriptor.Capabilities.HasFlag(ProviderCapabilities.Search), "direct provider reports search capability");
     Check(descriptor.Capabilities.HasFlag(ProviderCapabilities.CopyOut), "direct provider reports copy-out capability");
+}
+
+static void ValidateRegistrationContract()
+{
+    ExpectThrows<ArgumentNullException>(
+        () => _ = new ProviderRegistration(null!),
+        "registration rejects null provider");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider("", [".iso"], canHandle: false)),
+        "registration rejects empty provider id");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider(" bad", [".iso"], canHandle: false)),
+        "registration rejects provider id whitespace");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider("bad id", [".iso"], canHandle: false)),
+        "registration rejects invalid provider id characters");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider("empty-ext", [""], canHandle: false)),
+        "registration rejects empty extension entries");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider("bad-ext", ["../iso"], canHandle: false)),
+        "registration rejects path-like extension entries");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider("duplicate-ext", ["iso", ".ISO"], canHandle: false)),
+        "registration rejects duplicate normalized extensions");
+
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistration(new FakeProvider("null-ext", null!, canHandle: false)),
+        "registration rejects null extension collections");
+
+    var signatureOnly = new ProviderRegistration(new FakeProvider("signature-only", [], canHandle: false));
+    Check(signatureOnly.Descriptor.Extensions.Count == 0,
+        "signature-only providers may intentionally declare no extensions");
+}
+
+static void ValidateDisplayNameFallback()
+{
+    var blank = new FakeDirectProvider("blank-name", [".iso"], canHandle: false, displayName: "   ");
+    var descriptor = ProviderDescriptor.From(blank);
+    Check(descriptor.DisplayName == "blank-name", "blank display name falls back to stable provider id");
+}
+
+static async Task ValidateDescriptorSnapshotAsync(string path)
+{
+    var mutableExtensions = new List<string> { ".iso" };
+    var provider = new FakeProvider("snapshot", mutableExtensions, canHandle: true);
+    var registration = new ProviderRegistration(provider, Priority: 50);
+
+    mutableExtensions.Clear();
+    mutableExtensions.Add(".img");
+
+    var registry = new ProviderRegistry([registration]);
+    var resolution = await registry.ResolveAsync(path);
+
+    Check(registration.Descriptor.Extensions.SequenceEqual([".iso"]),
+        "registration snapshots normalized provider extensions");
+    Check(resolution.Diagnostics.Count == 1 && resolution.Diagnostics[0].ExtensionMatched,
+        "resolution uses immutable descriptor snapshot rather than mutable provider metadata");
+}
+
+static async Task ValidateDeterministicTieBreakAsync(string path)
+{
+    var zeta = new FakeProvider("zeta", [".iso"], canHandle: true);
+    var alpha = new FakeProvider("alpha", [".iso"], canHandle: true);
+    var registry = new ProviderRegistry([
+        new ProviderRegistration(zeta, Priority: 10),
+        new ProviderRegistration(alpha, Priority: 10)
+    ]);
+
+    Check(registry.Providers.Select(x => x.Id).SequenceEqual(["alpha", "zeta"]),
+        "equal-priority provider descriptors are ordered deterministically by id");
+
+    var resolution = await registry.ResolveAsync(path);
+    Check(resolution.Provider?.Id == "alpha",
+        "equal-priority extension matches resolve deterministically by provider id");
+    Check(alpha.ProbeCount == 1 && zeta.ProbeCount == 0,
+        "deterministic winner stops later equal-priority probes");
 }
 
 static async Task ValidateExtensionPreferenceAsync(string path)
@@ -121,18 +208,12 @@ static async Task ValidateCancellationAsync(string path)
 
 static void ValidateDuplicateIds()
 {
-    try
-    {
-        _ = new ProviderRegistry([
+    ExpectThrows<ArgumentException>(
+        () => _ = new ProviderRegistry([
             new FakeProvider("same", [".iso"], canHandle: false),
             new FakeProvider("SAME", [".img"], canHandle: false)
-        ]);
-        throw new InvalidOperationException("duplicate provider ids were unexpectedly accepted");
-    }
-    catch (ArgumentException)
-    {
-        Check(true, "provider ids are unique case-insensitively");
-    }
+        ]),
+        "provider ids are unique case-insensitively");
 }
 
 static async Task ValidateInspectionAsync(string path)
@@ -143,6 +224,20 @@ static async Task ValidateInspectionAsync(string path)
 
     Check(info.Format == "FAKE", "registry delegates inspection to the resolved provider");
     Check(provider.InspectCount == 1, "resolved provider inspection runs exactly once");
+}
+
+static void ExpectThrows<TException>(Action action, string name)
+    where TException : Exception
+{
+    try
+    {
+        action();
+        throw new InvalidOperationException($"{name}: expected {typeof(TException).Name}");
+    }
+    catch (TException)
+    {
+        Check(true, name);
+    }
 }
 
 static void Check(bool condition, string name)
@@ -212,12 +307,19 @@ class FakeProvider : IDiskImageProvider
 
 sealed class FakeDirectProvider : FakeProvider, IDirectBrowseProvider
 {
-    public FakeDirectProvider(string id, IReadOnlyCollection<string> extensions, bool canHandle)
+    private readonly string _displayName;
+
+    public FakeDirectProvider(
+        string id,
+        IReadOnlyCollection<string> extensions,
+        bool canHandle,
+        string displayName = "Fake Direct")
         : base(id, extensions, canHandle)
     {
+        _displayName = displayName;
     }
 
-    public string DisplayName => "Fake Direct";
+    public string DisplayName => _displayName;
 
     public Task<IReadOnlyList<ExplorerEntry>> ListAsync(string imagePath, string directoryPath, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<ExplorerEntry>>([]);

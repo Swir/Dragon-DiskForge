@@ -7,7 +7,7 @@ public sealed class ProviderRegistry
     private readonly IReadOnlyList<ProviderRegistration> _registrations;
 
     public ProviderRegistry(IEnumerable<IDiskImageProvider> providers)
-        : this(providers.Select(provider => new ProviderRegistration(provider)))
+        : this(CreateRegistrations(providers))
     {
     }
 
@@ -20,17 +20,14 @@ public sealed class ProviderRegistry
             .ToArray();
 
         var duplicate = materialized
-            .GroupBy(x => x.Provider.Id, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(x => x.Descriptor.Id, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(group => group.Count() > 1);
         if (duplicate is not null)
             throw new ArgumentException($"Provider id '{duplicate.Key}' is registered more than once.", nameof(registrations));
 
-        if (materialized.Any(x => string.IsNullOrWhiteSpace(x.Provider.Id)))
-            throw new ArgumentException("Every provider must have a non-empty id.", nameof(registrations));
-
         _registrations = materialized
             .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.Provider.Id, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(x => x.Descriptor.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -150,14 +147,13 @@ public sealed class ProviderRegistry
             .Select((registration, index) => new Candidate(
                 registration,
                 index,
-                ExtensionMatches(registration.Provider, extension)))
+                ExtensionMatches(registration.Descriptor, extension)))
             .OrderByDescending(x => x.ExtensionMatched)
             .ThenBy(x => x.Index);
     }
 
-    private static bool ExtensionMatches(IDiskImageProvider provider, string extension)
-        => extension.Length > 0 && provider.Extensions.Any(value =>
-            string.Equals(NormalizeExtension(value), extension, StringComparison.OrdinalIgnoreCase));
+    private static bool ExtensionMatches(ProviderDescriptor descriptor, string extension)
+        => extension.Length > 0 && descriptor.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
 
     private static string NormalizeExtension(string? extension)
     {
@@ -166,6 +162,12 @@ public sealed class ProviderRegistry
 
         var value = extension.Trim();
         return value.StartsWith('.') ? value : "." + value;
+    }
+
+    private static ProviderRegistration[] CreateRegistrations(IEnumerable<IDiskImageProvider> providers)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+        return providers.Select(provider => new ProviderRegistration(provider)).ToArray();
     }
 
     private sealed record Candidate(

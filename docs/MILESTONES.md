@@ -20,11 +20,11 @@ Released version: **0.3.0**.
 - Safe Copy-only drag-out ✅
 - Provider-backed direct ISO browsing ✅
 
-## 0.4 Extended Image Providers — IN PROGRESS 🚧
+## 0.4 Extended Image Providers — COMPLETE ✅
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **95%**.
+Required 0.4 engineering scope: **100% complete**.
 
 ### Completed execution slices
 
@@ -40,28 +40,19 @@ Current milestone completion is approximately **95%**.
 10. **DMG / UDIF metadata provider** ✅
 11. **WIM / ESD metadata provider** ✅
 12. **FFU metadata provider** ✅
+13. **Provider-contract hardening** ✅
 
-### FFU execution slice ✅
+### Provider-contract hardening ✅
 
-- `.ffu` container recognition
-- `IFfuMetadataProvider` + `FfuMetadataInfo`
-- truthful `ContainerMetadata` capability
-- common 32-byte `SignedImage ` security-header validation
-- common 24-byte `ImageFlash ` + NUL image-header validation
-- SHA-256 algorithm metadata id `0x0000800C`
-- chunk geometry and alignment validation
-- bounded catalog/hash-table and image/manifest regions
-- common 248-byte store metadata parsing
-- PlatformID, block size and descriptor count/length metadata
-- all declared metadata ranges bounded against the physical file
-- cancellation propagation
-- no write-descriptor destination interpretation
-- no device access, payload application, sector writing, Direct Browse, Mount or Convert
-- dedicated Windows CI smoke tests
-
-### Remaining execution slice
-
-- provider-contract hardening before any public stability promise
+- validated provider registration and stable provider IDs
+- immutable normalized descriptor snapshots
+- invalid/duplicate extension declarations rejected early
+- signature-only provider support retained
+- safe display-name fallback to provider ID
+- deterministic priority + provider-ID ordering
+- descriptor-based extension matching
+- cancellation, fallback and failure isolation preserved
+- dedicated registry tests plus complete existing regression path
 
 ### Validation checkpoints
 
@@ -70,11 +61,16 @@ Current milestone completion is approximately **95%**.
 - PR #18 / run #172 — BIN/CUE
 - PR #19 / run #182 — MDF/MDS
 - PR #20 / run #185 — NRG
-- PR #21 / run #198 — CCD/IMG/SUB final head
-- PR #22 / run #205 — VMDK final head
-- PR #23 / run #212 — QCOW/QCOW2 final head
-- PR #24 / run #219 — DMG/UDIF final head
-- PR #25 / run #222 — WIM/ESD code head passed full provider/native/build/artifact path
-- PR #26 / run #225 — FFU code head passed full provider/native/build/artifact path
+- PR #21 / run #198 — CCD/IMG/SUB
+- PR #22 / run #205 — VMDK
+- PR #23 / run #212 — QCOW/QCOW2
+- PR #24 / run #219 — DMG/UDIF
+- PR #25 / run #222 — WIM/ESD
+- PR #26 / run #226 — final FFU docs-synchronized head
+- PR #27 / run #228 — hardening code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
 
-A capability becomes user-visible only after its real backing path and tests exist.
+Closing 0.4 completes the internal engineering contract only. It does not declare a stable public plugin API.
+
+## 0.5 Partitions + File Systems + Image Intelligence — NEXT ⬜
+
+The next execution work begins from the hardened provider layer. A capability becomes user-visible only after its real backing path and tests exist.

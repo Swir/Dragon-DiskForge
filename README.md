@@ -6,19 +6,20 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current version — 0.4.0-alpha.1
+## Current development version — 0.4.0-alpha.1
 
-## Project progress — 43% toward 1.0
+## Project progress — 44% toward 1.0
 
-`█████████░░░░░░░░░░░ 43%`
+`█████████░░░░░░░░░░░ 44%`
 
-**Overall completion:** **43%**
+**Overall completion:** **44%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~95%** 🚧
-- `0.5 → 1.0` — planned / future milestones
+- `0.4 Extended Image Providers` — **100%** ✅
+- `0.5 Partitions + File Systems + Image Intelligence` — next milestone
+- `0.6 → 1.0` — planned / future milestones
 
 > The progress indicator changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
 
@@ -32,19 +33,25 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 - managed ISO9660/Joliet direct browsing without mounting
 - shared Core SHA-256 verification with progress/cancellation
 
-## 0.4 Extended Image Providers 🚧
+## 0.4 Extended Image Providers — COMPLETE ✅
 
-The provider foundation and **eleven additional image families** are now implemented and proven.
+The provider foundation, **eleven additional image families**, and the provider-contract hardening gate are implemented and proven.
 
-### Provider architecture
+### Hardened provider architecture
 
 - central Core `ProviderRegistry`
 - explicit truthful capabilities
 - deterministic priority/extension-first resolution
+- deterministic provider-ID tie-breaking for equal priorities
 - provider/signature fallback
 - probe and inspection failure isolation
 - cancellation as a hard stop
-- diagnostics and duplicate-ID protection
+- diagnostics and case-insensitive duplicate-ID protection
+- fail-fast provider registration for null providers, invalid IDs and invalid extension declarations
+- immutable normalized descriptor snapshots used for matching
+- duplicate normalized extensions rejected inside one provider
+- signature-only providers may intentionally declare zero extensions
+- blank capability-specific display names safely fall back to the stable provider ID
 
 ### Proven provider slices
 
@@ -60,29 +67,24 @@ The provider foundation and **eleven additional image families** are now impleme
 - **WIM / ESD** ✅ — bounded 208-byte header and resource metadata; `ContainerMetadata`
 - **FFU** ✅ — bounded common Full Flash Update security/image/store metadata; `ContainerMetadata`
 
-### FFU metadata provider ✅
+### 0.4 final hardening gate ✅
 
-- dedicated `IFfuMetadataProvider` + `FfuMetadataInfo`
-- truthful `ContainerMetadata` capability
-- validates the common 32-byte `SignedImage ` security header
-- validates the 24-byte `ImageFlash ` + NUL image header
-- supports the proven SHA-256 metadata algorithm id `0x0000800C`
-- validates chunk size, catalog/hash-table region, manifest region and chunk alignment
-- parses the common 248-byte store header metadata used by the proven slice
-- reads bounded PlatformID, block size, write-descriptor count/length and validation-descriptor count/length
-- all declared metadata regions are bounded against the physical FFU file
-- base Core signature detection recognizes `SignedImage `
-- write-descriptor locations are not interpreted and payload chunks are never mapped to physical media
-- Direct Browse, Mount, Convert, device access, sector writing and image application remain disabled
-- PR #26 / run #225 passed FFU tests, all previous provider tests, Explorer safety, ISO/native Windows regression, Release x64 build and artifact publication ✅
+- provider descriptors are snapshotted and normalized when registration is created
+- registry resolution uses immutable descriptor extensions rather than mutable provider metadata
+- invalid provider IDs/extensions fail fast with explicit exceptions
+- equal-priority providers resolve deterministically by stable provider ID
+- existing extension-first resolution, fallback, failure isolation and cancellation behavior remain intact
+- PR #27 / run #228 passed the hardened registry tests, all provider tests, Explorer safety, ISO/native Windows regression, Release x64 build and artifact publication ✅
 
-### Remaining 0.4 gate
+This completes the required **0.4 engineering scope**. It does **not** declare a stable public plugin API; public compatibility guarantees remain a later release concern.
 
-**Provider-contract hardening** — tighten registry/descriptor invariants and deterministic provider behavior before any public stability promise. This is hardening of the internal 0.4 contract, not a declaration of a stable public plugin API.
+## Next milestone — 0.5
+
+**Partitions + File Systems + Image Intelligence** will build on the hardened provider layer with cross-provider partition intelligence, filesystem recognition and boot/install metadata. User-visible capabilities will continue to follow the **No fake features** rule.
 
 The cross-process human drag gesture and normal-user UAC prompt remain manual QA gates in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md).
 
-The planned first public GitHub beta is **`0.5.0-beta.1`** after required 0.4 provider work and the agreed 0.5 image-intelligence scope are proven. See [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
+The planned first public GitHub beta is **`0.5.0-beta.1`** after the agreed 0.5 image-intelligence scope is proven. See [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md) and [`docs/MILESTONES.md`](docs/MILESTONES.md).
 
@@ -92,7 +94,7 @@ Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution s
 - x64 + ARM64 targets
 - shared Core engine for GUI and future CLI
 - isolated Windows native-storage layer
-- provider registry with explicit capabilities/fallback/failure isolation
+- hardened provider registry with explicit capabilities/fallback/failure isolation
 - bounded read-only partition, floppy, optical-layout, virtual-disk and container metadata parsers
 
 ## Build on Windows
@@ -103,7 +105,7 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, hardened provider-registry invariants, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
 
 ## Safety design
 
