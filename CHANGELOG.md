@@ -14,26 +14,26 @@ The project follows semantic versioning while it evolves toward 1.0.
 - read-only QCOW v1 and QCOW2 v2/v3 metadata provider
 - read-only Apple DMG / UDIF metadata provider
 - read-only WIM / ESD container metadata provider
-- `IWimMetadataProvider` + `WimMetadataInfo`
-- truthful `ContainerMetadata` capability for archive/container formats such as WIM/ESD
-- little-endian 208-byte `MSWIM\0\0\0` header parsing for version, flags, chunk size, GUID, part/image counts and boot index
-- bounded lookup-table, XML, boot-metadata and integrity resource-descriptor parsing
-- dedicated WIM/ESD smoke tests covering standard WIM, solid/ESD, invalid magic/header/version, split/spanned images, write-in-progress state, BootIndex, resource bounds/flags, chunk size, cancellation and registry capabilities
+- read-only FFU container metadata provider
+- `IFfuMetadataProvider` + `FfuMetadataInfo`
+- FFU `ContainerMetadata` capability integration
+- bounded common FFU security/image/store metadata parsing
+- FFU base-signature recognition through `SignedImage `
+- dedicated FFU smoke tests covering signatures, header sizes, SHA-256 algorithm metadata, chunk alignment, catalog/hash/manifest bounds, PlatformID, store block size, descriptor counts/lengths, cancellation and registry capabilities
 
 ### Changed
-- application registry now includes WIM / ESD metadata after DMG / UDIF
-- project progress advances to **42% toward 1.0** after the tenth real additional 0.4 image family
-- 0.4 milestone completion advances to approximately **89%**
-- next 0.4 provider becomes **FFU**
+- application registry now includes FFU metadata after WIM / ESD
+- project progress advances to **43% toward 1.0** after the eleventh real additional 0.4 image family
+- 0.4 milestone completion advances to approximately **95%**
+- remaining 0.4 work becomes **provider-contract hardening** rather than another required image family
 
 ### Safety
 - all provider paths remain read-only-first
-- WIM/ESD resource descriptors are bounded against the physical file before use
-- split/spanned WIM is rejected until companion-part handling exists
-- `WRITE_IN_PROGRESS`, unknown flags, invalid chunk geometry and invalid BootIndex are rejected rather than guessed
-- WIM/ESD resources are not decompressed and embedded image file trees are not traversed or extracted
-- encrypted ESD payloads are not decrypted
-- no WIM/ESD Direct Browse, Mount or Convert is exposed
+- FFU catalog/hash, image/manifest and store metadata regions are bounded against the physical file before use
+- FFU write-descriptor destinations are not interpreted
+- FFU payload chunks are not mapped to physical media
+- no physical-device access, sector writing, image application, FFU Direct Browse, Mount or Convert is exposed
+- unknown or contradictory FFU structural metadata is rejected rather than guessed
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -46,9 +46,9 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #23 / run #212 — final QCOW/QCOW2 head + full regression/build/artifact
 - PR #24 / run #219 — final DMG/UDIF head + full regression/build/artifact
 - PR #25 / run #222 — WIM/ESD metadata tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication
+- PR #26 / run #225 — FFU metadata tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication
 
 ### Planned
-- remaining 0.4 image provider: FFU
 - provider-contract hardening before any public stability promise
 
 ## [0.3.0] - 2026-09-15

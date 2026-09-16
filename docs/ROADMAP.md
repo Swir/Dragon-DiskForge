@@ -35,7 +35,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 89%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF and WIM/ESD are real and tested.
+**Current 0.4 completion: approximately 95%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit capability reporting
@@ -44,7 +44,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ probe/inspection failure isolation
 - ✅ cancellation hard stop
 - ✅ diagnostics and duplicate-ID protection
-- 🚧 public stable plugin/provider contract remains a later stability gate
+- 🚧 provider-contract hardening remains the final 0.4 gate before any stability promise
 
 ### IMG / RAW partition provider — ✅ complete
 - ✅ MBR/EBR/GPT
@@ -108,14 +108,28 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ cancellation propagation
 - ✅ `ContainerMetadata` through `IWimMetadataProvider`
 - ✅ no resource decompression, file-tree traversal/extraction, encrypted ESD handling, Direct Browse, Mount or Convert
-- ✅ PR #25 / run #222 passed WIM/ESD plus the complete prior provider/native/build/artifact regression path before documentation synchronization
 
-### Remaining image families
-- ⬜ FFU
+### FFU metadata provider — ✅ complete
+- ✅ `.ffu` common-header recognition
+- ✅ 32-byte `SignedImage ` security header
+- ✅ 24-byte `ImageFlash ` + NUL image header
+- ✅ SHA-256 metadata id `0x0000800C`
+- ✅ chunk geometry/alignment validation
+- ✅ bounded catalog/hash and manifest regions
+- ✅ common 248-byte store metadata
+- ✅ PlatformID, block size and descriptor count/length validation
+- ✅ all declared metadata regions bounded against the physical file
+- ✅ `ContainerMetadata` through `IFfuMetadataProvider`
+- ✅ no write-descriptor destination interpretation
+- ✅ no physical-device access, sector writing, image application, Direct Browse, Mount or Convert
+- ✅ PR #26 / run #225 passed FFU plus the complete prior provider/native/build/artifact regression path before documentation synchronization
 
-**Next provider:** **FFU**.
+### Remaining 0.4 work
+- 🚧 provider-contract hardening
 
-**Exit criteria:** providers expose truthful capabilities without turning Core into a monolithic parser. Provider-contract hardening remains required before any public stability promise.
+**Next gate:** **provider-contract hardening**.
+
+**Exit criteria:** provider registration, descriptor normalization, capability reporting and deterministic resolution obey explicit tested invariants without turning Core into a monolithic parser. Completion of this gate closes the required 0.4 engineering scope; it does not declare a stable public plugin API.
 
 ---
 
