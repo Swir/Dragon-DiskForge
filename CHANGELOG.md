@@ -15,25 +15,23 @@ The project follows semantic versioning while it evolves toward 1.0.
 - read-only Apple DMG / UDIF metadata provider
 - read-only WIM / ESD container metadata provider
 - read-only FFU container metadata provider
-- `IFfuMetadataProvider` + `FfuMetadataInfo`
-- FFU `ContainerMetadata` capability integration
-- bounded common FFU security/image/store metadata parsing
-- FFU base-signature recognition through `SignedImage `
-- dedicated FFU smoke tests covering signatures, header sizes, SHA-256 algorithm metadata, chunk alignment, catalog/hash/manifest bounds, PlatformID, store block size, descriptor counts/lengths, cancellation and registry capabilities
+- hardened provider registration/descriptor contract and deterministic equal-priority ordering
 
 ### Changed
-- application registry now includes FFU metadata after WIM / ESD
-- project progress advances to **43% toward 1.0** after the eleventh real additional 0.4 image family
-- 0.4 milestone completion advances to approximately **95%**
-- remaining 0.4 work becomes **provider-contract hardening** rather than another required image family
+- provider registrations now snapshot validated descriptors at creation time
+- registry extension matching now uses immutable normalized descriptor extensions rather than mutable provider metadata
+- invalid provider IDs, null/empty/invalid extension entries and duplicate normalized extensions fail fast
+- blank capability-specific display names fall back to the stable provider ID
+- project progress advances to **44% toward 1.0**
+- **0.4 Extended Image Providers reaches 100% of its required engineering scope**
+- next milestone becomes **0.5 Partitions + File Systems + Image Intelligence**
 
 ### Safety
 - all provider paths remain read-only-first
-- FFU catalog/hash, image/manifest and store metadata regions are bounded against the physical file before use
-- FFU write-descriptor destinations are not interpreted
-- FFU payload chunks are not mapped to physical media
-- no physical-device access, sector writing, image application, FFU Direct Browse, Mount or Convert is exposed
-- unknown or contradictory FFU structural metadata is rejected rather than guessed
+- existing cancellation, failure isolation and truthful capability behavior remains intact
+- hardening adds no new mount, extraction, conversion or write capability
+- signature-only providers remain supported without requiring fake file extensions
+- no stable public plugin API is declared by closing the internal 0.4 contract gate
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -45,11 +43,13 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #22 / run #205 — final VMDK head + full provider/native regression/build/artifact
 - PR #23 / run #212 — final QCOW/QCOW2 head + full regression/build/artifact
 - PR #24 / run #219 — final DMG/UDIF head + full regression/build/artifact
-- PR #25 / run #222 — WIM/ESD metadata tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication
-- PR #26 / run #225 — FFU metadata tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication
+- PR #25 / run #222 — WIM/ESD + full regression/build/artifact
+- PR #26 / run #226 — final FFU docs-synchronized head + full regression/build/artifact
+- PR #27 / run #228 — provider-contract hardening + all provider/native/Explorer tests + Release x64 build and artifact
 
 ### Planned
-- provider-contract hardening before any public stability promise
+- 0.5 partition/filesystem/image-intelligence work
+- public beta `0.5.0-beta.1` only after the agreed 0.5 scope and beta gates are proven
 
 ## [0.3.0] - 2026-09-15
 
