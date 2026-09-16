@@ -27,10 +27,11 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] centralized semantic development-version metadata
 - [x] independently verified clean-package candidate gate
 - [x] independently bounded UDF root-directory traversal for validated Type 1 physical mappings
-- [ ] truthful guest-sector reader foundation for sparse/compressed virtual disks
+- [x] bounded QCOW2 v2/v3 standard uncompressed guest-byte reader foundation
+- [ ] VMDK sparse guest-byte reader and common guest-byte integration into bounded filesystem intelligence
 - [ ] final 0.5 beta-scope hardening checkpoint
 
-Latest validated checkpoints include PR #35 / run #270 and PR #36 / implementation run #274. Run #274 proves the new bounded UDF traversal gate plus the complete existing automated provider, Explorer, native Windows, Release x64, clean-package build/verification and artifact path.
+Latest validated checkpoints include PR #35 / run #270, PR #36 / implementation run #274 and PR #37 / implementation run #277. Run #277 proves the new QCOW2 guest-byte reader gate plus the complete existing automated provider, intelligence, Explorer, native Windows, Release x64, clean-package build/verification and artifact path.
 
 ### Windows beta package
 - [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build
@@ -41,7 +42,7 @@ Latest validated checkpoints include PR #35 / run #270 and PR #36 / implementati
 - [x] candidate package manifest records semantic version, ProductVersion/FileVersion, entry-point hash, icon and architecture
 - [x] independent CI verification reopens the ZIP and validates checksum/manifest/version/hash/icon/content policy before artifact upload
 - [x] canonical Dragon icon is included in the clean package root
-- [x] run #270 clean artifact was independently downloaded after CI: sidecar SHA-256 matched the nested ZIP; manifest version was `0.5.0-alpha.1`; executable SHA matched the manifest; one application EXE and zero PDB files were present
+- [x] run #270 clean artifact was independently downloaded and verified
 - [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
@@ -56,6 +57,7 @@ Latest validated checkpoints include PR #35 / run #270 and PR #36 / implementati
 - [x] partition/filesystem/intelligence/report automated gates green
 - [x] bounded UDF traversal gate green
 - [x] NTFS/architecture hardening gate green
+- [x] QCOW2 guest-byte reader gate green
 - [x] ISO direct-browse integration green
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
@@ -75,7 +77,7 @@ Latest validated checkpoints include PR #35 / run #270 and PR #36 / implementati
 
 ## Current beta readiness
 
-**NOT READY.** Automated Windows CI now proves the full existing regression path, bounded UDF root-directory traversal for validated Type 1 physical mappings, and the versioned clean ZIP/checksum/independent package-verification path. The remaining blockers are the unfinished truthful sparse/compressed guest-sector reader foundation, final 0.5 beta-scope hardening, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
+**NOT READY.** Automated Windows CI now proves the full existing regression path, bounded UDF root traversal, clean-package verification and the first truthful QCOW2 guest-byte reader. Remaining blockers are VMDK/common guest-byte integration, final 0.5 beta-scope hardening, final `0.5.0-beta.1` suffix promotion, and clean-machine/normal-user UAC/real cross-process drag-out/manual regression.
 
 ## Rule
 
