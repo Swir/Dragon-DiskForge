@@ -212,7 +212,7 @@ public sealed class UdfTraversalService
                 fileSetPartition,
                 blockSize,
                 detection.RegionSizeBytes,
-                minimumLength: 512,
+                minimumLength: blockSize,
                 out var fileSetOffset,
                 out var fileSetError))
         {
@@ -285,7 +285,7 @@ public sealed class UdfTraversalService
                 rootPartition,
                 blockSize,
                 detection.RegionSizeBytes,
-                minimumLength: 176,
+                minimumLength: blockSize,
                 out var rootEntryOffset,
                 out var rootMapError))
         {
@@ -869,6 +869,9 @@ public sealed class UdfTraversalService
             throw new InvalidDataException("Filesystem detection exceeds the physical image.");
         }
     }
+
+    private static bool IsPowerOfTwo(int value)
+        => value > 0 && (value & (value - 1)) == 0;
 
     private static bool IsPowerOfTwo(uint value)
         => value > 0 && (value & (value - 1)) == 0;
