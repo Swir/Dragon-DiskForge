@@ -48,7 +48,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 82%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface and a deeper bounded filesystem-evidence layer are implemented and validated.
+**Current 0.5 completion: approximately 88%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation and a clean Windows package candidate path are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
@@ -90,7 +90,6 @@ See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](BOOT-INSTALLER-INTELLIGENCE.md).
 - ✅ `ImageIntelligenceService` composes only already-proven provider/intelligence capabilities
 - ✅ partition names and filesystem labels/identifiers retain source + partition provenance
 - ✅ WIM/ESD container GUIDs and FFU PlatformIDs are exposed as bounded identity evidence
-- ✅ architecture hints flow from the bounded boot/installer layer
 - ✅ partition structural findings flow into a shared health model
 - ✅ exFAT dirty/media-failure, ext state, NTFS backup-boot and FAT32 backup-boot checks
 - ✅ metadata-only sparse/compressed/container providers do not gain fake filesystem probing
@@ -118,14 +117,34 @@ See [`docs/IMAGE-INTELLIGENCE.md`](IMAGE-INTELLIGENCE.md).
 - ✅ bounded main volume-descriptor sequence with a 16 MiB inspection ceiling
 - ✅ validated UDF Primary/Logical Volume Descriptor d-strings become identity evidence
 - ✅ generated valid/corrupt exFAT, FAT32 FSInfo, valid/corrupt UDF and cancellation tests
-- ✅ PR #33 / implementation run #262 passed the new gate plus all prior provider/Explorer/native Windows/Release x64/artifact checks before documentation synchronization
+- ✅ PR #33 / implementation run #262 passed the new gate plus the complete prior regression/build/artifact path
 
 See [`docs/FILESYSTEM-DEPTH.md`](FILESYSTEM-DEPTH.md).
+
+### NTFS metadata + architecture reconciliation hardening — ✅ complete
+- ✅ bounded `$MFT` and `$MFTMirr` cluster/range validation inside recognized NTFS regions
+- ✅ NTFS FILE-record size decoding from the signed boot metadata field
+- ✅ Update Sequence Array count/range and sector-trailer validation before accepting FILE records
+- ✅ update-sequence fixup normalization before conservative `$MFT` / `$MFTMirr` first-record comparison
+- ✅ explicit corruption/range/mirror-divergence findings; no repair, attribute traversal or directory traversal
+- ✅ independent boot-path and installer-path architecture hints are preserved and de-duplicated
+- ✅ direct one-to-one architecture disagreement becomes `ARCHITECTURE_EVIDENCE_CONFLICT` instead of a guessed winner
+- ✅ multi-architecture boot evidence is retained without being mislabeled as a direct conflict
+- ✅ generated NTFS corruption/range, architecture reconciliation and cancellation tests
+- ✅ PR #34 / implementation run #266 passed the hardening gate plus complete provider/Explorer/native Windows/Release x64 regression
+
+### Beta package preparation — ✅ validated candidate path
+- ✅ CI creates a clean Windows x64 ZIP candidate after the Release build
+- ✅ package staging rejects missing/multiple application EXEs, PDB files and test-only payloads
+- ✅ package manifest records product, architecture, entry point and debug-symbol policy
+- ✅ SHA-256 checksum is generated next to the ZIP
+- ✅ run #266 candidate was independently downloaded: checksum matched; one application EXE; zero PDB/test-only files
+- 🚧 final beta version metadata, clean-machine runtime and public GitHub Release packaging remain separate release gates
 
 ### Filesystem family depth
 - 🚧 ISO9660/UDF — ISO direct browsing proven; UDF VRS plus bounded primary anchor/main descriptor-sequence metadata proven; independently bounded UDF traversal remains
 - 🚧 FAT/FAT32/exFAT — recognition plus selected backup/checksum/FSInfo health evidence proven; deeper reader functionality remains
-- 🚧 NTFS metadata — bounded boot metadata plus backup-boot consistency proven; deeper supported metadata remains
+- 🚧 NTFS metadata — bounded boot metadata, backup-boot consistency, `$MFT`/`$MFTMirr` geometry, FILE-record update-sequence validation and first-record mirror comparison proven; broader NTFS traversal remains unsupported
 - ✅ ext-family recognition — ext2/ext3/ext4 recognition/basic metadata and bounded superblock state evidence proven
 
 ### Image-intelligence depth
@@ -133,15 +152,15 @@ See [`docs/FILESYSTEM-DEPTH.md`](FILESYSTEM-DEPTH.md).
 - ✅ Windows/Linux installer-recognition foundation through bounded Direct Browse file evidence
 - ✅ cross-source identity aggregation for partition/filesystem/container/platform identifiers
 - ✅ bounded architecture-hint aggregation foundation
+- ✅ stronger reconciliation of independent boot/installer architecture hints
 - ✅ evidence-backed health/corruption foundation for partition structure and selected filesystem metadata
 - ✅ user-facing text/JSON analysis report surface
-- 🚧 stronger reconciliation when several independent architecture sources exist
-- 🚧 deeper supported NTFS and UDF reader paths
+- 🚧 deeper independently bounded UDF reader path
 - ⬜ virtual guest-sector readers before filesystems inside sparse/compressed virtual disks can be analyzed
 
 **0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No format-specific UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** deeper supported NTFS metadata, cross-source architecture reconciliation and independently tested guest-sector reader paths for sparse/compressed virtual disks; then final 0.5 beta-scope hardening.
+**Next engineering focus:** independently bounded UDF traversal where it can be proven safely, then truthful guest-sector reader foundations for sparse/compressed virtual disks and final 0.5 beta hardening/manual QA.
 
 ---
 

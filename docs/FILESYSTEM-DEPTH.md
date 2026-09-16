@@ -1,6 +1,6 @@
 # Dragon DiskForge — Filesystem Depth Evidence
 
-This document defines the bounded read-only filesystem checks implemented by `FileSystemDepthService` for milestone 0.5.
+This document defines the bounded read-only filesystem checks implemented by the milestone 0.5 depth layer: `FileSystemDepthService` for exFAT/FAT32/UDF evidence and `NtfsMetadataDepthService` for deeper supported NTFS metadata.
 
 ## Contract
 
@@ -11,7 +11,7 @@ Every depth read must remain inside both:
 1. the recognized filesystem region; and
 2. the physical image file.
 
-The service does not mount, repair, modify, traverse directory trees or translate guest sectors inside sparse/compressed virtual disks.
+The services do not mount, repair, modify, traverse directory trees or translate guest sectors inside sparse/compressed virtual disks.
 
 ## exFAT depth
 
@@ -44,6 +44,27 @@ Implemented evidence:
 
 This complements the existing FAT32 primary/backup boot-sector consistency check.
 
+## NTFS metadata depth
+
+For a recognized NTFS volume, `NtfsMetadataDepthService` validates selected boot-derived locations and the first mirrored FILE record without claiming general NTFS traversal.
+
+Implemented evidence:
+
+- sector/cluster geometry is revalidated before deeper reads
+- boot-declared volume size must fit the already-recognized NTFS region
+- `$MFT` and `$MFTMirr` Logical Cluster Numbers must lie inside the bounded volume
+- signed clusters-per-FILE-record encoding is decoded conservatively; accepted FILE record sizes are power-of-two values from 512 bytes through 1 MiB
+- clusters-per-index-buffer encoding receives the same bounded size sanity check
+- first `$MFT` and `$MFTMirr` FILE records must fit the recognized region
+- `FILE` signature validation
+- Update Sequence Array offset/count/range validation
+- USA count must match the number of sectors in the bounded FILE record
+- every sector trailer must match the Update Sequence Number before fixup restoration
+- record header `first attribute`, `bytes in use` and `bytes allocated` fields must remain internally bounded
+- after validated fixup restoration, the first `$MFT` and `$MFTMirr` records are compared conservatively; divergence is reported as a warning
+
+The service never repairs an Update Sequence Array, writes replacement words back to disk, follows NTFS attributes or walks the directory tree. The restored record exists only in memory for validation/comparison.
+
 ## UDF depth
 
 Basic UDF recognition still begins with a bounded Volume Recognition Sequence (`BEA01`, `NSR02`/`NSR03`, `TEA01`). The depth layer adds independently validated metadata before accepting deeper UDF evidence.
@@ -66,15 +87,16 @@ OSTA compressed Unicode d-strings with compression IDs 8 and 16 are decoded only
 
 ## Evidence flow
 
-`ImageReportService` runs the depth layer only when the existing image-intelligence result contains recognized filesystems. Validated depth identity and health findings are merged into the report analysis with deterministic de-duplication and ordering.
+`ImageReportService` runs the generic depth layer only when the existing image-intelligence result contains recognized filesystems, then runs the NTFS-specific depth service only when a recognized NTFS region exists. Validated identity and health findings are merged into the report analysis with deterministic de-duplication and ordering.
 
-This means the user-facing Analyze / JSON report can expose deeper UDF identity and exFAT/FAT32/UDF health evidence without broadening the provider capability model or enabling unsupported actions.
+This means the user-facing Analyze / JSON report can expose deeper exFAT/FAT32/UDF and NTFS evidence without broadening provider capabilities or enabling unsupported actions.
 
 ## Safety limitations
 
 - No repair or write operations.
 - No directory/file traversal is added by this layer.
-- No UDF file-tree reader is claimed.
+- No NTFS attribute/MFT traversal is claimed beyond the explicitly validated first mirrored FILE record.
+- No UDF file-tree reader is claimed yet.
 - No guest-sector translation for VMDK/QCOW/DMG or other sparse/compressed mappings.
 - A missing finding is **not** proof that a filesystem is fully healthy.
 - The checks intentionally validate only metadata structures explicitly implemented and tested.
@@ -88,6 +110,10 @@ Generated fixtures cover:
 - FAT32 FSInfo values outside the bounded cluster geometry
 - valid UDF VRS + anchor + PVD + LVD + terminating descriptor
 - corrupted UDF primary-anchor tag checksum
+- valid `$MFT` / `$MFTMirr` first FILE records
+- corrupted NTFS Update Sequence Array sector trailer
+- logically valid but divergent `$MFT` / `$MFTMirr` first records
+- out-of-range `$MFTMirr` LCN
 - cancellation as a hard stop
 
-PR #33 implementation head was validated by Windows CI run #262, including the new filesystem-depth gate, all prior provider/intelligence tests, Explorer/native Windows integration, Release x64 build and artifact publication. Documentation synchronization is gated by a fresh final CI run before merge.
+PR #33 implementation head was validated by Windows CI run #262 for exFAT/FAT32/UDF depth. PR #34 implementation run #266 added the NTFS/architecture hardening gate and passed the complete provider, Explorer, native Windows, Release x64 and clean-package path before documentation synchronization.

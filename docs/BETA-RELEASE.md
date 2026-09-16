@@ -2,7 +2,7 @@
 
 The first public GitHub beta is targeted for **0.5.0-beta.1**.
 
-A workflow artifact is useful engineering evidence, but it is **not automatically a public beta**. The beta must be independently downloadable, reproducible, tested on the supported Windows path and documented with truthful limitations.
+A workflow artifact is useful engineering evidence, but it is **not automatically a public beta**. The beta must be independently downloadable, reproducible through the documented pipeline, tested on the supported Windows path and documented with truthful limitations.
 
 ## Required before 0.5.0-beta.1
 
@@ -22,28 +22,37 @@ A workflow artifact is useful engineering evidence, but it is **not automaticall
 - [x] unified identity/health intelligence foundation
 - [x] Windows Analyze + text/JSON reporting surface
 - [x] deeper bounded exFAT/FAT32/UDF filesystem evidence
-- [ ] deeper supported NTFS / remaining agreed 0.5 intelligence scope
+- [x] bounded NTFS `$MFT` / `$MFTMirr` metadata-depth validation
+- [x] cross-source boot/installer architecture reconciliation without guessed conflict resolution
+- [ ] independently bounded UDF traversal where justified
+- [ ] truthful guest-sector reader foundation for sparse/compressed virtual disks
 - [ ] final 0.5 beta-scope hardening checkpoint
 
-Latest validated checkpoints include PR #32 / run #260 and PR #33 / implementation run #262. These prove automated code/build/artifact paths, not clean-machine public-beta readiness.
+Latest validated checkpoints include PR #33 / implementation run #262 and PR #34 / implementation run #266. These prove automated code/build/package-candidate paths, not clean-machine public-beta readiness.
 
 ### Windows beta package
-- [ ] reproducible independently downloadable Windows x64 beta package
+- [x] clean Windows x64 package-candidate pipeline exists and is gated after the Release build
+- [x] candidate package requires exactly one `DragonDiskForge.App.exe`
+- [x] candidate package excludes `.pdb` and test-only payloads
+- [x] candidate package emits a manifest and SHA-256 sidecar
+- [x] run #266 candidate artifact was independently downloaded and its sidecar SHA-256 matched the ZIP
+- [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
 - [ ] final beta version embedded in application assemblies
-- [ ] application icon and version metadata verified in the beta package
-- [ ] SHA-256 checksum generated for the public package
-- [ ] artifact/package contents reviewed for debug/test-only files
+- [ ] application icon and version metadata verified in the final beta package
+- [ ] final public package SHA-256 published with the Release
 
 ### Regression and manual QA
 - [x] Core smoke tests green
 - [x] provider registry/fallback/isolation tests green
 - [x] provider-specific tests green
 - [x] partition/filesystem/intelligence/report automated gates green
+- [x] NTFS/architecture hardening gate green
 - [x] ISO direct-browse integration green
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
+- [x] clean ZIP candidate build/checksum gate green
 - [ ] normal-user UAC checklist completed on a desktop machine
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
@@ -59,7 +68,7 @@ Latest validated checkpoints include PR #32 / run #260 and PR #33 / implementati
 
 ## Current beta readiness
 
-**NOT READY.** Automated Windows CI is strong and produces a Release x64 artifact, but the agreed 0.5 engineering scope is still in progress and the clean-machine/manual/package gates above remain open.
+**NOT READY.** Automated Windows CI now proves the full existing regression path plus a clean ZIP candidate and checksum, but the agreed 0.5 engineering scope is still unfinished. Independently bounded UDF/guest-sector work, final beta version metadata, clean-machine validation, normal-user UAC and real cross-process drag-out/manual regression remain open.
 
 ## Rule
 

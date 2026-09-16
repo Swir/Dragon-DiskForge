@@ -35,13 +35,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - bounded UDF main volume-descriptor sequence inspection with a 16 MiB ceiling
 - validated UDF primary/logical volume d-string identity evidence
 - dedicated filesystem-depth generated-fixture and cancellation smoke tests
+- bounded `NtfsMetadataDepthService` for `$MFT` / `$MFTMirr` cluster/range, FILE-record size and Update Sequence Array validation
+- fixup-normalized first-record `$MFT` / `$MFTMirr` consistency evidence without repair or traversal
+- `ArchitectureReconciliationService` preserving independent boot-path and installer-path architecture hints
+- explicit architecture-conflict warnings for direct one-to-one disagreement without mislabeling multi-architecture media
+- dedicated intelligence-hardening fixtures for healthy/corrupt/out-of-range NTFS metadata, architecture reconciliation and cancellation
+- clean Windows x64 ZIP candidate packaging with package manifest, debug/test-content rejection and SHA-256 sidecar
 
 ### Changed
 - development version remains **0.5.0-alpha.1**
-- project progress advances to **54% toward 1.0** after the validated Windows analysis/report surface and deeper filesystem-evidence slice
-- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **82%**
-- CI now gates provider registry, partition intelligence, filesystem recognition, filesystem depth, boot/installer intelligence, unified image intelligence and image reporting before provider/native/build regression
-- the Windows analysis report now merges deeper bounded filesystem identity/health evidence when a truthful physical filesystem mapping was already recognized
+- project progress advances to **55% toward 1.0** after validated NTFS/architecture hardening and the clean Windows package-candidate path
+- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **88%**
+- CI now gates provider registry, partition intelligence, filesystem recognition/depth, NTFS/architecture hardening, boot/installer intelligence, unified image intelligence and image reporting before provider/native/build regression
+- the Windows analysis report now merges bounded NTFS depth findings and reconciles independent boot/installer architecture evidence
+- green Windows CI now publishes both the engineering artifact and a clean ZIP candidate with a SHA-256 sidecar
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
@@ -52,6 +59,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - exFAT redundant boot-region checks ignore only the mutable VolumeFlags and PercentInUse bytes when comparing copies
 - UDF descriptor-sequence inspection is capped at 16 MiB and rejects overflowing/out-of-range extents
 - UDF descriptor tags are validated before identity evidence is accepted
+- NTFS depth checks validate bounded metadata only; they never repair records, follow attributes or traverse directories
+- architecture reconciliation preserves conflicting evidence instead of guessing a winner
 - bootability is reported only from structurally valid El Torito evidence
 - health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee
 - existing cancellation, failure isolation and truthful capability behavior remain intact
@@ -74,14 +83,14 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #30 / run #242 — boot/installer intelligence + full regression/build/artifact
 - PR #31 / run #245 — unified identity/health implementation + full regression/build/artifact before docs synchronization
 - PR #32 / run #260 — Windows Analyze/report surface + full regression/build/artifact
-- PR #33 / run #262 — deeper filesystem evidence implementation + new depth gate and complete regression/build/artifact before docs synchronization
+- PR #33 / run #262 — deeper filesystem evidence implementation + complete regression/build/artifact before docs synchronization
+- PR #34 / run #266 — NTFS/architecture hardening, full regression/build, clean Windows ZIP candidate and SHA-256 before docs synchronization
+- PR #34 / run #266 package review — sidecar SHA-256 matched the downloaded candidate ZIP; one app EXE; zero PDB/test-only files
 
 ### Planned
-- deeper supported NTFS metadata/evidence
-- stronger cross-source architecture reconciliation where multiple proven sources exist
 - independently bounded UDF traversal where justified
 - guest-sector readers before filesystem intelligence inside sparse/compressed virtual disks
-- final 0.5 beta-scope hardening
+- final 0.5 beta-scope hardening, final beta version metadata and clean-machine/manual QA
 - public beta `0.5.0-beta.1` only after the agreed 0.5 scope and independent package/manual QA gates are proven
 
 ## [0.3.0] - 2026-09-15
