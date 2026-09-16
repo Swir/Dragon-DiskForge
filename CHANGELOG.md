@@ -25,14 +25,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - single-file and multi-file BIN/CUE layout validation with INDEX 00/01 metadata and bounded track ranges
 - same-name CUE companion resolution for `.bin` inputs
 - dedicated BIN/CUE smoke tests covering mixed-mode, multi-file, missing payload, traversal, index ordering, unsupported FILE types, orphan BINs and cancellation
+- read-only MDF/MDS CD track-layout provider using the shared `TrackLayout` capability
+- MDS `MEDIA DESCRIPTOR` header/version/medium/session/track validation
+- explicit MDF byte-offset handling for mixed-sector CD layouts
+- same-name MDF and footer-based ASCII/UTF-16 payload resolution, including `*.mdf`
+- dedicated MDF/MDS smoke tests covering mixed-sector tracks, corrupt signatures/offsets, missing payloads, unsupported sectors, traversal, wildcard/UTF-16 footers, DVD rejection, foreign extensions and cancellation
 
 ### Changed
-- the application provider registry now includes ISO9660/Joliet, RAW partition, IMA/floppy and BIN/CUE providers
+- the application provider registry now includes ISO9660/Joliet, RAW partition, IMA/floppy, BIN/CUE and MDF/MDS providers
 - RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
 - IMA/FLP images can be positively recognized by media geometry without enabling fake filesystem browsing
-- BIN/CUE images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
+- BIN/CUE and MDF/MDS images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
 - Direct Browse tooltip explains when a provider recognized only a non-browse inspection capability
-- project progress advances to 35% toward 1.0 after the third real additional 0.4 image family
+- project progress advances to 36% toward 1.0 after the fourth real additional 0.4 image family
+- 0.4 milestone completion advances to approximately 52%
 
 ### Safety
 - RAW/IMG parsing is read-only and validates every referenced partition range against the image length
@@ -44,15 +50,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - CUE payload paths must remain under the CUE directory; absolute/path-traversal references are rejected
 - mixed sector sizes inside one BIN are rejected rather than producing guessed byte offsets
 - a standalone `.bin` is not claimed without a same-name CUE that actually references it
-- RAW/IMG, IMA/FLP and BIN/CUE `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+- MDF/MDS parsing bounds descriptor tables, footer strings, MDF start offsets and computed track ranges against the real files
+- MDS footer payload paths are confined to the descriptor directory; rooted/traversal paths are rejected
+- mixed-sector MDF layouts use explicit MDS byte offsets rather than inferred offsets
+- DVD-style MDS media is deliberately rejected until its separate layout is implemented and tested
+- RAW/IMG, IMA/FLP, BIN/CUE and MDF/MDS `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
 
 ### Verified
 - RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
 - PR #17 / run #165 passed Core, provider-registry, RAW/IMG, IMA/floppy, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
 - PR #18 / run #172 passed Core, provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
+- PR #19 / run #181 passed Core, all provider smoke tests including MDF/MDS CD/DVD-scope safety, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
 
 ### Planned
-- remaining 0.4 image providers: MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 

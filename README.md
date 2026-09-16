@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 35% toward 1.0
+## Project progress — 36% toward 1.0
 
-`███████░░░░░░░░░░░░░ 35%`
+`███████░░░░░░░░░░░░░ 36%`
 
-**Overall completion:** **35%**
+**Overall completion:** **36%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~45%** 🚧
+- `0.4 Extended Image Providers` — **~52%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
@@ -106,7 +106,7 @@ Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
 
 ### 0.4 Extended Image Providers 🚧
 
-The provider foundation and three additional image families are now implemented:
+The provider foundation and four additional image families are now implemented:
 
 - central Core `ProviderRegistry`
 - explicit provider capability reporting
@@ -133,11 +133,17 @@ The provider foundation and three additional image families are now implemented:
 - single-file and multi-file CUE layouts with BIN existence/alignment and INDEX 00/01 range validation
 - standalone `.bin` accepted only when a same-name `.cue` exists and references that BIN
 - absolute/path-traversal payload references, unsupported FILE types and ambiguous mixed-sector tracks in one BIN are rejected
-- BIN/CUE does **not** advertise Direct Browse, Mount or Convert
-- dedicated provider-registry, RAW/IMG, IMA/floppy and BIN/CUE smoke tests in CI
-- PR #18 / run #172: BIN/CUE tests + full prior regression + WinUI Release x64 + artifact ✅
+- read-only **MDF / MDS CD track-layout provider** reusing the same `TrackLayout` capability
+- `MEDIA DESCRIPTOR` header, version, medium type, session and track-block validation
+- explicit per-track MDF byte offsets allow safe mixed-sector layouts without guessed offsets
+- same-name MDF plus footer-based ASCII/UTF-16 payload resolution, including `*.mdf`
+- descriptor and payload ranges are bounded against real file sizes; payload paths stay inside the descriptor directory
+- DVD-style MDS media is explicitly rejected until its distinct layout is implemented and tested
+- BIN/CUE and MDF/MDS do **not** advertise Direct Browse, Mount or Convert
+- dedicated provider-registry, RAW/IMG, IMA/floppy, BIN/CUE and MDF/MDS smoke tests in CI
+- PR #19 / run #181: MDF/MDS tests + full prior regression + WinUI Release x64 + artifact ✅
 
-The next 0.4 work is **MDF/MDS**. Filesystem-level browsing for RAW, floppy and BIN/CUE images remains intentionally disabled until the corresponding filesystem/content layers are implemented and proven.
+The next 0.4 work is **NRG**. Filesystem-level browsing for RAW, floppy and optical provider families remains intentionally disabled until the corresponding filesystem/content layers are implemented and proven.
 
 The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
@@ -166,7 +172,7 @@ The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.m
 - provider-backed direct-browse architecture for formats that can be safely parsed without mounting
 - bounded read-only partition-table parsing for RAW disk images
 - bounded read-only floppy geometry/BPB inspection
-- bounded read-only optical track-layout parsing for BIN/CUE
+- bounded read-only optical track-layout parsing for BIN/CUE and MDF/MDS CD images
 
 ## Build on Windows
 
@@ -176,13 +182,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, IMA/floppy provider smoke tests, BIN/CUE provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, IMA/floppy provider smoke tests, BIN/CUE provider smoke tests, MDF/MDS provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection and BIN/CUE track-layout inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary. Floppy inspection validates known capacity/geometry and rejects inconsistent BPB metadata. BIN/CUE inspection contains referenced payloads to the CUE directory, validates BIN existence/alignment and track ranges, and refuses ambiguous mixed-sector offsets rather than guessing them. RAW, floppy and BIN/CUE providers do not expose filesystem browsing until those capabilities are real and tested. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection and optical track-layout inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary. Floppy inspection validates known capacity/geometry and rejects inconsistent BPB metadata. BIN/CUE inspection contains referenced payloads to the CUE directory and refuses ambiguous mixed-sector offsets rather than guessing them. MDF/MDS inspection validates every descriptor and payload range, confines footer paths to the descriptor directory, uses explicit byte offsets for mixed-sector CD layouts and rejects DVD-style media until separately supported. These providers do not expose filesystem browsing until those capabilities are real and tested. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 

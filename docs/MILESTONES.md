@@ -74,7 +74,7 @@ The same project rule continues: no Explorer control becomes active before its b
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **45%**.
+Current milestone completion is approximately **52%**.
 
 ### Completed execution slices
 
@@ -121,9 +121,22 @@ Current milestone completion is approximately **45%**.
    - Direct Browse, Mount and Convert remain disabled until real backends exist
    - dedicated BIN/CUE smoke tests in Windows CI
 
+5. **MDF / MDS CD track-layout provider** ✅
+   - read-only `.mds` plus companion `.mdf` support
+   - reuses `ITrackLayoutProvider` and `TrackLayout`
+   - `MEDIA DESCRIPTOR` signature/version/medium validation
+   - bounded session and track-block traversal
+   - explicit sector-size, start-sector and MDF byte-offset parsing
+   - mixed-sector CD layouts supported through explicit byte offsets rather than inference
+   - same-name MDF plus footer-based ASCII/UTF-16 payload resolution including `*.mdf`
+   - descriptor and payload bounds validation
+   - rooted/path-traversal payload references rejected
+   - DVD-style MDS explicitly rejected until separately implemented and tested
+   - Direct Browse, Mount and Convert remain disabled until real backends exist
+   - dedicated MDF/MDS smoke tests in Windows CI
+
 ### Next execution slices
 
-- MDF/MDS provider
 - NRG provider
 - CCD/IMG/SUB provider
 - remaining virtual-disk/container providers from `docs/ROADMAP.md`
@@ -134,5 +147,6 @@ Current milestone completion is approximately **45%**.
 - PR #16 / run #153 — new RAW/IMG provider tests passed before the final UI/docs synchronization pass
 - PR #17 / run #165 — IMA/floppy provider plus full ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 - PR #18 / run #172 — BIN/CUE provider plus all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
+- PR #19 / run #181 — MDF/MDS CD provider plus explicit DVD-scope safety, all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 
 `docs/ROADMAP.md` remains the source of truth for exact provider order and completion state. A provider capability becomes user-visible only after its backing operation and tests exist.
