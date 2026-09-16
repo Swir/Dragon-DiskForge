@@ -10,6 +10,8 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
     private const int MaxChunks = 4096;
     private const int MaxDaoChunkBytes = 256 * 1024;
     private const int MaxCueChunkBytes = 64 * 1024;
+    private const int CdPregapFrames = 150;
+
     private static readonly string[] NrgExtensions = [".nrg"];
     private static readonly HashSet<int> SupportedSectorSizes = [2048, 2336, 2352, 2448];
 
@@ -146,8 +148,12 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
                     break;
 
                 case "END!":
+                    if (chunkSize != 0)
+                        throw new InvalidDataException("NRG END! chunk must be empty.");
                     endSeen = true;
-                    position = checked(dataOffset + chunkSize);
+                    position = dataOffset;
+                    if (position != footer.FooterOffset)
+                        throw new InvalidDataException("NRG contains trailing metadata after the END! chunk.");
                     goto ChunksComplete;
             }
 
@@ -224,30 +230,22 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
     {
         if (stream.Length >= 12)
         {
-            var tail = await ReadRangeAsync(stream, stream.Length - 12, 12, cancellationToken);
-            if (tail.AsSpan(0, 4).SequenceEqual("NER5"u8))
+            var v2Footer = await ReadRangeAsync(stream, stream.Length - 12, 12, cancellationToken);
+            if (v2Footer.AsSpan(0, 4).SequenceEqual("NER5"u8))
             {
-                var rawOffset = BinaryPrimitives.ReadUInt64BigEndian(tail.AsSpan(4, 8));
+                var rawOffset = BinaryPrimitives.ReadUInt64BigEndian(v2Footer.AsSpan(4, 8));
                 if (rawOffset > long.MaxValue)
                     throw new InvalidDataException("NRG v2 chunk-table offset exceeds the supported file range.");
 
                 return new NrgFooter(2, checked((long)rawOffset), stream.Length - 12);
             }
-
-            if (tail.AsSpan(4, 4).SequenceEqual("NERO"u8))
-            {
-                var rawOffset = BinaryPrimitives.ReadUInt32BigEndian(tail.AsSpan(8, 4));
-                return new NrgFooter(1, rawOffset, stream.Length - 8);
-            }
         }
-        else
+
+        var v1Footer = await ReadRangeAsync(stream, stream.Length - 8, 8, cancellationToken);
+        if (v1Footer.AsSpan(0, 4).SequenceEqual("NERO"u8))
         {
-            var tail = await ReadRangeAsync(stream, stream.Length - 8, 8, cancellationToken);
-            if (tail.AsSpan(0, 4).SequenceEqual("NERO"u8))
-            {
-                var rawOffset = BinaryPrimitives.ReadUInt32BigEndian(tail.AsSpan(4, 4));
-                return new NrgFooter(1, rawOffset, stream.Length - 8);
-            }
+            var rawOffset = BinaryPrimitives.ReadUInt32BigEndian(v1Footer.AsSpan(4, 4));
+            return new NrgFooter(1, rawOffset, stream.Length - 8);
         }
 
         throw new InvalidDataException("NRG footer does not contain the NERO or NER5 signature.");
@@ -263,12 +261,41 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
         {
             var type = data[offset];
             var rawTrack = data[offset + 1];
-            var index = data[offset + 2];
-            var lba = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(offset + 4, 4));
+            var index = DecodeBcd(data[offset + 2], "NRG cue index");
+            if (data[offset + 3] != 0)
+                throw new InvalidDataException($"NRG {chunkId} cue entry reserved byte is not zero.");
+
+            var lba = chunkId == "CUEX"
+                ? BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(offset + 4, 4))
+                : DecodeCuesLba(data.AsSpan(offset + 4, 4));
+
             points.Add(new CuePoint(type, rawTrack, index, lba));
         }
 
         return points;
+    }
+
+    private static int DecodeCuesLba(ReadOnlySpan<byte> position)
+    {
+        if (position.Length != 4 || position[0] != 0)
+            throw new InvalidDataException("NRG CUES position must use the 00:MM:SS:FF layout.");
+
+        var minute = DecodeBcd(position[1], "NRG CUES minute");
+        var second = DecodeBcd(position[2], "NRG CUES second");
+        var frame = DecodeBcd(position[3], "NRG CUES frame");
+        if (second >= 60 || frame >= 75)
+            throw new InvalidDataException("NRG CUES MSF position is outside the valid CD range.");
+
+        return checked((((minute * 60) + second) * 75) + frame - CdPregapFrames);
+    }
+
+    private static int DecodeBcd(byte value, string label)
+    {
+        var high = value >> 4;
+        var low = value & 0x0F;
+        if (high > 9 || low > 9)
+            throw new InvalidDataException($"{label} is not valid BCD.");
+        return (high * 10) + low;
     }
 
     private static DaoTrackGroup ParseDao(byte[] data, bool is64Bit)
@@ -293,7 +320,6 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
         {
             var offset = commonSize + (index * entrySize);
             var sectorSize = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(offset + 12, 2));
-            var modeWord = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(offset + 14, 2));
             var modeCode = data[offset + 14];
 
             long index0;
@@ -316,7 +342,6 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
                 firstTrack + index,
                 sectorSize,
                 modeCode,
-                modeWord,
                 index0,
                 index1,
                 end));
@@ -424,7 +449,6 @@ public sealed class NrgImageProvider : ITrackLayoutProvider
         int Number,
         int SectorSize,
         byte ModeCode,
-        ushort ModeWord,
         long Index0,
         long Index1,
         long End);
