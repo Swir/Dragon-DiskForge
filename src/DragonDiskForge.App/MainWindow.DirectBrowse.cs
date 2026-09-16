@@ -8,7 +8,8 @@ namespace DragonDiskForge.App;
 public sealed partial class MainWindow
 {
     private readonly ProviderRegistry _providerRegistry = new([
-        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100)
+        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100),
+        new ProviderRegistration(new RawDiskImageProvider(), Priority: 50)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
@@ -119,6 +120,11 @@ public sealed partial class MainWindow
 
     private static string BuildProviderUnavailableMessage(ProviderResolution resolution)
     {
+        if (resolution.Provider is not null && resolution.Descriptor is not null)
+        {
+            return $"Recognized by {resolution.Descriptor.DisplayName}, but that provider does not expose direct browsing yet. The action stays disabled until a tested browsing backend exists.";
+        }
+
         var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
         return failed > 0
             ? $"No direct-browse provider accepted this image. {failed} provider probe(s) failed safely; native Mount may still be available."
@@ -142,7 +148,7 @@ public sealed partial class MainWindow
             {
                 await ShowDialogAsync(
                     "Direct browse unavailable",
-                    "No registered direct-browse provider positively recognized this image. Dragon DiskForge will not pretend the format can be browsed.");
+                    "No registered direct-browse provider positively recognized this image with a tested browsing capability. Dragon DiskForge will not pretend the format can be browsed.");
                 return;
             }
 
