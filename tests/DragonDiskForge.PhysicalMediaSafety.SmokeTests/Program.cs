@@ -41,6 +41,13 @@ var ambiguousPlan = safety.PreviewImageToDiskWrite(
 Check(ambiguousPlan.IsRefused, "ambiguous destination identity is refused");
 Check(ambiguousPlan.RefusalReasons.Any(x => x.Contains("stable hardware identity", StringComparison.OrdinalIgnoreCase)), "identity refusal explains the blocker");
 
+var missingStableMaterialPlan = safety.PreviewImageToDiskWrite(
+    imagePath,
+    1024,
+    safeDisk with { StableId = string.Empty, HasStableIdentity = true });
+Check(missingStableMaterialPlan.IsRefused, "stable-identity claim without stable identity material is refused");
+Check(missingStableMaterialPlan.ConfirmationToken is null, "missing stable identity material cannot produce a confirmation token");
+
 var unknownCapacityPlan = safety.PreviewImageToDiskWrite(
     imagePath,
     1024,
