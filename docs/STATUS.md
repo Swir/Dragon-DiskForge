@@ -14,211 +14,111 @@
 
 ## Overall project progress
 
-**38% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus six additional image families implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
+**39% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven. Milestone 0.4 now has its provider foundation plus seven additional image families implemented and validated.
 
 ## Current milestone
 
 **0.4 Extended Image Providers — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **65%**.
+Current milestone completion is approximately **71%**.
 
-### Proven 0.4 slices
+## Proven 0.4 slices
 
-**Provider foundation**
+### Provider foundation
 
 - central Core `ProviderRegistry`
 - explicit provider capability reporting
 - deterministic priority and extension-first resolution
-- provider/signature fallback when an extension candidate does not accept an image
+- provider/signature fallback
 - probe and inspection failure isolation
 - cancellation preserved as a hard stop
 - provider diagnostics and duplicate-ID protection
 - ISO9660/Joliet direct browsing resolved through the registry
 
-**IMG / RAW partition provider**
+### IMG / RAW partition provider ✅
 
-- read-only `.img`, `.raw` and `.dd` provider
-- MBR primary-partition parsing
-- bounded EBR logical-partition traversal with loop protection
-- GPT parsing with 512/4096-byte logical-sector probing
-- common MBR and GPT partition-type decoding
-- GPT partition-name decoding
-- strict partition-range checks against the image length
-- malformed/fake image rejection
+- read-only `.img`, `.raw`, `.dd`
+- MBR primary partitions and bounded EBR logical partitions
+- GPT with 512/4096-byte logical-sector probing
+- partition type/name metadata and strict image-boundary checks
 - explicit `PartitionTable` capability
-- no fake Direct Browse, Mount or Convert capability
-- dedicated RAW/IMG smoke tests in Windows CI
+- dedicated Windows CI tests
 
-**IMA / floppy media provider**
+### IMA / floppy provider ✅
 
-- read-only `.ima` and `.flp` provider
-- exact standard floppy geometry recognition from 160 KB through 2.88 MB
-- optional FAT-style BIOS Parameter Block parsing
-- BPB capacity validation against the real image length
-- CHS consistency validation against the recognized physical geometry
-- filesystem hint, OEM string, media descriptor and volume-label metadata when present
-- blank/unformatted standard-size images recognized without inventing filesystem metadata
-- malformed-size, contradictory BPB and foreign-extension rejection
+- read-only `.ima`, `.flp`
+- standard raw floppy geometry recognition
+- optional FAT-style BPB parsing
+- capacity and CHS validation
 - explicit `MediaGeometry` capability
-- no fake Direct Browse, Mount or Convert capability
-- dedicated IMA/floppy smoke tests in Windows CI
+- dedicated Windows CI tests
 
-**BIN / CUE track-layout provider**
+### BIN / CUE track-layout provider ✅
 
-- read-only `.cue` and companion `.bin` provider
-- explicit `TrackLayout` capability via `ITrackLayoutProvider`
-- BINARY CUE parsing for AUDIO, MODE1/2048, MODE1/2352, MODE2/2336 and MODE2/2352
-- single-file and multi-file layouts
-- INDEX 00/01 parsing and bounded track-range calculation
-- referenced BIN existence and sector-alignment validation
-- same-name companion-CUE requirement for direct `.bin` resolution
-- absolute/path-traversal payload references blocked
-- unsupported FILE/track modes and mixed sector sizes within one BIN rejected rather than guessed
-- no fake Direct Browse, Mount or Convert capability
-- dedicated BIN/CUE smoke tests in Windows CI
+- bounded BINARY CUE parsing
+- AUDIO and MODE1/MODE2 supported sector layouts
+- single-file and multi-file payload handling
+- INDEX 00/01 range validation
+- payload path containment and alignment checks
+- explicit `TrackLayout` capability
 
-**MDF / MDS CD track-layout provider**
+### MDF / MDS CD track-layout provider ✅
 
-- read-only `.mds` and companion `.mdf` provider
-- reuses `ITrackLayoutProvider` and the explicit `TrackLayout` capability
-- validates the `MEDIA DESCRIPTOR` signature, version, medium type and session/track tables
-- parses track number, sector size, start sector and explicit MDF byte offset
-- supports mixed-sector CD layouts without guessed offsets
-- resolves same-name MDF payloads plus footer names in ASCII or UTF-16, including `*.mdf`
-- descriptor offsets, footer strings and track ranges are bounded against the real files
-- payload paths are confined to the MDS directory; rooted and traversal paths are rejected
-- missing/empty MDF files, unsupported sector sizes, duplicate tracks and malformed metadata are rejected
-- DVD-style MDS media is explicitly rejected until its distinct layout is separately implemented and tested
-- no fake Direct Browse, Mount or Convert capability
-- dedicated MDF/MDS smoke tests in Windows CI
+- `MEDIA DESCRIPTOR` signature/version/medium/session/track validation
+- explicit MDF byte offsets for mixed-sector layouts
+- safe footer-based MDF resolution
+- descriptor/payload bounds checks
+- DVD-style handling deliberately rejected until separately proven
 
-**NRG track-layout provider**
+### NRG v1/v2 track-layout provider ✅
 
-- read-only `.nrg` provider reusing `ITrackLayoutProvider` / `TrackLayout`
-- classic `NERO` v1 footer with 32-bit chunk-table offset
-- `NER5` v2 footer with 64-bit chunk-table offset
-- CUES v1 BCD `00:MM:SS:FF` cue decoding with real MSF-to-LBA conversion
-- CUEX v2 signed-LBA cue decoding
-- DAOI 32-bit and DAOX 64-bit byte-offset parsing
-- cue index 1 supplies the real logical start sector while DAO supplies byte ranges
-- audio/data cue control is cross-checked against DAO track mode
-- chunk count/size, cue entries, BCD values, sector sizes and track ranges are bounded and validated
-- a terminating empty `END!` chunk is required; trailing metadata is rejected
-- missing/ambiguous cue metadata, unknown track modes and metadata overlap are rejected rather than guessed
-- no fake Direct Browse, Mount or Convert capability
-- dedicated NRG v1/v2 smoke tests in Windows CI
+- `NERO` v1 and `NER5` v2 footer handling
+- CUES/CUEX track positions
+- DAOI/DAOX byte ranges
+- cue/DAO consistency validation
+- required empty `END!` terminator
 
-**CCD / IMG / SUB track-layout provider**
+### CCD / IMG / SUB track-layout provider ✅
 
-- read-only CloneCD `.ccd`, same-name `.img` and validated `.sub` provider
-- reuses `ITrackLayoutProvider` and explicit `TrackLayout`
-- `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
-- INDEX 0/1 parsing with INDEX 1 as the logical track start
-- same-name IMG must be non-empty and aligned to 2352-byte raw sectors
-- optional same-name SUB must be exactly 96 bytes per IMG sector
-- descriptor byte size, line count and line length are bounded
-- CloneCD versions outside the currently proven 1–3 range are rejected
-- missing/duplicate/non-increasing INDEX 1, INDEX 0 after INDEX 1, unsupported modes and out-of-range metadata are rejected rather than guessed
-- CCD provider priority is above RAW only after a same-name CCD descriptor validates; ordinary `.img` remains available to the RAW provider
-- no fake Direct Browse, Mount or Convert capability
-- dedicated CCD/IMG/SUB smoke tests in Windows CI
+- CloneCD `.ccd`, same-name `.img`, optional validated `.sub`
+- MODE 0/1/2 and INDEX 0/1 handling
+- 2352-byte IMG alignment
+- 96-byte-per-sector SUB validation
+- CCD-vs-RAW `.img` fallback preserved
 
-### Proven 0.3 slices
+### VMDK sparse metadata provider ✅
 
-**Mounted-volume Explorer**
+- read-only hosted sparse VMDK header version 1 inspection
+- `IVirtualDiskMetadataProvider` + `VirtualDiskMetadata` capability
+- validates `0x564D444B` magic and version 1
+- parses virtual capacity, grain size, descriptor offset/size, grain-table entry count, redundant grain-directory offset, grain-directory offset and overhead
+- validates all sector-based metadata offsets against the physical VMDK file
+- validates unclean-shutdown, newline-detection and compression fields
+- optional embedded descriptor limited to 1 MiB
+- descriptor metadata: version, createType, CID, parentCID and extent count
+- malformed/conflicting descriptor values rejected
+- text-only VMDK descriptors and unproven sparse header versions intentionally not claimed
+- no virtual-sector translation, Direct Browse, Mount or Convert in this slice
+- dedicated VMDK smoke tests passed in PR #22 / run #200
 
-- real Core Explorer contract and filesystem-backed service
-- mounted ISO/VHD/VHDX browsing
-- folders-first listing, navigation, breadcrumbs and metadata
-- recursive search with cancellation and result limits
-- safe Copy out with overwrite protection and reparse-point safety
-- trust warning before shell-opening executable/script content
-- real mounted-ISO integration coverage
+## Proven validation checkpoints
 
-**Preview + Image Library**
+- PR #16 / run #153 — RAW/IMG
+- PR #17 / run #165 — IMA/floppy + full regression/build/artifact
+- PR #18 / run #172 — BIN/CUE + full regression/build/artifact
+- PR #19 / run #182 — MDF/MDS + full regression/build/artifact
+- PR #20 / run #185 — NRG + full regression/build/artifact
+- PR #21 / run #198 — final CCD/IMG/SUB head + full provider/native regression/build/artifact
+- PR #22 / run #200 — VMDK sparse metadata + all previous providers, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
 
-- bounded read-only text Preview with cancellation and truncation indication
-- safe image Preview without shell execution
-- PDF/media metadata-only Preview
-- binary/unsupported metadata fallback
-- local Recent Images + Favorites
-- atomic JSON persistence with Windows path deduplication
-- real Images view with Open / Favorite / Unfavorite / Remove actions
+## Next 0.4 provider
 
-**Mounted history + multi-image workspace**
+**QCOW / QCOW2** — begin with bounded container-header metadata inspection. Cluster translation, virtual-sector reads and filesystem browsing stay disabled until implemented and proven.
 
-- local mounted-history contract and atomic JSON persistence
-- distinct Mount/Unmount history events with bounded newest-first retention
-- live Windows mount state kept independent from history metadata
-- separate Mounted dashboard history section
-- Clear History cannot alter live mounted state
-- dedicated mounted-history smoke tests in CI
-- multi-image Dragon Explorer workspace using WinUI tabs
-- one independent Explorer session per mounted image/root
-- duplicate-tab prevention and stale-tab pruning
-- closing a tab never unmounts the image
-- successful unmount closes tabs backed by the image
+## Current safety state
 
-**Safe drag-out to Windows Explorer**
+Inspection paths remain read-only-first. Unsupported capabilities stay disabled. Metadata offsets and lengths are validated before reads; parsers reject contradictory structures rather than guessing.
 
-- mounted Explorer rows expose native WinUI drag-out
-- drag payload uses Windows Storage items and advertises Copy only
-- root containment is revalidated immediately before transfer
-- stale/missing sources are blocked
-- listed and runtime reparse points/junctions are blocked
-- asynchronous StorageItem resolution uses a `DragStarting` deferral
-- dedicated drag-out safety smoke tests are green
+VMDK currently exposes only proven sparse-v1 metadata and a bounded embedded descriptor. It does not expose grain-table translation, virtual disk sectors, filesystem browsing, Mount or Convert.
 
-**Provider-backed direct ISO browsing**
-
-- `IDirectBrowseProvider` provider contract
-- managed ISO9660/Joliet parser
-- list, nested navigation and recursive search directly from ISO extents
-- file/folder Copy out without mounting
-- cancellation, overwrite, path traversal, filename and extent-boundary safety
-- dedicated **Direct ISO** workspace tab marked **NO MOUNT**
-- direct capability button enabled only after positive provider detection
-- real IMAPI integration proves the image stays detached through browse/search/Copy out
-
-### Proven checkpoints
-
-- PR #5 / run #56 — first mounted Explorer slice
-- PR #6 / run #72 — Preview + Image Library
-- PR #7 / run #86 — Mounted history + multi-image workspace
-- PR #10 / run #103 — safe drag-out + x64 artifact
-- PR #12 / run #128 — provider-backed ISO direct browse + native mount regression + WinUI build + artifact
-- PR #12 / run #131 — full regression remained green after README project-progress synchronization
-- PR #16 / run #153 — RAW/IMG provider smoke tests passed before final UI/docs synchronization
-- PR #17 / run #165 — IMA/floppy provider, full regression, Release x64 build and artifact all passed
-- PR #18 / run #172 — BIN/CUE provider, full prior-provider regression, Release x64 build and artifact all passed
-- PR #19 / run #182 — final MDF/MDS CD branch head, explicit DVD-scope rejection, full provider/native regression, Release x64 build and artifact all passed
-- PR #20 / run #185 — NRG v1/v2 provider, full prior-provider regression, Release x64 build and artifact all passed before documentation synchronization
-- PR #21 / run #193 — CCD/IMG/SUB provider, `.img` ambiguity fallback, full provider/native regression, Release x64 build and artifact all passed before documentation synchronization
-
-### Next 0.4 provider
-
-**VMDK** — start with bounded sparse-extent/header and descriptor inspection, without claiming filesystem browsing or full virtual-disk I/O until grain-directory/data paths are implemented and proven.
-
-### Current safety state
-
-Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection, optical track-layout inspection, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
-
-Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during mounted-volume search, Copy out or drag-out.
-
-Direct ISO browsing uses virtual `/` paths and validates metadata extents against the image bounds. Direct mode does not expose Open/Preview/drag-out until provider-backed implementations exist for those actions.
-
-RAW parsing validates MBR/EBR/GPT metadata against the file boundary, bounds extended-chain traversal and does not enable filesystem browsing until the filesystem layer is real and tested.
-
-Floppy inspection validates exact standard media size and, when a BPB exists, verifies capacity and CHS geometry before exposing metadata. It does not expose FAT directory/file browsing yet.
-
-BIN/CUE inspection confines referenced payloads to the CUE directory, validates BIN existence/alignment and track/index ranges, and refuses ambiguous mixed-sector offsets instead of inventing them.
-
-MDF/MDS inspection bounds descriptor structures and MDF track ranges, confines footer-resolved payloads to the descriptor directory and accepts only the CD-style layout currently proven by tests. DVD-style MDS remains disabled rather than being interpreted through CD assumptions.
-
-NRG inspection bounds metadata before the `NERO`/`NER5` footer, decodes CUES and CUEX according to their distinct formats, validates DAOI/DAOX byte ranges and requires cue/DAO agreement. It never falls back to guessed track positions when metadata is missing or contradictory.
-
-CCD/IMG/SUB inspection uses validated CloneCD TRACK MODE/INDEX metadata, enforces raw IMG sector alignment and optional SUB length, and never lets an unproven `.ccd` steal a generic `.img` from the RAW provider.
-
-Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state.
-
-The interactive UAC prompt and the real cross-process Windows Explorer drag gesture remain documented manual desktop QA cases in `docs/MANUAL-VALIDATION.md`; CI does not fabricate those human-interaction results.
+The interactive UAC prompt and the real cross-process Windows Explorer drag gesture remain manual desktop QA cases in `docs/MANUAL-VALIDATION.md`; CI does not fabricate those human-interaction results.
