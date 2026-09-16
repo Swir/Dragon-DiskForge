@@ -14,11 +14,13 @@
 
 ## Overall project progress
 
-**33% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus the first additional image family implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
+**34% toward 1.0** — milestones 0.1, 0.2 and 0.3 are complete and proven, while 0.4 now has its provider foundation plus two additional image families implemented. The visible README progress bar must be updated whenever real roadmap progress changes.
 
 ## Current milestone
 
 **0.4 Extended Image Providers — IN PROGRESS 🚧**
+
+Current milestone completion is approximately **38%**.
 
 ### Proven 0.4 slices
 
@@ -46,6 +48,20 @@
 - explicit `PartitionTable` capability
 - no fake Direct Browse, Mount or Convert capability
 - dedicated RAW/IMG smoke tests in Windows CI
+
+**IMA / floppy media provider**
+
+- read-only `.ima` and `.flp` provider
+- exact standard floppy geometry recognition from 160 KB through 2.88 MB
+- optional FAT-style BIOS Parameter Block parsing
+- BPB capacity validation against the real image length
+- CHS consistency validation against the recognized physical geometry
+- filesystem hint, OEM string, media descriptor and volume-label metadata when present
+- blank/unformatted standard-size images recognized without inventing filesystem metadata
+- malformed-size, contradictory BPB and foreign-extension rejection
+- explicit `MediaGeometry` capability
+- no fake Direct Browse, Mount or Convert capability
+- dedicated IMA/floppy smoke tests in Windows CI
 
 ### Proven 0.3 slices
 
@@ -113,16 +129,19 @@
 - PR #12 / run #128 — provider-backed ISO direct browse + native mount regression + WinUI build + artifact
 - PR #12 / run #131 — full regression remained green after README project-progress synchronization
 - PR #16 / run #153 — RAW/IMG provider smoke tests passed before final UI/docs synchronization
+- PR #17 / run #165 — IMA/floppy provider, full regression, Release x64 build and artifact all passed
 
 ### Current safety state
 
-Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, RAW partition-table inspection, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
+Inspection, hashing, mounted-volume browsing, provider-backed ISO browsing, RAW partition-table inspection, floppy geometry/BPB inspection, Preview and default native mounts are read-only-first. Explorer never writes into an image during normal browsing. Copy out writes only to an explicit destination and refuses silent overwrite conflicts. Drag-out is Copy-only and never requests Move.
 
 Preview text reads are bounded. Image Preview renders without shell execution. PDF and media Preview are metadata-only. Executable/script content requires a trust warning before shell-open. Reparse points and junctions are not recursively traversed during mounted-volume search, Copy out or drag-out.
 
 Direct ISO browsing uses virtual `/` paths and validates metadata extents against the image bounds. Direct mode does not expose Open/Preview/drag-out until provider-backed implementations exist for those actions.
 
 RAW parsing validates MBR/EBR/GPT metadata against the file boundary, bounds extended-chain traversal and does not enable filesystem browsing until the filesystem layer is real and tested.
+
+Floppy inspection validates exact standard media size and, when a BPB exists, verifies capacity and CHS geometry before exposing metadata. It does not expose FAT directory/file browsing yet.
 
 Recents, Favorites and Mounted history are local per-user metadata. None of those metadata stores controls or substitutes for Windows mount state.
 
