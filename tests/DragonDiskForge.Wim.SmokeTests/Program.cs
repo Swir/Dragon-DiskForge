@@ -135,11 +135,11 @@ static void CreateWim(string path, uint version, uint flags, uint chunkSize)
     WriteU16(h, 40, 1);
     WriteU16(h, 42, 1);
     WriteU32(h, 44, 2);
-    WriteResource(h, 48, flags: 0x02, storedSize: 64, offset: 512, originalSize: 64);
-    WriteResource(h, 72, flags: 0x00, storedSize: 128, offset: 576, originalSize: 128);
-    WriteResource(h, 96, flags: 0x02, storedSize: 64, offset: 704, originalSize: 64);
+    WriteResource(h, 48, flags: 0x02, storedSize: 64, physicalOffset: 512, originalSize: 64);
+    WriteResource(h, 72, flags: 0x00, storedSize: 128, physicalOffset: 576, originalSize: 128);
+    WriteResource(h, 96, flags: 0x02, storedSize: 64, physicalOffset: 704, originalSize: 64);
     WriteU32(h, 120, 1);
-    WriteResource(h, 124, flags: 0x00, storedSize: 64, offset: 768, originalSize: 64);
+    WriteResource(h, 124, flags: 0x00, storedSize: 64, physicalOffset: 768, originalSize: 64);
     File.WriteAllBytes(path, bytes);
 }
 
