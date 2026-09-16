@@ -31,16 +31,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - dedicated guest-relative filesystem models and separate guest sections in text/JSON reports
 - final guest GPT/EBR integrity hardening: GPT primary-header CRC32, partition-entry-array CRC32, GPT geometry/metadata placement validation, MBR/EBR status validation and extended-container containment
 - generated final-hardening fixtures covering valid GPT, corrupt GPT header/table checksums, invalid MBR status, escaping logical partitions and escaping EBR links
+- 0.6 dual verification foundation with `ImageVerificationInfo`, SHA-256 + SHA-512 in one bounded sequential pass, exact hashed byte count and a dedicated SHA-512 API
+- generated verification smoke coverage for multi-buffer input, empty files, missing files, monotonic progress and cancellation
 
 ### Changed
-- development version remains **0.5.0-alpha.1** until the independent public-beta gate is complete
-- project progress advances to **61% toward 1.0** after validating the final 0.5 engineering hardening slice
-- **0.5 Partitions + File Systems + Image Intelligence** reaches **100% automated engineering completion**
-- next engineering milestone becomes **0.6 Create + Convert + Verify** after PR #40 final docs-synchronized CI/merge
+- development version remains **0.5.0-alpha.1** until the independent public-beta gate is complete; 0.6 engineering may proceed in parallel without weakening that gate
+- project progress advances to **63% toward 1.0** after validating the first 0.6 engineering slice
+- **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
+- **0.6 Create + Convert + Verify** is now in progress at approximately **20%** based on 1 of 5 top-level roadmap deliverables
+- the existing `ComputeSha256Async` API remains compatible while the shared verification engine gains combined SHA-256/SHA-512 output
 - beta publication remains blocked by final suffix/package promotion and clean-machine/UAC/cross-process drag-out/manual regression gates
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
+- the new 0.6 verification path is read-only and does not enable image creation, conversion or mutation
 - guest-byte readers do not enable Direct Browse, extraction, Mount or write capabilities
 - common guest analysis consumes bytes only through proven bounded `IGuestByteReader` implementations
 - guest partition/filesystem offsets are modeled separately from physical container offsets
@@ -76,10 +80,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #38 / run #284 — bounded hosted-sparse VMDK guest-byte reader
 - PR #39 / run #287 — common guest partition/filesystem intelligence
 - PR #40 / implementation run #289 — final guest GPT/EBR integrity hardening + complete regression/build/package-verification/artifact path
+- PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification foundation + complete Windows regression/build/package path
 
 ### Planned
 - finish independent `0.5.0-beta.1` manual/package release gates without weakening the completed 0.5 engineering scope
-- begin 0.6 Create + Convert + Verify after PR #40 final CI/merge
+- continue 0.6 with a safe temporary-output/atomic-finalization transaction layer before exposing create/convert UI capabilities
+- add image creation/conversion, split/join and sparse/compression handling only after their backing paths and rollback/cancellation tests exist
 - promote to `0.5.0-beta.1` only when the independent beta gate is complete
 
 ## [0.3.0] - 2026-09-15

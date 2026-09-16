@@ -12,17 +12,35 @@
 
 **0.5.0-alpha.1**
 
-The 0.5 engineering scope is complete, but the public beta version suffix is intentionally not promoted until the independent beta release gate passes.
+The 0.5 engineering scope is complete, but the public beta version suffix is intentionally not promoted until the independent beta release gate passes. 0.6 engineering may continue in parallel without weakening that release gate.
 
 ## Overall project progress
 
-**61% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. Public beta publication remains separately gated by clean-machine/manual validation and final package/version promotion.
+**63% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. The first verified 0.6 slice adds dual SHA-256/SHA-512 verification while preserving the existing SHA-256 API. Public beta publication remains separately gated by clean-machine/manual validation and final package/version promotion.
 
-## Next milestone
+## Current milestone
 
-**0.6 Create + Convert + Verify — NEXT 🚧**
+**0.6 Create + Convert + Verify — IN PROGRESS 🚧**
 
-The first 0.6 implementation work may begin while beta manual gates remain open, provided no public beta is published prematurely and 0.5 release-critical regressions are fixed first.
+Current 0.6 engineering completion is approximately **20%** (1 of 5 top-level roadmap deliverables).
+
+### Proven 0.6 slice
+
+1. **Dual SHA-256/SHA-512 verification foundation** ✅
+   - `ImageVerificationInfo` reports SHA-256, SHA-512 and the exact hashed byte count
+   - SHA-256 and SHA-512 are computed together in one bounded sequential read pass
+   - existing `ComputeSha256Async` callers remain compatible
+   - dedicated `ComputeSha512Async` API is available
+   - progress remains bounded/monotonic and cancellation propagates
+   - generated smoke coverage includes multi-buffer input, empty files, missing files and pre-cancellation
+   - PR #41 implementation run #292 passed the new verification gate plus the complete Windows regression/build/package path
+
+### Remaining 0.6 roadmap deliverables
+
+- image creation and conversion pipeline
+- split/join and sparse/compression handling
+- temporary output + atomic finalization
+- cancellation/rollback safety for mutating pipelines
 
 ## Proven 0.5 slices
 
@@ -83,6 +101,9 @@ The first 0.6 implementation work may begin while beta manual gates remain open,
 - PR #39 / run #287 — common guest partition/filesystem intelligence + full Windows regression/package path
 - PR #40 / implementation run #289 — final guest GPT/EBR integrity hardening + full Windows regression/package path
 
+### 0.6
+- PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification foundation + full Windows regression/build/package path
+
 ## Beta readiness
 
 The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated 0.5 engineering gates are complete. Remaining blockers are independent release gates:
@@ -99,6 +120,8 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges and reject contradictory or unknown states instead of guessing.
 
-The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may feed bounded guest partition/filesystem analysis, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately, and guest GPT checksum/EBR containment checks now run before filesystem probing.
+The new 0.6 verification API is read-only and does not enable image creation, conversion or mutation. SHA-256/SHA-512 verification reads the selected file sequentially and supports cancellation/progress without changing the image.
+
+The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may feed bounded guest partition/filesystem analysis, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately, and guest GPT checksum/EBR containment checks run before filesystem probing.
 
 Interactive UAC, clean-machine runtime and the real cross-process Explorer drag gesture remain manual QA gates.

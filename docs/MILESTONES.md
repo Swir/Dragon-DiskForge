@@ -47,29 +47,32 @@ Required automated engineering scope: **100% complete**.
 13. **Common bounded guest partition/filesystem intelligence** ✅
 14. **Final guest partition structure hardening** ✅
 
-### Final guest partition structure hardening ✅
-
-- validates primary GPT header CRC32 before trusting guest metadata
-- validates the declared GPT partition-entry-array CRC32 with bounded streaming reads
-- cross-checks GPT usable range, backup-header placement and primary entry-array placement against guest geometry
-- rejects invalid MBR/EBR boot-status bytes
-- constrains EBR links and logical partitions to the declared extended-partition container
-- generated fixtures cover valid GPT, corrupt header/table checksums, invalid MBR status and escaping EBR/logical ranges
-- no Direct Browse, extraction, Mount, repair or write path is enabled
-- PR #40 implementation run #289 passed the guest-intelligence gate and complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication ✅
-
 ### 0.5 exit
 
 The automated engineering exit criteria are satisfied. Public beta publication remains a separate release decision gated by `docs/BETA-RELEASE.md`: clean-machine launch/regression, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and Release checksum publication.
 
-## 0.6 Create + Convert + Verify — NEXT 🚧
+## 0.6 Create + Convert + Verify — IN PROGRESS 🚧
 
-Next engineering milestone after the final PR #40 docs-synchronized CI/merge:
+Current engineering completion: approximately **20%** based on 1 of 5 top-level roadmap deliverables completed and validated.
 
-- image creation/conversion pipeline
+### Completed execution slice
+
+1. **Dual SHA-256/SHA-512 verification foundation** ✅
+   - `ImageVerificationInfo` returns SHA-256, SHA-512 and exact hashed byte count
+   - the combined API computes both digests in a single bounded sequential file pass
+   - existing SHA-256 callers remain source-compatible through `ComputeSha256Async`
+   - dedicated `ComputeSha512Async` API is available
+   - progress remains bounded/monotonic; cancellation and missing-file behavior are explicit
+   - generated smoke coverage validates multi-buffer data, empty files, both digests, byte count, progress, cancellation and missing files
+   - PR #41 implementation run #292 passed the verification gate and the complete Windows regression/build/package path ✅
+
+### Remaining execution slices
+
+- image creation and conversion pipeline
 - split/join and sparse/compression handling
-- SHA-256/SHA-512 verification
 - temporary output + atomic finalization
-- cancellation/rollback safety
+- cancellation/rollback safety for mutating pipelines
+
+The next implementation work should establish the safe output-transaction foundation before user-visible creation/conversion is enabled: temporary output, same-volume atomic commit where supported, explicit overwrite policy, cancellation cleanup and rollback-oriented tests.
 
 A capability becomes user-visible only after its real backing path and tests exist.
