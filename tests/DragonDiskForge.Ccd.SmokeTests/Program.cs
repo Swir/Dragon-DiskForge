@@ -28,7 +28,7 @@ try
 
     var inspect = await provider.InspectAsync(valid.Ccd);
     Expect(inspect.Format == "CCD/IMG/SUB", "Inspect should report CCD/IMG/SUB.");
-    Expect(inspect.Description.Contains("validated SUB sidecar", StringComparison.Ordinal), "Inspect should report a validated SUB sidecar.");
+    Expect(inspect.DetectionMethod.Contains("validated SUB sidecar", StringComparison.Ordinal), "Inspect should report a validated SUB sidecar.");
     Expect(!inspect.CanExplore && !inspect.CanMount && !inspect.CanConvert && inspect.CanVerify,
         "CCD provider must remain inspection-only in this slice.");
 
@@ -36,7 +36,7 @@ try
         new TrackSpec(1, 2, null, 0));
     Expect(await provider.CanHandleAsync(noSub.Ccd), "CCD/IMG should remain valid when optional SUB is absent.");
     var noSubInspect = await provider.InspectAsync(noSub.Ccd);
-    Expect(noSubInspect.Description.Contains("no SUB sidecar", StringComparison.Ordinal), "Inspect should distinguish absent optional SUB.");
+    Expect(noSubInspect.DetectionMethod.Contains("no SUB sidecar", StringComparison.Ordinal), "Inspect should distinguish absent optional SUB.");
 
     var badSub = CreateCloneCdSet(root, "bad-sub", withSub: true,
         new TrackSpec(1, 1, null, 0));
