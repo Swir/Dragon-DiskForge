@@ -24,14 +24,18 @@ The project follows semantic versioning while it evolves toward 1.0.
 - Windows installation-media recognition from setup + boot WIM + install payload evidence
 - Linux casper, Debian-style and Anaconda-style installer/live-media recognition
 - EFI fallback filename architecture hints for x86, x86_64, ARM, ARM64 and RISC-V 64
-- dedicated partition, filesystem and boot/installer intelligence CI gates
+- `ImageIntelligenceService` plus shared identity and health-evidence models
+- cross-source partition-name, filesystem-label/identifier, WIM/ESD container-GUID and FFU PlatformID aggregation
+- bounded exFAT dirty/media-failure, ext state, NTFS backup-boot and FAT32 backup-boot health evidence
+- dedicated partition, filesystem, boot/installer and unified image-intelligence CI gates
 
 ### Changed
 - development version is **0.5.0-alpha.1**
-- project progress advances to **50% toward 1.0** after the validated boot/installer intelligence foundation
-- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **55%**
-- CI now gates provider registry, partition intelligence, filesystem recognition and boot/installer intelligence before provider/native/build regression
+- project progress advances to **52% toward 1.0** after the validated unified identity/health intelligence foundation
+- **0.5 Partitions + File Systems + Image Intelligence** advances to approximately **70%**
+- CI now gates provider registry, partition intelligence, filesystem recognition, boot/installer intelligence and unified image intelligence before provider/native/build regression
 - installer evidence traversal stores only real files, ignores reparse-point evidence, rejects traversal-style virtual paths and enforces directory/entry/depth limits
+- filesystem health reads are restricted to already-recognized physical filesystem regions and are also bounded against the physical image
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
@@ -41,6 +45,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - bootability is reported only from a structurally valid El Torito catalog; installer file markers alone never fabricate boot support
 - installer evidence requires a truthful Direct Browse provider and never executes, extracts, mounts or modifies content
 - El Torito catalog and boot-image ranges are bounded against the physical image
+- health findings are evidence-backed checks, not a whole-filesystem “healthy” guarantee
+- exFAT/ext/NTFS/FAT32 health reads cannot escape the bounded filesystem region
 - existing cancellation, failure isolation and truthful capability behavior remain intact
 
 ### Verified
@@ -58,12 +64,13 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #27 / run #228 — provider-contract hardening + full regression/build/artifact
 - PR #28 / run #232 — docs-synchronized cross-provider partition intelligence + full regression/build/artifact
 - PR #29 / run #235 — docs-synchronized bounded filesystem recognition + full regression/build/artifact
-- PR #30 / run #240 — boot/installer intelligence code head + new gate + complete provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
+- PR #30 / run #242 — docs-synchronized boot/installer intelligence + full regression/build/artifact
+- PR #31 / run #245 — unified identity/health code and expanded generated-fixture tests + complete provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
 
 ### Planned
-- richer UDF/FAT/NTFS reader depth
-- cross-source architecture and label/UUID/GUID aggregation beyond current bounded hints
-- corruption/health warnings only where backed by proven metadata checks
+- richer UDF/FAT/exFAT/NTFS reader depth
+- additional evidence-backed health/corruption checks without unsupported whole-filesystem claims
+- stronger cross-source architecture reconciliation where multiple proven sources exist
 - guest-sector readers before filesystem intelligence inside sparse/compressed virtual disks
 - public beta `0.5.0-beta.1` only after the agreed 0.5 scope and beta gates are proven
 
