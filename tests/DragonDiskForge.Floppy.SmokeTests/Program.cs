@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using DragonDiskForge.Core.Providers;
+using DragonDiskForge.Core.Services;
 
 var root = Path.Combine(Path.GetTempPath(), "DragonDiskForge-Floppy-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
@@ -13,13 +14,16 @@ try
     CreateFat12Floppy(fat12Path);
     Expect(await provider.CanHandleAsync(fat12Path), "A valid 1.44 MB IMA image should be recognized.");
 
+    var catalogFormat = SupportedFormats.FromPath(fat12Path);
+    Expect(catalogFormat?.Name == "IMA / Floppy", "Shared supported-format catalogue should map .ima to IMA / Floppy.");
+
     var info = await provider.ReadMediaGeometryAsync(fat12Path);
     Expect(info.GeometryName.Contains("1.44 MB", StringComparison.Ordinal), "1.44 MB geometry should be reported.");
     Expect(info.BytesPerSector == 512, "FAT12 BPB bytes/sector should be parsed.");
     Expect(info.SectorsPerTrack == 18 && info.Heads == 2 && info.Tracks == 80, "1.44 MB CHS geometry should be parsed.");
     Expect(info.TotalSectors == 2880, "1.44 MB total sectors should be parsed.");
     Expect(info.BootParameterBlockDetected, "Valid FAT12 BPB should be detected.");
-    Expect(info.FileSystemHint.Contains("FAT12", StringComparison.OrdinalIgnoreCase), "FAT12 filesystem hint should be exposed.");
+    Expect(info.FileSystemHint == "FAT12", "FAT12 filesystem hint should be exposed.");
     Expect(info.VolumeLabel == "DRAGON", "FAT12 volume label should be decoded.");
 
     var inspect = await provider.InspectAsync(fat12Path);
@@ -37,16 +41,37 @@ try
     await CreateSizedFileAsync(fakePath, 1_000_000);
     Expect(!await provider.CanHandleAsync(fakePath), "Unsupported image size must not be accepted merely because the extension is .ima.");
 
-    var corruptPath = Path.Combine(root, "corrupt.ima");
-    CreateFat12Floppy(corruptPath);
-    using (var stream = new FileStream(corruptPath, FileMode.Open, FileAccess.Write, FileShare.None))
+    var corruptCapacityPath = Path.Combine(root, "corrupt-capacity.ima");
+    CreateFat12Floppy(corruptCapacityPath);
+    using (var stream = new FileStream(corruptCapacityPath, FileMode.Open, FileAccess.Write, FileShare.None))
     {
         stream.Position = 19;
         Span<byte> wrongTotal = stackalloc byte[2];
         BinaryPrimitives.WriteUInt16LittleEndian(wrongTotal, 1440);
         stream.Write(wrongTotal);
     }
-    Expect(!await provider.CanHandleAsync(corruptPath), "A BPB whose capacity disagrees with the image must be rejected.");
+    Expect(!await provider.CanHandleAsync(corruptCapacityPath), "A BPB whose capacity disagrees with the image must be rejected.");
+
+    var corruptGeometryPath = Path.Combine(root, "corrupt-geometry.ima");
+    CreateFat12Floppy(corruptGeometryPath);
+    using (var stream = new FileStream(corruptGeometryPath, FileMode.Open, FileAccess.Write, FileShare.None))
+    {
+        stream.Position = 24;
+        Span<byte> wrongSectorsPerTrack = stackalloc byte[2];
+        BinaryPrimitives.WriteUInt16LittleEndian(wrongSectorsPerTrack, 9);
+        stream.Write(wrongSectorsPerTrack);
+    }
+    Expect(!await provider.CanHandleAsync(corruptGeometryPath), "A BPB whose CHS geometry disagrees with the exact media size must be rejected.");
+
+    var misleadingFsPath = Path.Combine(root, "misleading-fs.ima");
+    CreateFat12Floppy(misleadingFsPath);
+    using (var stream = new FileStream(misleadingFsPath, FileMode.Open, FileAccess.Write, FileShare.None))
+    {
+        stream.Position = 54;
+        stream.Write(Encoding.ASCII.GetBytes("FAT16   "));
+    }
+    var misleadingFs = await provider.ReadMediaGeometryAsync(misleadingFsPath);
+    Expect(misleadingFs.FileSystemHint == "FAT12", "A misleading BPB filesystem label must not override the computed FAT family.");
 
     var foreignPath = Path.Combine(root, "dragon.vhd");
     File.Copy(fat12Path, foreignPath);
