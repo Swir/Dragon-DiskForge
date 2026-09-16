@@ -25,6 +25,7 @@ public sealed record ProviderDescriptor(
             IMediaGeometryProvider media => media.DisplayName,
             ITrackLayoutProvider tracks => tracks.DisplayName,
             IVirtualDiskMetadataProvider virtualDisk => virtualDisk.DisplayName,
+            IQcowMetadataProvider qcow => qcow.DisplayName,
             _ => provider.Id
         };
 
