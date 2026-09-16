@@ -18,11 +18,10 @@ var safeDisk = MakeDisk(
 var safePlan = safety.PreviewImageToDiskWrite(imagePath, 4L * 1024 * 1024, safeDisk);
 Check(safePlan.IsAllowed, "stable non-system disk can reach the confirmation gate");
 Check(safePlan.RequiresExplicitConfirmation, "allowed destructive plan always requires explicit confirmation");
-Check(!string.IsNullOrWhiteSpace(safePlan.ConfirmationToken), "allowed plan emits a destination-bound confirmation token");
-Check(safePlan.ConfirmationToken == "ERASE PHYSICALDRIVE7 5566778899AABBCCDDEEFF"[^25..] ? false : true, "placeholder");
+Check(safePlan.ConfirmationToken == "ERASE PHYSICALDRIVE7 AABBCCDDEEFF", "confirmation token is bound to disk number and stable identity");
 Check(safety.ConfirmationMatches(safePlan, safePlan.ConfirmationToken), "exact confirmation token is accepted");
 Check(!safety.ConfirmationMatches(safePlan, safePlan.ConfirmationToken?.ToLowerInvariant()), "confirmation token is case-sensitive");
-Check(!safety.ConfirmationMatches(safePlan, "ERASE PHYSICALDRIVE8 deadbeef"), "confirmation for another disk is rejected");
+Check(!safety.ConfirmationMatches(safePlan, "ERASE PHYSICALDRIVE8 DEADBEEF"), "confirmation for another disk is rejected");
 Check(safePlan.Warnings.Any(x => x.Contains("smaller", StringComparison.OrdinalIgnoreCase)), "smaller source warns about trailing destination capacity");
 Check(safePlan.Warnings.Any(x => x.Contains("removable", StringComparison.OrdinalIgnoreCase)), "removable-media evidence is surfaced as a warning");
 
