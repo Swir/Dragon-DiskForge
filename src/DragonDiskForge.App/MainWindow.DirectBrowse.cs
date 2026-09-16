@@ -18,7 +18,8 @@ public sealed partial class MainWindow
         new ProviderRegistration(new VmdkSparseImageProvider(), Priority: 40),
         new ProviderRegistration(new QcowImageProvider(), Priority: 30),
         new ProviderRegistration(new DmgUdifImageProvider(), Priority: 20),
-        new ProviderRegistration(new WimEsdImageProvider(), Priority: 10)
+        new ProviderRegistration(new WimEsdImageProvider(), Priority: 10),
+        new ProviderRegistration(new FfuImageProvider(), Priority: 5)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
@@ -142,7 +143,7 @@ public sealed partial class MainWindow
             return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its virtual-disk metadata. Direct filesystem browsing stays disabled until extent translation and filesystem support are implemented and tested.";
 
         if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.ContainerMetadata) == true)
-            return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its container metadata. Direct browsing stays disabled until resource decompression and file-tree support are implemented and tested.";
+            return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its container metadata. Direct browsing stays disabled until container payload parsing and file-tree support are implemented and tested.";
 
         var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
         return failed > 0

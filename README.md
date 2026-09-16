@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 42% toward 1.0
+## Project progress — 43% toward 1.0
 
-`████████░░░░░░░░░░░░ 42%`
+`█████████░░░░░░░░░░░ 43%`
 
-**Overall completion:** **42%**
+**Overall completion:** **43%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~89%** 🚧
+- `0.4 Extended Image Providers` — **~95%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > The progress indicator changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -34,7 +34,7 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## 0.4 Extended Image Providers 🚧
 
-The provider foundation and **ten additional image families** are now implemented and proven.
+The provider foundation and **eleven additional image families** are now implemented and proven.
 
 ### Provider architecture
 
@@ -58,25 +58,27 @@ The provider foundation and **ten additional image families** are now implemente
 - **QCOW / QCOW2** ✅ — QCOW v1 and QCOW2 v2/v3 big-endian container metadata
 - **DMG / UDIF** ✅ — bounded `koly` trailer and XML plist metadata
 - **WIM / ESD** ✅ — bounded 208-byte header and resource metadata; `ContainerMetadata`
+- **FFU** ✅ — bounded common Full Flash Update security/image/store metadata; `ContainerMetadata`
 
-### WIM / ESD metadata provider ✅
+### FFU metadata provider ✅
 
-- dedicated `IWimMetadataProvider` + `WimMetadataInfo`
-- introduces the truthful `ContainerMetadata` capability instead of mislabeling WIM as a virtual disk
-- validates the 208-byte little-endian `MSWIM\0\0\0` header
-- supports standard WIM version `68864` and solid/ESD version `3584` metadata
-- parses flags, chunk size, GUID, part number, total parts, image count and boot index
-- parses lookup-table, XML, boot-metadata and integrity resource descriptors
-- resource stored size uses the lower 56 bits while resource flags use the upper byte
-- all resource offsets/ranges are bounded against the physical container before use
-- standalone Part 1/1 images are supported; split/spanned WIM is rejected until companion-part handling exists
-- `WRITE_IN_PROGRESS`, unknown flags, invalid chunk geometry, invalid BootIndex and out-of-file resources are rejected rather than guessed
-- resource decompression, XML/file-tree parsing, extraction, encrypted ESD handling, Direct Browse, Mount and Convert remain disabled
-- PR #25 / run #222 passed WIM/ESD tests, all previous provider tests, Explorer safety, ISO/native Windows regression, Release x64 build and artifact publication ✅
+- dedicated `IFfuMetadataProvider` + `FfuMetadataInfo`
+- truthful `ContainerMetadata` capability
+- validates the common 32-byte `SignedImage ` security header
+- validates the 24-byte `ImageFlash ` + NUL image header
+- supports the proven SHA-256 metadata algorithm id `0x0000800C`
+- validates chunk size, catalog/hash-table region, manifest region and chunk alignment
+- parses the common 248-byte store header metadata used by the proven slice
+- reads bounded PlatformID, block size, write-descriptor count/length and validation-descriptor count/length
+- all declared metadata regions are bounded against the physical FFU file
+- base Core signature detection recognizes `SignedImage `
+- write-descriptor locations are not interpreted and payload chunks are never mapped to physical media
+- Direct Browse, Mount, Convert, device access, sector writing and image application remain disabled
+- PR #26 / run #225 passed FFU tests, all previous provider tests, Explorer safety, ISO/native Windows regression, Release x64 build and artifact publication ✅
 
-### Next 0.4 provider
+### Remaining 0.4 gate
 
-**FFU** — bounded read-only Full Flash Update metadata inspection first. Payload writing, physical-device flashing and destructive operations stay disabled until separately implemented and tested.
+**Provider-contract hardening** — tighten registry/descriptor invariants and deterministic provider behavior before any public stability promise. This is hardening of the internal 0.4 contract, not a declaration of a stable public plugin API.
 
 The cross-process human drag gesture and normal-user UAC prompt remain manual QA gates in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md).
 
@@ -101,13 +103,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF and WIM/ESD; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-VMDK, QCOW and DMG expose only proven metadata. WIM/ESD exposes container metadata only; it does not decompress resources, traverse image file trees, extract payloads, browse directly, mount or convert them.
+VMDK, QCOW and DMG expose only proven metadata. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 
 ## Project rule
 

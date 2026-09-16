@@ -60,6 +60,9 @@ jobs:
       - name: WIM / ESD metadata smoke tests
         run: dotnet run --project tests/DragonDiskForge.Wim.SmokeTests/DragonDiskForge.Wim.SmokeTests.csproj -c Release
 
+      - name: FFU metadata smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Ffu.SmokeTests/DragonDiskForge.Ffu.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 

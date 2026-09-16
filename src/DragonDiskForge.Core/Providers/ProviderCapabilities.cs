@@ -41,7 +41,7 @@ public static class ProviderCapabilityExtensions
         if (provider is IVirtualDiskMetadataProvider or IQcowMetadataProvider or IDmgMetadataProvider)
             capabilities |= ProviderCapabilities.VirtualDiskMetadata;
 
-        if (provider is IWimMetadataProvider)
+        if (provider is IWimMetadataProvider or IFfuMetadataProvider)
             capabilities |= ProviderCapabilities.ContainerMetadata;
 
         return capabilities;
