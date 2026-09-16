@@ -42,12 +42,17 @@ $stage = Join-Path $output "DragonDiskForge-win-x64"
 $zip = Join-Path $output "DragonDiskForge-win-x64.zip"
 $checksum = "$zip.sha256"
 
+Write-Host "Preparing clean Windows x64 package for version $expected."
+Write-Host "Build search root: $source"
+
 $executables = @(Get-ChildItem -Path $source -Recurse -File -Filter "DragonDiskForge.App.exe")
 if ($executables.Count -ne 1) {
     throw "Expected exactly one DragonDiskForge.App.exe below '$source', found $($executables.Count)."
 }
 
 $appDirectory = $executables[0].Directory.FullName
+Write-Host "Application output directory: $appDirectory"
+
 if (Test-Path $output) {
     Remove-Item $output -Recurse -Force
 }
@@ -73,6 +78,17 @@ if (-not (Test-Path $entryPoint -PathType Leaf)) {
     throw "Packaged application is missing DragonDiskForge.App.exe at the package root."
 }
 
+$icon = Join-Path $stage "DragonDiskForge.ico"
+if (-not (Test-Path $icon -PathType Leaf)) {
+    $repositoryIcon = Join-Path (Get-Location) "src/DragonDiskForge.App/Assets/DragonDiskForge.ico"
+    if (-not (Test-Path $repositoryIcon -PathType Leaf)) {
+        throw "DragonDiskForge.ico is absent from both the application output and the canonical repository asset path."
+    }
+
+    Copy-Item $repositoryIcon $icon -Force
+    Write-Host "Added canonical DragonDiskForge.ico to package root."
+}
+
 $debugFiles = @(Get-ChildItem -Path $stage -Recurse -File -Filter "*.pdb")
 if ($debugFiles.Count -ne 0) {
     throw "Public-package staging contains debug symbol files."
@@ -85,19 +101,17 @@ if ($testFiles.Count -ne 0) {
     throw "Public-package staging contains test-only files."
 }
 
-$icon = Join-Path $stage "DragonDiskForge.ico"
-if (-not (Test-Path $icon -PathType Leaf)) {
-    throw "Packaged application is missing DragonDiskForge.ico."
-}
-
 $versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($entryPoint)
 $productVersion = [string]$versionInfo.ProductVersion
 $fileVersion = [string]$versionInfo.FileVersion
+Write-Host "Executable ProductVersion: $productVersion"
+Write-Host "Executable FileVersion: $fileVersion"
 if ([string]::IsNullOrWhiteSpace($productVersion) -or -not $productVersion.StartsWith($expected, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Packaged application ProductVersion '$productVersion' does not match expected version '$expected'."
 }
 
 $entryPointSha256 = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+$packageFilesBeforeManifest = @(Get-ChildItem -Path $stage -Recurse -File)
 $manifest = [ordered]@{
     schemaVersion = 2
     product = "Dragon DiskForge"
@@ -109,7 +123,7 @@ $manifest = [ordered]@{
     icon = "DragonDiskForge.ico"
     entryPointSha256 = $entryPointSha256
     debugSymbolsIncluded = $false
-    fileCount = $files.Count
+    fileCount = $packageFilesBeforeManifest.Count + 1
 }
 $manifest | ConvertTo-Json | Set-Content -Path (Join-Path $stage "package-manifest.json") -Encoding utf8NoBOM
 
@@ -122,7 +136,7 @@ $hash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 $line = "$hash  $([System.IO.Path]::GetFileName($zip))"
 Set-Content -Path $checksum -Value $line -Encoding ascii
 
-Write-Host "Packaged $($files.Count) application files."
+Write-Host "Packaged $((Get-ChildItem -Path $stage -Recurse -File).Count) files."
 Write-Host "Version: $expected"
 Write-Host "ProductVersion: $productVersion"
 Write-Host "ZIP: $zip"
