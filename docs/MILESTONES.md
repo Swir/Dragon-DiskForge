@@ -74,7 +74,7 @@ The same project rule continues: no Explorer control becomes active before its b
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **59%**.
+Current milestone completion is approximately **65%**.
 
 ### Completed execution slices
 
@@ -150,9 +150,22 @@ Current milestone completion is approximately **59%**.
    - Direct Browse, Mount and Convert remain disabled until real backends exist
    - dedicated NRG v1/v2 smoke tests in Windows CI
 
+7. **CCD / IMG / SUB track-layout provider** ✅
+   - read-only `.ccd`, same-name `.img` and validated same-name `.sub` support
+   - reuses `ITrackLayoutProvider` and explicit `TrackLayout`
+   - CloneCD `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
+   - INDEX 0/1 parsing with INDEX 1 used as the logical track start
+   - IMG payload must be non-empty and aligned to 2352-byte raw sectors
+   - optional SUB sidecar must be exactly 96 bytes per IMG sector
+   - descriptor byte-size, line-count and line-length bounds
+   - unsupported versions/modes, missing or duplicate INDEX 1, non-increasing track starts, invalid INDEX 0 ordering and out-of-range metadata rejected
+   - CCD registration sits above generic RAW for `.img`, but claims the file only after a same-name CCD descriptor validates; otherwise registry fallback remains intact
+   - cancellation propagation
+   - Direct Browse, Mount and Convert remain disabled until real backends exist
+   - dedicated CCD/IMG/SUB smoke tests in Windows CI
+
 ### Next execution slices
 
-- CCD/IMG/SUB provider
 - VMDK provider
 - QCOW/QCOW2 provider
 - remaining virtual-disk/container providers from `docs/ROADMAP.md`
@@ -165,5 +178,6 @@ Current milestone completion is approximately **59%**.
 - PR #18 / run #172 — BIN/CUE provider plus all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 - PR #19 / run #182 — final MDF/MDS CD branch head plus explicit DVD-scope safety, all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 - PR #20 / run #185 — NRG v1/v2 provider plus all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed before docs synchronization
+- PR #21 / run #193 — CCD/IMG/SUB provider plus `.img` ambiguity fallback, all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed before docs synchronization
 
 `docs/ROADMAP.md` remains the source of truth for exact provider order and completion state. A provider capability becomes user-visible only after its backing operation and tests exist.
