@@ -35,7 +35,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 77%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK and QCOW/QCOW2 are real and tested.
+**Current 0.4 completion: approximately 83%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2 and DMG/UDIF are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit capability reporting
@@ -86,27 +86,31 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ no guest-sector translation/browse/mount/convert
 
 ### QCOW / QCOW2 metadata provider — ✅ complete
-- ✅ `.qcow`, `.qcow2`
-- ✅ QCOW v1 and QCOW2 v2/v3
-- ✅ big-endian `QFI\xFB` parsing
-- ✅ QCOW v1 cluster/L2/L1/backing metadata
-- ✅ QCOW2 L1/refcount/snapshot metadata
-- ✅ v3 feature masks, refcount order and header length
-- ✅ Zstandard compression metadata consistency
-- ✅ backing filename bounded/strict UTF-8 and never followed
-- ✅ unknown incompatible/compatible bits rejected
-- ✅ corrupt/external-data/autoclear states outside this slice rejected
+- ✅ QCOW v1 and QCOW2 v2/v3 big-endian metadata
+- ✅ L1/refcount/snapshot/feature validation
+- ✅ backing filename bounded and never followed
+- ✅ no cluster translation/virtual-sector I/O/browse/mount/convert
+
+### DMG / UDIF metadata provider — ✅ complete
+- ✅ `.dmg` single-file UDIF detection through trailing `koly`
+- ✅ 512-byte big-endian trailer version/header validation
+- ✅ flags, fork, segment, checksum, XML, image-variant and sector metadata
+- ✅ physical data/resource/XML ranges bounded before reads
+- ✅ 512-byte-sector virtual-size calculation
+- ✅ XML plist bounded to 16 MiB
+- ✅ DTD and external XML resolution disabled
+- ✅ bounded `blkx` entry counting without `mish` block-map decoding
+- ✅ multi-segment images rejected until companion-segment support exists
 - ✅ cancellation propagation
-- ✅ shared `VirtualDiskMetadata` capability through `IQcowMetadataProvider`
-- ✅ no cluster translation, virtual-sector reads, Direct Browse, Mount or Convert
-- ✅ PR #23 / run #207 passed QCOW plus the complete prior provider/native/build/artifact regression path before documentation synchronization
+- ✅ shared `VirtualDiskMetadata` capability through `IDmgMetadataProvider`
+- ✅ no decompression, guest-sector translation, Direct Browse, Mount or Convert
+- ✅ PR #24 / run #214 passed DMG plus the complete prior provider/native/build/artifact regression path before documentation synchronization
 
 ### Remaining image families
-- ⬜ DMG
 - ⬜ WIM/ESD
 - ⬜ FFU
 
-**Next provider:** **DMG**.
+**Next provider:** **WIM/ESD**.
 
 **Exit criteria:** providers expose truthful capabilities without turning Core into a monolithic parser.
 
