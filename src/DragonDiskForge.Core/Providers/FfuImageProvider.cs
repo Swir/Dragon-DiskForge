@@ -91,7 +91,7 @@ public sealed class FfuImageProvider : IFfuMetadataProvider
         var securitySpan = securityBytes.AsSpan();
 
         var declaredSecuritySize = ReadU32(securitySpan, 0);
-        if (!securitySpan.Slice(4, 12).SequenceEqual(SecuritySignature))
+        if (!securitySpan.Slice(4, SecuritySignature.Length).SequenceEqual(SecuritySignature))
             throw new InvalidDataException("FFU security signature does not match SignedImage.");
 
         var chunkSizeInKb = ReadU32(securitySpan, 16);
@@ -112,8 +112,12 @@ public sealed class FfuImageProvider : IFfuMetadataProvider
         var imageSpan = imageBytes.AsSpan();
 
         var declaredImageSize = ReadU32(imageSpan, 0);
-        if (!imageSpan.Slice(4, 12).SequenceEqual(ImageSignature))
-            throw new InvalidDataException("FFU image signature does not match ImageFlash.");
+        if (!imageSpan.Slice(4, ImageSignature.Length).SequenceEqual(ImageSignature)
+            || imageSpan[4 + ImageSignature.Length] != 0)
+        {
+            throw new InvalidDataException("FFU image signature does not match the 12-byte ImageFlash field.");
+        }
+
         var manifestSize = ReadU32(imageSpan, 16);
         var imageChunkSizeInKb = ReadU32(imageSpan, 20);
 
