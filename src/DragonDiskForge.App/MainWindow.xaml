@@ -94,7 +94,7 @@
                                 VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Ellipse Width="8" Height="8" Fill="{ThemeResource DragonSuccessBrush}" />
-                                <TextBlock Text="Core 0.2" FontWeight="SemiBold" />
+                                <TextBlock Text="DiskForge" FontWeight="SemiBold" />
                                 <TextBlock Text="•" Foreground="{ThemeResource DragonMutedBrush}" />
                                 <TextBlock Text="Ready" Foreground="{ThemeResource DragonMutedBrush}" />
                             </StackPanel>
@@ -350,6 +350,8 @@
                                 <Button x:Name="MountButton" Content="Mount" IsEnabled="False"
                                         Style="{StaticResource DragonSecondaryButtonStyle}"
                                         ToolTipService.ToolTip="Native mount is available for proven ISO/VHD/VHDX images" />
+                                <Button Content="Analyze" Click="Analyze_Click"
+                                        Style="{StaticResource DragonSecondaryButtonStyle}" />
                                 <Button Content="Verify" Click="Verify_Click"
                                         Style="{StaticResource DragonPrimaryButtonStyle}" />
                             </StackPanel>
@@ -361,7 +363,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Dragon DiskForge • 0.2 Native Mount channel"
+                        <TextBlock Text="Dragon DiskForge • Development release"
                                    FontSize="11" Foreground="{ThemeResource DragonMutedBrush}" />
                         <TextBlock x:Name="SafeModeText"
                                    Grid.Column="1" Text="READ-ONLY SAFE MODE"
