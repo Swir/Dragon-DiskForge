@@ -11,7 +11,8 @@ public sealed partial class MainWindow
         new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100),
         new ProviderRegistration(new RawPartitionImageProvider(), Priority: 90),
         new ProviderRegistration(new FloppyImageProvider(), Priority: 80),
-        new ProviderRegistration(new CueSheetImageProvider(), Priority: 70)
+        new ProviderRegistration(new CueSheetImageProvider(), Priority: 70),
+        new ProviderRegistration(new MdsImageProvider(), Priority: 60)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
