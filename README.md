@@ -6,17 +6,17 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 58% toward 1.0
+## Project progress — 59% toward 1.0
 
-`████████████░░░░░░░░ 58%`
+`████████████░░░░░░░░ 59%`
 
-**Overall completion:** **58%**
+**Overall completion:** **59%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~95%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **~97%** 🚧
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -35,11 +35,11 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - user-facing **Analyze** action with text/JSON reporting and Save JSON
 - required **by Swir** + GitHub footer in the Windows UI
 - versioned, checksum-verified clean Windows x64 package candidate pipeline
-- first truthful sparse-container guest-byte translation path for standard QCOW2 clusters
+- truthful sparse-container guest-byte translation for standard QCOW2 and hosted sparse VMDK mappings
 
 ## 0.5 Partitions + File Systems + Image Intelligence 🚧
 
-Eleven substantial 0.5 execution slices are implemented and validated.
+Twelve substantial 0.5 execution slices are implemented and validated.
 
 ### Cross-provider partition intelligence ✅
 - provider-agnostic `PartitionIntelligenceService`
@@ -111,13 +111,24 @@ Eleven substantial 0.5 execution slices are implemented and validated.
 - backing chains, encryption, dirty images, external data files, non-default compression metadata, extended L2 entries and compressed-cluster descriptors fail closed
 - generated smoke tests cover cross-cluster reads, zero/unallocated clusters, OOB mappings, reserved bits, unsupported states and cancellation
 - PR #37 / implementation run #277 passed the new reader gate plus the complete provider/Explorer/native Windows/Release/clean-package verification and artifact path
-- this does **not** enable Direct Browse or filesystem analysis inside QCOW2 yet; integration remains a separate truthful capability step
+
+### Bounded hosted-sparse VMDK guest-byte reader ✅
+- `VmdkSparseGuestByteReader` implements the same read-only guest-byte contract for the proven hosted sparse v1 subset
+- clean single-extent `monolithicSparse` images with no parent chain and no compression are translated through active grain directory/grain tables
+- redundant-vs-primary grain-directory selection follows the sparse-header flag
+- unallocated grains become zeroes only because parent chains are refused
+- guest bounds, directory/table/grain physical bounds and metadata-overhead separation are enforced before reads
+- compressed/stream-optimized/zeroed-entry/unknown-flag states, split create types, parent chains and unclean images fail closed
+- generated tests cover allocated/sparse/cross-grain reads, active-directory selection, metadata/data separation, OOB pointers and cancellation
+- PR #38 implementation head passed the dedicated VMDK reader gate together with the existing provider/intelligence/native regression path before documentation synchronization
+
+Neither sparse-container reader enables Direct Browse, extraction, Mount or filesystem analysis by itself. Common guest-byte integration remains a separate truthful capability step.
 
 See [`docs/GUEST-BYTE-READERS.md`](docs/GUEST-BYTE-READERS.md), [`docs/FILESYSTEM-DEPTH.md`](docs/FILESYSTEM-DEPTH.md), [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md), [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md) and [`docs/IMAGE-INTELLIGENCE.md`](docs/IMAGE-INTELLIGENCE.md).
 
 ### Remaining 0.5 work
 
-- VMDK sparse guest-byte reader plus a common guest-reader integration path into bounded filesystem intelligence
+- common bounded guest-byte source integration into partition/filesystem intelligence
 - final 0.5 beta-scope hardening/documentation
 - clean-machine launch/open/mount/explore/verify/analyze, normal-user UAC and real cross-process drag-out manual QA
 - promote the verified version pipeline to `0.5.0-beta.1` only when the beta gate is complete
@@ -147,7 +158,7 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
+CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition/depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
 
 ## Safety design
 
@@ -155,7 +166,7 @@ Inspection is read-only-first. Native mounts default to read-only. Metadata pars
 
 Partition/filesystem intelligence operates only on proven byte mappings. UDF root traversal follows only validated Type 1 physical mappings and remains non-recursive. NTFS depth checks validate metadata only and never repair or traverse directories. Architecture reconciliation preserves conflicting evidence rather than guessing a winner.
 
-The QCOW2 guest reader currently translates only standard uncompressed v2/v3 cluster mappings with no backing file or encryption. Unsupported compressed/extended/external states fail closed and no Direct Browse capability is advertised from that reader.
+The QCOW2 guest reader currently translates only standard uncompressed v2/v3 cluster mappings with no backing file or encryption. The VMDK guest reader currently translates only clean hosted sparse v1 `monolithicSparse` mappings with one extent, no parent chain and no compressed/stream-optimized semantics. Unsupported states fail closed and neither reader advertises Direct Browse by itself.
 
 VMDK, QCOW and DMG provider surfaces remain capability-limited to what their tested engine paths actually support. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 

@@ -37,7 +37,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 95%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation, bounded UDF root traversal, a versioned clean Windows package-candidate path and the first truthful QCOW2 guest-byte reader are implemented and validated.
+**Current 0.5 completion: approximately 97%.** Cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, the Windows analysis/report surface, deeper exFAT/FAT32/UDF evidence, bounded NTFS metadata depth, architecture reconciliation, bounded UDF root traversal, a versioned clean Windows package-candidate path and truthful QCOW2 plus hosted-sparse VMDK guest-byte readers are implemented and validated.
 
 ### Provider-independent partition intelligence — ✅ complete
 - ✅ capability-driven `PartitionIntelligenceService`
@@ -108,8 +108,18 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ PR #37 / implementation run #277 passed the new reader test plus the complete provider, Explorer, native Windows, Release x64, clean-package verification and artifact path
 - ✅ no Direct Browse or filesystem capability is implied by this isolated reader slice
 
+#### VMDK hosted sparse standard uncompressed mappings — ✅ complete
+- ✅ `VmdkSparseGuestByteReader` implements `IGuestByteReader`
+- ✅ clean hosted sparse v1 `monolithicSparse`, one embedded extent, no parent chain
+- ✅ active redundant/primary grain-directory selection and grain-table translation
+- ✅ allocated reads, cross-grain reads and unallocated/no-parent zero semantics
+- ✅ guest/physical bounds plus directory/table/grain metadata-overhead separation
+- ✅ parent chains, split create types, unclean images, compressed/stream-optimized/zeroed-entry/unknown flag semantics fail closed
+- ✅ generated fixtures cover active-directory selection, OOB pointers, metadata/data separation and cancellation
+- ✅ PR #38 implementation head passed the dedicated VMDK reader gate and complete pre-package regression before documentation synchronization
+- ✅ no Direct Browse, Mount, extraction or filesystem capability is implied by this isolated reader slice
+
 #### Remaining guest-byte work
-- ⬜ VMDK hosted sparse v1 guest-byte reader for safe standard uncompressed mappings
 - ⬜ common bounded guest-source integration into partition/filesystem intelligence
 - ⬜ explicitly supported compressed/backing variants only after independent implementation/testing; never infer support
 
@@ -127,11 +137,11 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ evidence-backed health/corruption foundation
 - ✅ user-facing text/JSON analysis reports
 - ✅ bounded non-recursive UDF Type 1 root traversal
-- 🚧 virtual guest-byte readers — QCOW2 standard uncompressed path proven; VMDK and common filesystem integration remain
+- 🚧 virtual guest-byte readers — QCOW2 and hosted sparse VMDK standard uncompressed paths proven; common partition/filesystem integration remains
 
 **0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** VMDK sparse guest-byte reader, then a common guest-byte source integration into bounded partition/filesystem intelligence, followed by final 0.5 beta hardening/manual QA.
+**Next engineering focus:** common bounded guest-byte source integration into partition/filesystem intelligence, followed by final 0.5 beta hardening/manual QA.
 
 ---
 
