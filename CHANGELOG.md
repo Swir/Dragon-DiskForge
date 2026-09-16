@@ -11,30 +11,26 @@ The project follows semantic versioning while it evolves toward 1.0.
 - read-only IMA/FLP media geometry with FAT-style BPB validation
 - read-only BIN/CUE, MDF/MDS CD, NRG v1/v2 and CCD/IMG/SUB optical track-layout providers
 - read-only VMware hosted sparse VMDK v1 metadata provider
-- `IVirtualDiskMetadataProvider`, `VirtualDiskMetadataInfo` and shared `VirtualDiskMetadata` capability
 - read-only QCOW v1 and QCOW2 v2/v3 metadata provider
-- `IQcowMetadataProvider` and `QcowMetadataInfo`, also mapped to `VirtualDiskMetadata`
-- big-endian QCOW parsing for virtual size, cluster geometry, backing metadata, encryption and L1 metadata
-- QCOW2 refcount/snapshot metadata and v3 feature-mask/refcount-order/header-length validation
-- bounded Zstandard compression metadata validation for QCOW2 v3
-- dedicated QCOW smoke tests for valid v1/v2/v3, backing metadata, malformed geometry/ranges/features, corrupt/external-data/autoclear states, compression mismatch, cancellation and registry capabilities
+- read-only Apple DMG / UDIF metadata provider
+- `IDmgMetadataProvider` and `DmgMetadataInfo`, mapped to the shared `VirtualDiskMetadata` capability
+- big-endian 512-byte `koly` trailer parsing for version, flags, fork metadata, segment metadata, checksums, XML plist location, image variant and sector count
+- bounded XML plist parsing with DTD/external resolution disabled and `blkx` entry counting without `mish` block-map decoding
+- dedicated DMG smoke tests covering valid UDIF metadata, XML/no-XML images, malformed trailer/ranges/XML, segmentation, checksum bounds, foreign extensions, cancellation and registry capabilities
 
 ### Changed
-- application registry now includes QCOW/QCOW2 metadata after VMDK
-- backing-file names are treated strictly as image metadata and are never followed/opened
-- project progress advances to **40% toward 1.0** after the eighth real additional 0.4 image family
-- 0.4 milestone completion advances to approximately **77%**
-- next 0.4 provider becomes **DMG**
+- application registry now includes DMG / UDIF metadata after QCOW/QCOW2
+- project progress advances to **41% toward 1.0** after the ninth real additional 0.4 image family
+- 0.4 milestone completion advances to approximately **83%**
+- next 0.4 provider becomes **WIM/ESD**
 
 ### Safety
 - all provider paths remain read-only-first
-- QCOW/QCOW2 table offsets/ranges are checked against the physical file before use
-- QCOW v1 cluster/L2 geometry, reserved padding, encryption metadata and derived L1 size are validated
-- QCOW2 L1/refcount offsets must be cluster-aligned and bounded
-- backing-file names are limited to 1023 bytes, strict UTF-8 and permitted header/cluster ranges
-- QCOW2 v3 rejects unknown incompatible/compatible bits, corrupt state, external-data mode and non-zero autoclear state in this first slice
-- QCOW2 header length/refcount order and compression feature/type consistency are validated
-- no QCOW cluster translation, virtual-sector I/O, Direct Browse, Mount or Convert is exposed
+- DMG physical data/resource/XML ranges are bounded before reads and may not extend into the final `koly` trailer
+- DMG XML metadata is limited to 16 MiB; DTD and external entity resolution are disabled
+- multi-segment DMGs are rejected until companion-segment handling is implemented
+- malformed/unsupported UDIF trailers, unsafe checksum sizes and malformed plist/blkx structure are rejected rather than guessed
+- no DMG `blkx`/`mish` block decompression, guest-sector translation, Direct Browse, Mount or Convert is exposed
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -44,10 +40,11 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #20 / run #185 — NRG + full regression/build/artifact
 - PR #21 / run #198 — final CCD/IMG/SUB head + full regression/build/artifact
 - PR #22 / run #205 — final VMDK head + full provider/native regression/build/artifact
-- PR #23 / run #207 — QCOW/QCOW2 v1/v2/v3 tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication all passed before docs synchronization
+- PR #23 / run #212 — final QCOW/QCOW2 head + all previous provider tests, ISO/native Windows integration, Release x64 build and artifact publication
+- PR #24 / run #214 — DMG/UDIF tests, all previous provider tests, Explorer safety, ISO/native Windows integration, Restore, Release x64 build and artifact publication all passed before docs synchronization
 
 ### Planned
-- remaining 0.4 image providers: DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 

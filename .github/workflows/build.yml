@@ -54,6 +54,9 @@ jobs:
       - name: QCOW/QCOW2 metadata smoke tests
         run: dotnet run --project tests/DragonDiskForge.Qcow.SmokeTests/DragonDiskForge.Qcow.SmokeTests.csproj -c Release
 
+      - name: DMG / UDIF metadata smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Dmg.SmokeTests/DragonDiskForge.Dmg.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 

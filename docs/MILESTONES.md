@@ -24,7 +24,7 @@ Released version: **0.3.0**.
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **77%**.
+Current milestone completion is approximately **83%**.
 
 ### Completed execution slices
 
@@ -37,28 +37,26 @@ Current milestone completion is approximately **77%**.
 7. **CCD / IMG / SUB track-layout provider** ✅
 8. **VMDK sparse metadata provider** ✅
 9. **QCOW / QCOW2 metadata provider** ✅
+10. **DMG / UDIF metadata provider** ✅
 
-### QCOW/QCOW2 execution slice ✅
+### DMG / UDIF execution slice ✅
 
-- `.qcow` and `.qcow2`
-- QCOW v1 plus QCOW2 v2/v3
-- `IQcowMetadataProvider` + `QcowMetadataInfo`
+- `.dmg` single-file UDIF images
+- `IDmgMetadataProvider` + `DmgMetadataInfo`
 - shared `VirtualDiskMetadata` capability
-- big-endian `QFI\xFB` header validation
-- QCOW v1 cluster/L2/L1/backing metadata validation
-- QCOW2 L1/refcount/snapshot offset and range validation
-- v3 incompatible/compatible/autoclear feature-mask validation
-- v3 refcount-order and header-length checks
-- Zstandard compression metadata accepted only when feature and extended header agree
-- backing names bounded to 1023 bytes, strict UTF-8 and never followed/opened
-- corrupt, external-data, unknown feature and unsupported autoclear states rejected
+- trailing 512-byte big-endian `koly` trailer validation
+- version/header/flags, data/resource fork, segment, checksum, XML, image-variant and sector metadata
+- all physical metadata ranges bounded before reading
+- logical size derived from 512-byte sector count
+- XML plist bounded to 16 MiB with DTD/external resolution disabled
+- bounded `blkx` entry counting without `mish` block-map decoding
+- multi-segment images rejected until companion-segment handling exists
 - cancellation propagation
-- no cluster translation, guest-sector I/O, Direct Browse, Mount or Convert
+- no decompression, virtual-sector I/O, Direct Browse, Mount or Convert
 - dedicated Windows CI smoke tests
 
 ### Next execution slices
 
-- DMG provider
 - WIM/ESD provider
 - FFU provider
 - provider-contract hardening before any public stability promise
@@ -72,6 +70,7 @@ Current milestone completion is approximately **77%**.
 - PR #20 / run #185 — NRG
 - PR #21 / run #198 — CCD/IMG/SUB final head
 - PR #22 / run #205 — VMDK final head
-- PR #23 / run #207 — QCOW/QCOW2 code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact before documentation synchronization
+- PR #23 / run #212 — QCOW/QCOW2 final head
+- PR #24 / run #214 — DMG/UDIF code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact before documentation synchronization
 
 A capability becomes user-visible only after its real backing path and tests exist.
