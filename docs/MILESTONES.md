@@ -22,7 +22,7 @@ Released version: **0.3.0**.
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
 
-Development version: **0.4.0-alpha.1**.
+Development version at milestone close: **0.4.0-alpha.1**.
 
 Required 0.4 engineering scope: **100% complete**.
 
@@ -42,35 +42,50 @@ Required 0.4 engineering scope: **100% complete**.
 12. **FFU metadata provider** ✅
 13. **Provider-contract hardening** ✅
 
-### Provider-contract hardening ✅
+### Final 0.4 validation
 
-- validated provider registration and stable provider IDs
-- immutable normalized descriptor snapshots
-- invalid/duplicate extension declarations rejected early
-- signature-only provider support retained
-- safe display-name fallback to provider ID
-- deterministic priority + provider-ID ordering
-- descriptor-based extension matching
-- cancellation, fallback and failure isolation preserved
-- dedicated registry tests plus complete existing regression path
-
-### Validation checkpoints
-
-- PR #16 / run #153 — RAW/IMG
-- PR #17 / run #165 — IMA/floppy
-- PR #18 / run #172 — BIN/CUE
-- PR #19 / run #182 — MDF/MDS
-- PR #20 / run #185 — NRG
-- PR #21 / run #198 — CCD/IMG/SUB
-- PR #22 / run #205 — VMDK
-- PR #23 / run #212 — QCOW/QCOW2
-- PR #24 / run #219 — DMG/UDIF
-- PR #25 / run #222 — WIM/ESD
 - PR #26 / run #226 — final FFU docs-synchronized head
 - PR #27 / run #228 — hardening code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
 
 Closing 0.4 completes the internal engineering contract only. It does not declare a stable public plugin API.
 
-## 0.5 Partitions + File Systems + Image Intelligence — NEXT ⬜
+## 0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧
 
-The next execution work begins from the hardened provider layer. A capability becomes user-visible only after its real backing path and tests exist.
+Development version: **0.5.0-alpha.1**.
+
+Current milestone completion is approximately **11%**.
+
+### Completed execution slices
+
+1. **Cross-provider partition intelligence** ✅
+
+### Cross-provider partition intelligence ✅
+
+- capability-driven `PartitionIntelligenceService`
+- provider resolution through `ProviderRegistry` + `PartitionTable`
+- stable finding codes and severities
+- duplicate index and zero-length checks
+- LBA arithmetic overflow checks
+- byte offset/size consistency checks
+- physical image-bound checks
+- overlapping partition-range checks
+- bootable partition count preserved without overstating health
+- capability-driven fake providers used in smoke tests
+- read-only analysis only; no mount, write or repair path
+
+### 0.5 validation checkpoints
+
+- PR #28 / run #231 — cross-provider partition intelligence code head passed dedicated tests, all provider regressions, Explorer safety, ISO/native Windows integration, Release x64 build and artifact before documentation synchronization
+
+### Next execution slices
+
+- bounded ISO9660/UDF filesystem recognition and metadata
+- FAT/FAT32/exFAT recognition and metadata
+- NTFS metadata where supported
+- ext-family recognition
+- bootability and BIOS/UEFI intelligence
+- Windows/Linux installer recognition
+- architecture, label and UUID/GUID intelligence
+- health/corruption warnings grounded in proven metadata
+
+A capability becomes user-visible only after its real backing path and tests exist.

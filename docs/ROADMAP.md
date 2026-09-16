@@ -51,84 +51,45 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ intentional signature-only provider support
 - ✅ safe display-name fallback
 
-### IMG / RAW partition provider — ✅ complete
-- ✅ MBR/EBR/GPT
-- ✅ strict bounds
-- ✅ `PartitionTable`
-
-### IMA / floppy provider — ✅ complete
-- ✅ standard media geometry
-- ✅ FAT-style BPB capacity/CHS validation
-- ✅ `MediaGeometry`
-
-### BIN / CUE provider — ✅ complete
-- ✅ AUDIO/MODE1/MODE2 BINARY CUE layouts
-- ✅ INDEX/payload/range safety
-- ✅ `TrackLayout`
-
-### MDF / MDS CD provider — ✅ complete
-- ✅ bounded descriptor/session/track metadata
-- ✅ explicit MDF offsets
-- ✅ safe footer payload resolution
-
-### NRG v1/v2 provider — ✅ complete
-- ✅ NERO/NER5
-- ✅ CUES/CUEX
-- ✅ DAOI/DAOX
-- ✅ END! and cue/DAO consistency
-
-### CCD / IMG / SUB provider — ✅ complete
-- ✅ CloneCD MODE/INDEX
-- ✅ 2352-byte IMG alignment
-- ✅ optional 96-byte SUB validation
-- ✅ safe CCD-vs-RAW `.img` fallback
-
-### VMDK sparse metadata provider — ✅ complete
-- ✅ hosted sparse v1 magic/header validation
-- ✅ capacity/grain/descriptor/GD metadata
-- ✅ physical-file bounds and descriptor limits
-- ✅ `VirtualDiskMetadata`
-- ✅ no guest-sector translation/browse/mount/convert
-
-### QCOW / QCOW2 metadata provider — ✅ complete
-- ✅ QCOW v1 and QCOW2 v2/v3 big-endian metadata
-- ✅ L1/refcount/snapshot/feature validation
-- ✅ backing filename bounded and never followed
-- ✅ no cluster translation/virtual-sector I/O/browse/mount/convert
-
-### DMG / UDIF metadata provider — ✅ complete
-- ✅ `.dmg` single-file UDIF detection through trailing `koly`
-- ✅ bounded big-endian trailer and plist metadata
-- ✅ no `blkx` decompression or filesystem browsing
-
-### WIM / ESD metadata provider — ✅ complete
-- ✅ standalone Part 1/1 WIM/ESD metadata
-- ✅ bounded 208-byte header and resource descriptors
-- ✅ `ContainerMetadata`
-- ✅ no resource decompression/file-tree extraction
-
-### FFU metadata provider — ✅ complete
-- ✅ bounded common `SignedImage ` / `ImageFlash ` metadata
-- ✅ chunk/catalog/hash/manifest/store bounds
-- ✅ `ContainerMetadata`
-- ✅ no write-destination interpretation or device writes
-
-### Final 0.4 contract gate — ✅ complete
-- ✅ invalid provider declarations fail fast
-- ✅ descriptor metadata is snapshotted and immutable for resolution
-- ✅ equal-priority selection is deterministic
-- ✅ existing fallback, diagnostics, failure isolation and cancellation remain proven
-- ✅ PR #27 / run #228 passed the full provider/native/build/artifact regression path before documentation synchronization
+### Proven 0.4 image families
+- ✅ IMG / RAW partition metadata
+- ✅ IMA / floppy media metadata
+- ✅ BIN / CUE track layout
+- ✅ MDF / MDS CD track layout
+- ✅ NRG v1/v2 track layout
+- ✅ CCD / IMG / SUB track layout
+- ✅ VMDK sparse v1 metadata
+- ✅ QCOW / QCOW2 metadata
+- ✅ DMG / UDIF metadata
+- ✅ WIM / ESD container metadata
+- ✅ FFU container metadata
 
 **0.4 exit criteria: PASSED.** Closing this milestone hardens the internal provider contract; it does not promise a stable public plugin API.
 
 ---
 
-## 0.5 Partitions + File Systems + Image Intelligence — ⬜ next
+## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-- ⬜ cross-provider partition intelligence
-- ⬜ ISO9660/UDF
-- ⬜ FAT/FAT32/exFAT
+**Current 0.5 completion: approximately 11%.** The first capability-driven intelligence slice is implemented and validated.
+
+### Cross-provider partition intelligence — ✅ complete
+- ✅ provider-agnostic `PartitionIntelligenceService`
+- ✅ resolves through `ProviderRegistry` + `PartitionTable` capability rather than format-specific shortcuts
+- ✅ stable structural finding codes and severities
+- ✅ duplicate partition-index detection
+- ✅ zero-length partition detection
+- ✅ start/end LBA overflow detection
+- ✅ provider-reported byte offset/size consistency checks
+- ✅ physical image-bound validation
+- ✅ overlapping partition-range detection
+- ✅ bootable partition count preserved without claiming filesystem health
+- ✅ capability-driven fake providers in dedicated smoke tests
+- ✅ read-only only; no writes, repairs or mounting
+- ✅ PR #28 / run #231 passed this slice plus the complete existing provider/native/build/artifact regression path before documentation synchronization
+
+### Remaining 0.5 scope
+- ⬜ ISO9660/UDF filesystem recognition and metadata
+- ⬜ FAT/FAT32/exFAT recognition and metadata
 - ⬜ NTFS metadata where supported
 - ⬜ ext-family recognition
 - ⬜ bootability + BIOS/UEFI detection
@@ -137,6 +98,8 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ⬜ health/corruption warnings
 
 **0.5 entry rule:** build on provider capabilities rather than format-specific UI shortcuts. New filesystem/intelligence features remain disabled until their real engine path and tests exist.
+
+**Next engineering focus:** bounded filesystem recognition/metadata, beginning with signatures and structures that can be validated read-only without mounting.
 
 ---
 
