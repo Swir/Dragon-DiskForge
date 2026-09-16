@@ -15,7 +15,8 @@ public sealed partial class MainWindow
         new ProviderRegistration(new CueSheetImageProvider(), Priority: 70),
         new ProviderRegistration(new MdsImageProvider(), Priority: 60),
         new ProviderRegistration(new NrgImageProvider(), Priority: 50),
-        new ProviderRegistration(new VmdkSparseImageProvider(), Priority: 40)
+        new ProviderRegistration(new VmdkSparseImageProvider(), Priority: 40),
+        new ProviderRegistration(new QcowImageProvider(), Priority: 30)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
