@@ -200,8 +200,22 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ RAW provider deliberately does not advertise Direct Browse, Mount or Convert
 - ✅ dedicated RAW/IMG smoke-test project integrated into Windows CI
 
+### IMA / floppy media provider — ✅ complete
+- ✅ `.ima` and `.flp` provider registration
+- ✅ exact standard floppy geometry recognition from 160 KB through 2.88 MB
+- ✅ raw blank/unformatted standard-size images recognized without fabricated filesystem claims
+- ✅ FAT-style BIOS Parameter Block parsing when metadata exists
+- ✅ BPB capacity validation against the actual image length
+- ✅ BPB sectors/track and head-count validation against the recognized media geometry
+- ✅ OEM string, volume-label, media-descriptor and filesystem-hint metadata
+- ✅ unsupported-size, malformed-BPB and foreign-extension rejection
+- ✅ cancellation propagation
+- ✅ dedicated `MediaGeometry` capability
+- ✅ floppy provider deliberately does not advertise Direct Browse, Mount or Convert
+- ✅ dedicated IMA/floppy smoke-test project integrated into Windows CI
+- ✅ PR #17 / run #165 passes the floppy provider plus the full Windows regression/build/artifact path
+
 ### Remaining image families
-- ⬜ IMA / floppy images
 - ⬜ BIN/CUE
 - ⬜ MDF/MDS
 - ⬜ NRG
@@ -212,7 +226,9 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ WIM/ESD
 - ⬜ FFU
 
-**Current 0.4 completion:** approximately **30%**. The first non-ISO image family is real and tested; the remaining format providers still need implementation.
+**Current 0.4 completion:** approximately **38%**. The provider foundation plus IMG/RAW and IMA/floppy families are real and tested; the remaining format providers still need implementation.
+
+**Next provider:** **BIN/CUE**.
 
 **Exit criteria:** providers expose consistent capabilities without turning Core into one monolithic parser.
 

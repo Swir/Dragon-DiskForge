@@ -7,7 +7,8 @@ public static class SupportedFormats
     public static IReadOnlyList<SupportedFormat> All { get; } = new[]
     {
         new SupportedFormat("ISO", new[] { ".iso" }, true),
-        new SupportedFormat("IMG / RAW", new[] { ".img", ".ima", ".raw", ".dd" }, false),
+        new SupportedFormat("IMG / RAW", new[] { ".img", ".raw", ".dd" }, false),
+        new SupportedFormat("IMA / Floppy", new[] { ".ima", ".flp" }, false),
         new SupportedFormat("BIN/CUE", new[] { ".bin", ".cue" }, false),
         new SupportedFormat("MDF/MDS", new[] { ".mdf", ".mds" }, false),
         new SupportedFormat("NRG", new[] { ".nrg" }, false),

@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 33% toward 1.0
+## Project progress — 34% toward 1.0
 
-`███████░░░░░░░░░░░░░ 33%`
+`███████░░░░░░░░░░░░░ 34%`
 
-**Overall completion:** **33%**
+**Overall completion:** **34%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~30%** 🚧
+- `0.4 Extended Image Providers` — **~38%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
@@ -106,7 +106,7 @@ Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
 
 ### 0.4 Extended Image Providers 🚧
 
-The provider foundation and the first additional image family are now implemented:
+The provider foundation and two additional image families are now implemented:
 
 - central Core `ProviderRegistry`
 - explicit provider capability reporting
@@ -117,16 +117,21 @@ The provider foundation and the first additional image family are now implemente
 - provider diagnostics for future UI/CLI reporting
 - duplicate provider-ID protection
 - existing ISO9660/Joliet direct browsing resolves through the registry instead of hardcoded `.iso` UI logic
-- new read-only **IMG / RAW partition provider** for `.img`, `.raw` and `.dd`
+- read-only **IMG / RAW partition provider** for `.img`, `.raw` and `.dd`
 - MBR primary partitions plus bounded EBR logical-partition traversal
 - GPT parsing with 512/4096-byte logical-sector probing
 - strict partition/image boundary validation and corrupt-image rejection
 - common MBR and GPT partition types plus GPT partition names
 - dedicated `PartitionTable` capability; RAW does **not** advertise Direct Browse, Mount or Convert
-- dedicated provider-registry and RAW/IMG smoke tests in CI
-- full provider work remains gated by real tests before UI capabilities are enabled
+- read-only **IMA / floppy provider** for `.ima` and `.flp`
+- exact standard floppy geometry recognition from 160 KB through 2.88 MB
+- FAT-style BIOS Parameter Block validation when present, including capacity and CHS consistency checks
+- blank/unformatted standard-size floppy recognition without inventing filesystem metadata
+- dedicated `MediaGeometry` capability; floppy images do **not** advertise Direct Browse, Mount or Convert
+- dedicated provider-registry, RAW/IMG and IMA/floppy smoke tests in CI
+- PR #17 / run #165: floppy tests + ISO/native-mount regression + full WinUI Release x64 + artifact ✅
 
-The next 0.4 work continues with additional image families. Filesystem-level browsing for RAW images remains intentionally disabled until the filesystem layer is implemented and proven.
+The next 0.4 work is **BIN/CUE**. Filesystem-level browsing for RAW and floppy images remains intentionally disabled until the filesystem layer is implemented and proven.
 
 The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
@@ -154,6 +159,7 @@ The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.m
 - provider registry with explicit capabilities, fallback and failure isolation
 - provider-backed direct-browse architecture for formats that can be safely parsed without mounting
 - bounded read-only partition-table parsing for RAW disk images
+- bounded read-only floppy geometry/BPB inspection
 
 ## Build on Windows
 
@@ -163,13 +169,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, IMA/floppy provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing and RAW partition-table inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary and does not expose filesystem browsing until that capability is real. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing, RAW partition-table inspection and floppy geometry/BPB inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary. Floppy inspection validates known capacity/geometry and rejects inconsistent BPB metadata. Neither RAW nor floppy providers expose filesystem browsing until that capability is real and tested. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 

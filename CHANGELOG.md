@@ -14,25 +14,34 @@ The project follows semantic versioning while it evolves toward 1.0.
 - `IPartitionTableProvider` contract and `PartitionTable` provider capability
 - `.dd` raw-image extension support
 - dedicated RAW/IMG smoke tests covering valid MBR/EBR/GPT images, malformed images, cancellation and registry capability resolution
+- read-only IMA/FLP media-geometry provider for standard floppy capacities from 160 KB through 2.88 MB
+- `IMediaGeometryProvider` contract and `MediaGeometry` provider capability
+- FAT-style BPB metadata parsing with capacity, sectors/track, head-count and CHS consistency validation
+- safe blank/unformatted floppy recognition based on exact standard media size
+- dedicated IMA/floppy smoke tests covering FAT12 metadata, blank media, bad capacity, bad CHS, foreign extension isolation and cancellation
 
 ### Changed
-- the application provider registry now includes the RAW partition provider alongside ISO9660/Joliet
+- the application provider registry now includes ISO9660/Joliet, RAW partition and IMA/floppy providers
 - RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
-- Direct Browse tooltip now explains when a provider recognized only the partition-table capability
-- project progress advances to 33% toward 1.0 after the first real additional 0.4 image family
+- IMA/FLP images can be positively recognized by media geometry without enabling fake filesystem browsing
+- Direct Browse tooltip explains when a provider recognized only a non-browse inspection capability
+- project progress advances to 34% toward 1.0 after the second real additional 0.4 image family
 
 ### Safety
 - RAW/IMG parsing is read-only and validates every referenced partition range against the image length
 - EBR traversal is bounded and loop-protected
 - GPT entry count and entry size are bounded before allocation/iteration
 - invalid `.img`/`.raw` extensions alone never make an image supported
-- RAW/IMG `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+- IMA/FLP parsing is read-only and rejects unsupported sizes, inconsistent BPB capacity and contradictory CHS geometry
+- foreign container extensions are not claimed by RAW or floppy providers merely because their payload resembles a supported layout
+- RAW/IMG and IMA/FLP `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
 
 ### Verified
 - RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
+- PR #17 / run #165 passed Core, provider-registry, RAW/IMG, IMA/floppy, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
 
 ### Planned
-- remaining 0.4 image providers: IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 
