@@ -12,45 +12,40 @@
 
 ## Current development version
 
-**0.4.0-alpha.1**
+**0.5.0-alpha.1**
 
 ## Overall project progress
 
-**44% toward 1.0** — milestones 0.1 through 0.4 have completed their required engineering scope.
+**45% toward 1.0** — milestones 0.1 through 0.4 are complete and the first validated 0.5 intelligence slice is now in place.
 
-## 0.4 final state
+## Current milestone
 
-**100% complete.** The provider foundation, eleven additional image families and the provider-contract hardening gate are implemented and validated.
+**0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧**
 
-### Proven 0.4 slices
+Current milestone completion is approximately **11%**.
 
-1. Provider registry foundation ✅
-2. IMG/RAW partition provider ✅
-3. IMA/floppy media provider ✅
-4. BIN/CUE track-layout provider ✅
-5. MDF/MDS CD track-layout provider ✅
-6. NRG v1/v2 track-layout provider ✅
-7. CCD/IMG/SUB track-layout provider ✅
-8. VMDK sparse metadata provider ✅
-9. QCOW/QCOW2 metadata provider ✅
-10. DMG/UDIF metadata provider ✅
-11. WIM/ESD metadata provider ✅
-12. FFU metadata provider ✅
-13. Provider-contract hardening ✅
+## Proven 0.5 slices
 
-### Provider-contract hardening proven scope
+1. Cross-provider partition intelligence ✅
 
-- provider descriptor snapshot created at registration time
-- provider IDs validated as stable restricted identifiers
-- null, empty, path-like and duplicate normalized extensions rejected
-- intentional signature-only providers with zero extensions preserved
-- blank capability-specific display names fall back to provider ID
-- registry matching uses immutable normalized descriptor extensions
-- equal-priority providers are ordered deterministically by ID
-- extension-first resolution, fallback, failure isolation and cancellation behavior preserved
+### Cross-provider partition intelligence proven scope
+
+- provider-agnostic `PartitionIntelligenceService`
+- resolves through `ProviderRegistry` using the truthful `PartitionTable` capability
+- stable structural findings with explicit severity
+- duplicate partition indexes detected
+- zero-length partitions detected
+- LBA arithmetic overflow detected
+- byte offset and byte size checked against provider-reported LBA geometry
+- partition ranges bounded against the physical image
+- overlapping partition byte ranges detected
+- bootable partition count and partition-table metadata preserved
+- capability-driven fake providers prove the service is not tied to one image format
+- no filesystem-health claims, writes, repairs or mounts
 
 ## Proven validation checkpoints
 
+### 0.4
 - PR #16 / run #153 — RAW/IMG
 - PR #17 / run #165 — IMA/floppy
 - PR #18 / run #172 — BIN/CUE
@@ -64,16 +59,19 @@
 - PR #26 / run #226 — final FFU head + full regression/build/artifact
 - PR #27 / run #228 — provider-contract hardening + complete provider/native/build/artifact regression
 
-## Next milestone
+### 0.5
+- PR #28 / run #231 — partition-intelligence code head + dedicated tests + full provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
 
-**0.5 Partitions + File Systems + Image Intelligence — NEXT**
+## Next engineering focus
 
-The first 0.5 work will build cross-provider image intelligence on the hardened 0.4 contract. The planned first public beta remains `0.5.0-beta.1` and is not considered ready until the agreed 0.5 scope and beta gates are proven.
+**Bounded filesystem recognition and metadata.** The next slice should build on the provider/capability layer and avoid mount-only assumptions. Planned filesystem scope includes ISO9660/UDF, FAT/FAT32/exFAT, NTFS metadata where supported and ext-family recognition, followed by boot/install intelligence and corruption warnings.
+
+The planned first public beta remains `0.5.0-beta.1` and is not considered ready until the agreed 0.5 scope and beta gates are proven.
 
 ## Current safety state
 
-Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
+Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
 
-Closing 0.4 does not create a stable public plugin API and does not enable any new destructive operation.
+Partition intelligence reports structural metadata findings only; it does not claim filesystem health or modify partition tables.
 
 Interactive UAC and the real cross-process Explorer drag gesture remain manual QA cases in `docs/MANUAL-VALIDATION.md`.

@@ -16,22 +16,26 @@ The project follows semantic versioning while it evolves toward 1.0.
 - read-only WIM / ESD container metadata provider
 - read-only FFU container metadata provider
 - hardened provider registration/descriptor contract and deterministic equal-priority ordering
+- provider-agnostic cross-provider partition intelligence through the existing `PartitionTable` capability
+- stable structural partition findings for duplicate indexes, zero-length entries, LBA overflow, byte-geometry mismatches, physical image-bound violations and overlapping ranges
+- dedicated partition-intelligence smoke tests using capability-driven fake providers
 
 ### Changed
-- provider registrations now snapshot validated descriptors at creation time
-- registry extension matching now uses immutable normalized descriptor extensions rather than mutable provider metadata
+- development version advances to **0.5.0-alpha.1**
+- provider registrations snapshot validated descriptors at creation time
+- registry extension matching uses immutable normalized descriptor extensions rather than mutable provider metadata
 - invalid provider IDs, null/empty/invalid extension entries and duplicate normalized extensions fail fast
 - blank capability-specific display names fall back to the stable provider ID
-- project progress advances to **44% toward 1.0**
-- **0.4 Extended Image Providers reaches 100% of its required engineering scope**
-- next milestone becomes **0.5 Partitions + File Systems + Image Intelligence**
+- project progress advances to **45% toward 1.0** after the first validated 0.5 slice
+- **0.5 Partitions + File Systems + Image Intelligence** is now in progress at approximately **11%**
+- CI now includes a dedicated partition-intelligence gate
 
 ### Safety
-- all provider paths remain read-only-first
+- all provider and intelligence paths remain read-only-first
+- partition intelligence does not mount images, write bytes, repair partition tables or claim filesystem health
+- structural findings are derived only from provider-reported partition geometry plus the physical image length
 - existing cancellation, failure isolation and truthful capability behavior remains intact
-- hardening adds no new mount, extraction, conversion or write capability
-- signature-only providers remain supported without requiring fake file extensions
-- no stable public plugin API is declared by closing the internal 0.4 contract gate
+- no stable public plugin API is declared by the internal provider hardening work
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -46,9 +50,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #25 / run #222 — WIM/ESD + full regression/build/artifact
 - PR #26 / run #226 — final FFU docs-synchronized head + full regression/build/artifact
 - PR #27 / run #228 — provider-contract hardening + all provider/native/Explorer tests + Release x64 build and artifact
+- PR #28 / run #231 — partition-intelligence code head + dedicated tests + complete provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
 
 ### Planned
-- 0.5 partition/filesystem/image-intelligence work
+- bounded filesystem recognition and metadata for ISO9660/UDF, FAT/FAT32/exFAT, supported NTFS metadata and ext-family recognition
+- bootability, BIOS/UEFI, installer, architecture, label and UUID/GUID intelligence
+- corruption warnings only where backed by proven metadata checks
 - public beta `0.5.0-beta.1` only after the agreed 0.5 scope and beta gates are proven
 
 ## [0.3.0] - 2026-09-15
