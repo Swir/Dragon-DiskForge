@@ -6,7 +6,20 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 The project combines a native WinUI 3 experience with a distinctive **Dragon / forged-metal / ember** visual identity. It is designed as a real disk-image tool first: unsupported actions stay disabled until their engine capability is implemented and tested.
 
-## Current development version — 0.5.0-alpha.1
+## Current development version — 0.6.0-alpha.1
+
+## Desktop tools and release delivery
+
+The development branch now connects image intelligence to **Analyze** and JSON report export.
+**Tools / Convert** provides SHA-256/SHA-512 with expected-checksum comparison, blank RAW/VHD/VHDX creation,
+folder-to-ISO creation, RAW/VHD/VHDX conversion, GZip, and checksum-protected split/join.
+The shared-Core **ddf** command-line tool exposes the same operations.
+
+The portable Windows x64 release includes its runtime dependencies. Release packaging tests the packaged CLI
+and GUI startup, produces a ZIP and SHA-256 file, and publishes a new prerelease only from a successful main
+build whose commit message includes **[release]**. See [release notes](docs/RELEASE-NOTES.md).
+Interactive UAC/drag-out and clean-machine validation remain required before beta/stable promotion.
+The 1.0 roadmap is not complete; the progress checkpoint below describes the earlier 0.5 engine work.
 
 ## Project progress — 52% toward 1.0
 
