@@ -46,6 +46,10 @@ try
     await File.WriteAllBytesAsync(fakePath, new byte[4096]);
     Expect(!await provider.CanHandleAsync(fakePath), "A fake .img extension must not be accepted without a valid partition table.");
 
+    var foreignExtensionPath = Path.Combine(root, "mbr.vhd");
+    File.Copy(mbrPath, foreignExtensionPath);
+    Expect(!await provider.CanHandleAsync(foreignExtensionPath), "RAW provider must not claim a foreign container extension merely because its payload starts with an MBR.");
+
     var outOfBoundsPath = Path.Combine(root, "bad.img");
     CreateOutOfBoundsMbr(outOfBoundsPath);
     Expect(!await provider.CanHandleAsync(outOfBoundsPath), "Out-of-bounds MBR partition must be rejected.");
@@ -65,6 +69,9 @@ try
     Expect(resolution.Provider is RawPartitionImageProvider, "Provider registry should resolve GPT RAW through the RAW provider.");
     Expect(resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.PartitionTable) == true, "RAW provider should report PartitionTable capability.");
     Expect(resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.DirectBrowse) == false, "RAW provider must not advertise DirectBrowse before filesystem support exists.");
+
+    var foreignResolution = await registry.ResolveAsync(foreignExtensionPath);
+    Expect(foreignResolution.Provider is null, "Provider fallback must not let the RAW provider steal a foreign container extension.");
 
     Console.WriteLine("Dragon DiskForge RAW/IMG partition-provider smoke tests passed.");
 }
