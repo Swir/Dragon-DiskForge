@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 40% toward 1.0
+## Project progress — 41% toward 1.0
 
-`████████░░░░░░░░░░░░ 40%`
+`████████░░░░░░░░░░░░ 41%`
 
-**Overall completion:** **40%**
+**Overall completion:** **41%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~77%** 🚧
+- `0.4 Extended Image Providers` — **~83%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > The progress indicator changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -34,7 +34,7 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## 0.4 Extended Image Providers 🚧
 
-The provider foundation and **eight additional image families** are now implemented and proven.
+The provider foundation and **nine additional image families** are now implemented and proven.
 
 ### Provider architecture
 
@@ -56,27 +56,26 @@ The provider foundation and **eight additional image families** are now implemen
 - **CCD / IMG / SUB** ✅ — CloneCD MODE/INDEX parsing, 2352-byte IMG alignment and optional 96-byte SUB validation
 - **VMDK sparse v1** ✅ — VMware hosted sparse header + bounded embedded descriptor metadata
 - **QCOW / QCOW2** ✅ — QCOW v1 and QCOW2 v2/v3 big-endian container metadata
+- **DMG / UDIF** ✅ — bounded `koly` trailer and XML plist metadata
 
-### QCOW / QCOW2 metadata provider ✅
+### DMG / UDIF metadata provider ✅
 
-- dedicated `IQcowMetadataProvider` + `QcowMetadataInfo`
+- dedicated `IDmgMetadataProvider` + `DmgMetadataInfo`
 - reports the shared `VirtualDiskMetadata` capability
-- recognizes QCOW v1 and QCOW2 v2/v3 using `QFI\xFB` magic
-- QCOW v1: virtual size, cluster bits, L2 bits, modification time, encryption method, L1 table and bounded backing-file name metadata
-- QCOW2: virtual size, cluster geometry, encryption method, L1 table, refcount table and snapshot metadata
-- QCOW2 v3: incompatible/compatible/autoclear feature masks, refcount order and header length validation
-- validated Zstandard compression metadata support when feature/header fields agree
-- all numeric header fields are parsed big-endian
-- L1/refcount/snapshot/backing-name ranges are checked against the physical file before use
-- backing-file names are read only as bounded UTF-8 metadata and are **never opened or followed**
-- unknown incompatible/compatible feature bits are rejected
-- corrupt images, external-data mode and unparsed autoclear feature state are rejected rather than guessed
-- cluster translation, virtual-sector reads, filesystem browsing, Mount and Convert remain disabled
-- PR #23 / run #207 passed QCOW tests, all previous provider tests, ISO/native Windows regression, Release x64 build and artifact publication ✅
+- validates the trailing 512-byte big-endian `koly` trailer and UDIF version 4/header size
+- parses flags, running/data/resource fork metadata, segment metadata, checksum metadata, XML plist location, image variant and sector count
+- physical data/resource/XML ranges are bounded before reads and cannot overlap the final trailer
+- sector count provides the logical 512-byte-sector virtual size
+- single-file UDIF images are supported; multi-segment images are explicitly rejected until companion-segment handling exists
+- XML plist reads are bounded to 16 MiB with DTD and external entity resolution disabled
+- `blkx` dictionary entries are counted without decoding `mish` block maps or touching compressed partition data
+- malformed XML, invalid trailer/ranges, unsafe checksum-size metadata and foreign extensions are rejected
+- block-map decompression, guest-sector translation, filesystem browsing, Mount and Convert remain disabled
+- PR #24 / run #214 passed DMG tests, all previous provider tests, ISO/native Windows regression, Release x64 build and artifact publication ✅
 
 ### Next 0.4 provider
 
-**DMG** — bounded read-only container/trailer metadata inspection first. Filesystem parsing and decompression paths stay disabled until their own implementation/tests exist.
+**WIM / ESD** — bounded read-only WIM container/header/resource metadata inspection first. File extraction, resource decompression and encrypted ESD handling stay disabled until independently implemented and tested.
 
 The cross-process human drag gesture and normal-user UAC prompt remain manual QA gates in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md).
 
@@ -101,13 +100,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK and QCOW/QCOW2; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, provider registry, RAW/IMG, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2 and DMG/UDIF; Explorer safety; direct ISO integration; native ISO/VHD/VHDX integration; and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-VMDK and QCOW currently expose only proven metadata. They do **not** translate guest data structures, expose virtual sectors, browse filesystems, mount these formats, or convert them.
+VMDK, QCOW and DMG currently expose only proven metadata. They do **not** translate guest data structures, expose virtual sectors, browse filesystems, mount these formats, or convert them. DMG XML parsing disables DTD/external resolution and does not decode `blkx` block maps yet.
 
 ## Project rule
 
