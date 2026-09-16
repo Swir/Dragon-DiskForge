@@ -18,7 +18,7 @@ public sealed class ImageDetectionService
         var method = signature is not null ? "Signature" : declared is not null ? "Extension" : "Unknown";
 
         var nativeMount = format is "ISO" or "VHD" or "VHDX";
-        var known = signature is not null || declared is not null;
+
 
         return new DiskImageInfo(
             path,
@@ -26,9 +26,9 @@ public sealed class ImageDetectionService
             format,
             file.Length,
             method,
-            CanExplore: known,
+            CanExplore: nativeMount,
             CanMount: nativeMount,
-            CanConvert: known,
+            CanConvert: false,
             CanVerify: true);
     }
 
