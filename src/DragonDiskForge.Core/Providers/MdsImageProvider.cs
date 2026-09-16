@@ -60,7 +60,7 @@ public sealed class MdsImageProvider : ITrackLayoutProvider
             file.Name,
             "MDF/MDS",
             file.Length,
-            $"MDS track layout ({layout.TrackCount} track(s): {layout.DataTrackCount} data, {layout.AudioTrackCount} audio; {layout.DataFiles.Count} MDF file(s))",
+            $"MDS CD track layout ({layout.TrackCount} track(s): {layout.DataTrackCount} data, {layout.AudioTrackCount} audio; {layout.DataFiles.Count} MDF file(s))",
             CanExplore: false,
             CanMount: false,
             CanConvert: false,
@@ -125,6 +125,10 @@ public sealed class MdsImageProvider : ITrackLayoutProvider
         if (majorVersion > 1)
             throw new InvalidDataException($"MDS version {majorVersion}.{minorVersion} is not supported by this provider slice.");
 
+        var mediumType = BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(18, 2));
+        if ((mediumType & 0x10) != 0)
+            throw new InvalidDataException("DVD-style MDS media is not enabled in this provider slice; only the validated CD track layout is accepted.");
+
         var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(20, 2));
         if (sessionCount is 0 or > MaxSessions)
             throw new InvalidDataException("MDS session count is outside the supported range.");
@@ -163,13 +167,12 @@ public sealed class MdsImageProvider : ITrackLayoutProvider
                 var trackNumber = block[4];
                 var extraOffset = BinaryPrimitives.ReadUInt32LittleEndian(block.AsSpan(12, 4));
 
-                // A0/A1/A2 and other lead-in blocks are TOC metadata, not user tracks.
                 if (trackNumber is 0 or >= 0xA0 || extraOffset == 0)
                     continue;
 
                 if (trackNumber > MaxTracks)
                     throw new InvalidDataException("MDS track number is outside the supported range.");
-                if (firstTrack != 0 && trackNumber < firstTrack || lastTrack != 0 && trackNumber > lastTrack)
+                if ((firstTrack != 0 && trackNumber < firstTrack) || (lastTrack != 0 && trackNumber > lastTrack))
                     throw new InvalidDataException("MDS track lies outside its session track range.");
                 if (!seenTrackNumbers.Add(trackNumber))
                     throw new InvalidDataException("MDS contains duplicate user track numbers.");
