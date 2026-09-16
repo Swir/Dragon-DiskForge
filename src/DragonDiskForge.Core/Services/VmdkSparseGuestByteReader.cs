@@ -227,7 +227,7 @@ public sealed class VmdkSparseGuestByteReader : IGuestByteReader
             throw new NotSupportedException("Zeroed-grain table entry overloading is outside this VMDK v1 guest-byte reader slice.");
         if ((metadata.Flags & ~SupportedFlags) != 0)
             throw new NotSupportedException("VMDK sparse flags contain semantics outside the proven guest-byte reader slice.");
-        if (metadata.SectorSize != SectorSize)
+        if ((ulong)metadata.SectorSize != SectorSize)
             throw new InvalidDataException("VMDK sparse sector size is not the expected 512 bytes.");
     }
 
