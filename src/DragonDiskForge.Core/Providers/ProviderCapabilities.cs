@@ -37,7 +37,7 @@ public static class ProviderCapabilityExtensions
         if (provider is ITrackLayoutProvider)
             capabilities |= ProviderCapabilities.TrackLayout;
 
-        if (provider is IVirtualDiskMetadataProvider)
+        if (provider is IVirtualDiskMetadataProvider or IQcowMetadataProvider)
             capabilities |= ProviderCapabilities.VirtualDiskMetadata;
 
         return capabilities;
