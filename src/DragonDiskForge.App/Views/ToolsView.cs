@@ -23,7 +23,7 @@ public sealed class ToolsView : UserControl
     public ToolsView(nint window)
     {
         _window = window;
-        foreach (var name in new[] { "SHA-256", "SHA-512", "Create empty RAW image", "Compress to GZip", "Decompress GZip", "Split image", "Join split image" }) _operation.Items.Add(name);
+        foreach (var name in new[] { "SHA-256", "SHA-512", "Create empty RAW image", "Compress to GZip", "Decompress GZip", "Split image", "Join split image", "Create ISO from folder", "Create empty VHD", "Create empty VHDX", "Convert to RAW", "Convert to VHD", "Convert to VHDX" }) _operation.Items.Add(name);
         _operation.SelectedIndex = 0;
         var panel = new StackPanel { Spacing = 14, Padding = new Thickness(30), MaxWidth = 920, HorizontalAlignment = HorizontalAlignment.Stretch };
         panel.Children.Add(new TextBlock { Text = "Image tools", FontSize = 30 });
@@ -53,12 +53,17 @@ public sealed class ToolsView : UserControl
         UpdateFields();
     }
 
+    public void SelectConversion()
+    {
+        if (_cts is null) _operation.SelectedIndex = 11;
+    }
+
     private void UpdateFields()
     {
         var index = _operation.SelectedIndex;
-        _source.IsEnabled = index != 2 && _cts is null;
+        _source.IsEnabled = index is not (2 or 8 or 9) && _cts is null;
         _destination.IsEnabled = index >= 2 && _cts is null;
-        _size.Visibility = index is 2 or 4 or 5 ? Visibility.Visible : Visibility.Collapsed;
+        _size.Visibility = index is 2 or 4 or 5 or 8 or 9 ? Visibility.Visible : Visibility.Collapsed;
         _expected.Visibility = index < 2 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -67,6 +72,15 @@ public sealed class ToolsView : UserControl
         if (_cts is not null) return;
         try
         {
+            if (_operation.SelectedIndex == 7)
+            {
+                var folderPicker = new FolderPicker();
+                folderPicker.FileTypeFilter.Add("*");
+                InitializeWithWindow.Initialize(folderPicker, _window);
+                var folder = await folderPicker.PickSingleFolderAsync();
+                if (folder is not null) _source.Text = folder.Path;
+                return;
+            }
             var picker = new FileOpenPicker();
             picker.FileTypeFilter.Add("*");
             InitializeWithWindow.Initialize(picker, _window);
@@ -95,7 +109,7 @@ public sealed class ToolsView : UserControl
             InitializeWithWindow.Initialize(outputFolderPicker, _window);
             var outputFolder = await outputFolderPicker.PickSingleFolderAsync();
             if (outputFolder is not null)
-                _destination.Text = Path.Combine(outputFolder.Path, _operation.SelectedIndex == 3 ? "image.gz" : "image.img");
+                _destination.Text = Path.Combine(outputFolder.Path, _operation.SelectedIndex switch { 3 => "image.gz", 7 => "image.iso", 8 or 11 => "image.vhd", 9 or 12 => "image.vhdx", _ => "image.img" });
         }
         catch (Exception ex) { _result.Text = ex.Message; }
     }
@@ -119,7 +133,7 @@ public sealed class ToolsView : UserControl
         var progress = new Progress<double>(x => _progress.Value = Math.Clamp(x * 100, 0, 100));
         try
         {
-            var size = operation is 2 or 4 or 5
+            var size = operation is 2 or 4 or 5 or 8 or 9
                 ? checked((long)(double.IsFinite(sizeValue) && sizeValue > 0 ? sizeValue * 1024 * 1024 : throw new ArgumentException("Enter a positive size.")))
                 : 0;
             var result = await Task.Run(async () =>
@@ -136,6 +150,12 @@ public sealed class ToolsView : UserControl
                     case 4: await files.DecompressAsync(source, destination, size, progress, cts.Token); break;
                     case 5: await files.SplitAsync(source, destination, size, progress, cts.Token); break;
                     case 6: await files.JoinAsync(source, destination, progress, cts.Token); break;
+                    case 7: await new ImageCreationService().CreateIsoAsync(source, destination, progress: progress, token: cts.Token); break;
+                    case 8:
+                    case 9: await new ImageCreationService().CreateVirtualDiskAsync(destination, size, operation == 8 ? "vhd" : "vhdx", cts.Token); break;
+                    case 10:
+                    case 11:
+                    case 12: await new ImageCreationService().ConvertAsync(source, destination, operation == 10 ? "raw" : operation == 11 ? "vhd" : "vhdx", progress, cts.Token); break;
                 }
                 return "Completed: " + destination;
             }, cts.Token);
