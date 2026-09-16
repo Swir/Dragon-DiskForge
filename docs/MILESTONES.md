@@ -53,7 +53,7 @@ The automated engineering exit criteria are satisfied. Public beta publication r
 
 ## 0.6 Create + Convert + Verify — IN PROGRESS 🚧
 
-Current engineering completion: approximately **40%** based on 2 of 5 top-level roadmap deliverables completed and validated.
+Current engineering completion: approximately **80%** based on 4 of 5 top-level roadmap deliverables completed and validated.
 
 ### Completed execution slices
 
@@ -74,14 +74,33 @@ Current engineering completion: approximately **40%** based on 2 of 5 top-level 
    - writer failure and cancellation preserve existing destinations and clean temporary output when possible
    - missing destination directories and unknown overwrite policy values fail closed
    - generated tests cover new output, replacement, cancellation, writer failure, destination races and temp cleanup
-   - PR #42 implementation run #296 and final run #297 passed the safe-output gate and the complete Windows regression/build/package path ✅
+   - PR #42 implementation run #296 and final run #298 passed the safe-output gate and the complete Windows regression/build/package path ✅
 
-### Remaining execution slices
+3. **Image creation + conversion pipeline foundation** ✅
+   - `RawImagePipelineService` creates blank explicit-length RAW images through `SafeOutputService`
+   - generic guest-byte export materializes proven `IGuestByteReader` sources through bounded sequential 1 MiB transfers
+   - explicit QCOW2 → RAW and hosted-sparse VMDK → RAW entry points reuse the already-proven guest-byte readers
+   - committed output length must match the captured guest-visible source length
+   - source/destination identity is refused for file-backed conversion
+   - progress reaches `1.0` only after commit
+   - current output-file-domain limits fail before mutation
+   - generated synthetic QCOW2/VMDK fixtures validate real guest-byte materialization
+   - PR #43 implementation run #300 passed the RAW pipeline gate and complete Windows regression/build/package path ✅
 
-- image creation and conversion pipeline
-- split/join and sparse/compression handling
-- cancellation/rollback safety for real mutating pipelines
+4. **Cancellation + rollback safety for current mutating pipelines** ✅
+   - cancellation after a real guest read aborts before publication
+   - guest-reader failure during replacement preserves the previous destination
+   - existing-destination refusal occurs before source consumption under `FailIfExists`
+   - temporary transaction files are cleaned when possible on failure/cancellation
+   - unsupported QCOW2/VMDK states retain their fail-closed reader behavior
+   - no user-visible Create/Convert capability is enabled yet
 
-The next implementation work should build a real format-producing pipeline on top of `SafeOutputService` so rollback and cancellation are tested through actual mutation orchestration rather than only the shared transaction primitive. A bounded guest-image-to-RAW export over the proven QCOW2/VMDK readers is the preferred next conversion slice.
+### Remaining execution slice
+
+- split/join and broader sparse/compression handling
+
+Materializing already-proven sparse guest mappings into flat RAW does not count as writing sparse container metadata or decoding unsupported compressed payloads.
+
+The next implementation work should address the remaining split/join and sparse/compression scope without weakening transactional rollback, bounds checks or truthful format support.
 
 A capability becomes user-visible only after its real backing path and tests exist.

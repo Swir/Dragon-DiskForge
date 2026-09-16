@@ -156,13 +156,13 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.6 Create + Convert + Verify — 🚧 in progress
 
-**Current 0.6 engineering completion: approximately 40%.** Two of five top-level roadmap deliverables are implemented and validated.
+**Current 0.6 engineering completion: approximately 80%.** Four of five top-level roadmap deliverables are implemented and validated.
 
-- ⬜ image creation and conversion pipeline
+- ✅ image creation and conversion pipeline
 - ⬜ split/join and sparse/compression handling
 - ✅ SHA-256/SHA-512 verification
 - ✅ temporary output + atomic finalization
-- ⬜ cancellation/rollback safety
+- ✅ cancellation/rollback safety
 
 ### SHA-256/SHA-512 verification — ✅ complete foundation
 - ✅ `ImageVerificationInfo` returns SHA-256, SHA-512 and exact hashed byte count
@@ -184,11 +184,33 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ writer failure/cancellation/failed commit cleanup preserves existing destinations when possible
 - ✅ missing parent directories and unknown overwrite policies fail closed
 - ✅ generated rollback/race/cancellation/temp-cleanup coverage
-- ✅ PR #42 implementation run #296 and final run #297 passed the complete Windows regression/build/package path
+- ✅ PR #42 implementation run #296 and final run #298 passed the complete Windows regression/build/package path
 
-### Next 0.6 engineering priority
+### Image creation + conversion pipeline — ✅ complete foundation
+- ✅ `RawImagePipelineService.CreateBlankAsync` creates an explicit-length logical RAW image through the safe transaction boundary
+- ✅ generic `ExportGuestToRawAsync` materializes a proven `IGuestByteReader` source with a bounded 1 MiB transfer buffer
+- ✅ explicit QCOW2 → RAW conversion using the proven QCOW2 standard-uncompressed reader subset
+- ✅ explicit hosted-sparse VMDK → RAW conversion using the proven clean `monolithicSparse` reader subset
+- ✅ committed output length must equal captured guest-visible source length
+- ✅ source/destination identity is rejected for file-backed conversion
+- ✅ progress reaches `1.0` only after transaction commit
+- ✅ lengths beyond the current output file domain fail before mutation
+- ✅ generated real-format fixtures verify allocated and proven zero/unallocated materialization
+- ✅ PR #43 implementation run #300 passed the new RAW pipeline gate plus the complete Windows regression/build/package path
 
-Build the first real format-producing pipeline on top of `SafeOutputService` so pipeline-level cancellation/rollback behavior can be proven rather than inferred from the shared transaction primitive. A bounded guest-image-to-RAW export over already proven QCOW2/VMDK readers is the strongest next conversion slice. Creation, split/join and additional sparse/compression semantics remain disabled until separately implemented and tested.
+### Cancellation + rollback safety — ✅ complete for current mutating pipelines
+- ✅ cancellation after a real guest read aborts before final commit
+- ✅ reader failure during replacement preserves the existing destination
+- ✅ temporary transaction files are cleaned when possible after failure/cancellation
+- ✅ `FailIfExists` refuses an existing destination before consuming the source
+- ✅ unsupported QCOW2/VMDK states retain their fail-closed reader behavior
+- ✅ no Create/Convert WinUI capability is enabled by this Core-only work
+
+### Remaining 0.6 engineering priority
+
+Implement split/join plus explicitly bounded sparse/compression handling. This remains open: materializing already-proven sparse guest mappings into flat RAW does **not** count as writing sparse container metadata or decoding unsupported compressed payloads.
+
+See `docs/OUTPUT-TRANSACTIONS.md` and `docs/RAW-IMAGE-PIPELINES.md`.
 
 ## 0.7 Physical Media Tools — ⬜ planned
 Future physical-media functionality remains gated behind dedicated safety design, explicit user confirmation, device identity checks and independent validation before it becomes user-visible.

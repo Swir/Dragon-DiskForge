@@ -33,6 +33,9 @@ jobs:
       - name: Safe output transaction smoke tests
         run: dotnet run --project tests/DragonDiskForge.SafeOutput.SmokeTests/DragonDiskForge.SafeOutput.SmokeTests.csproj -c Release
 
+      - name: RAW creation + guest export smoke tests
+        run: dotnet run --project tests/DragonDiskForge.RawPipeline.SmokeTests/DragonDiskForge.RawPipeline.SmokeTests.csproj -c Release
+
       - name: Provider registry smoke tests
         run: dotnet run --project tests/DragonDiskForge.ProviderRegistry.SmokeTests/DragonDiskForge.ProviderRegistry.SmokeTests.csproj -c Release
 
