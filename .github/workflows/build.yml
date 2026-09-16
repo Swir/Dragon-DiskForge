@@ -75,6 +75,9 @@ jobs:
       - name: VMDK sparse metadata smoke tests
         run: dotnet run --project tests/DragonDiskForge.Vmdk.SmokeTests/DragonDiskForge.Vmdk.SmokeTests.csproj -c Release
 
+      - name: VMDK sparse guest-byte reader smoke tests
+        run: dotnet run --project tests/DragonDiskForge.VmdkGuestReader.SmokeTests/DragonDiskForge.VmdkGuestReader.SmokeTests.csproj -c Release
+
       - name: QCOW/QCOW2 metadata smoke tests
         run: dotnet run --project tests/DragonDiskForge.Qcow.SmokeTests/DragonDiskForge.Qcow.SmokeTests.csproj -c Release
 
