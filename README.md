@@ -6,18 +6,18 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 63% toward 1.0
+## Project progress — 64% toward 1.0
 
-`█████████████░░░░░░░ 63%`
+`█████████████░░░░░░░ 64%`
 
-**Overall completion:** **63%**
+**Overall completion:** **64%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
-- `0.6 Create + Convert + Verify` — **~20%** 🚧
+- `0.6 Create + Convert + Verify` — **~40%** 🚧
 - `0.7 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -31,6 +31,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 - safe Copy-only drag-out to Windows Explorer/Desktop
 - managed ISO9660/Joliet direct browsing without mounting
 - shared Core verification with SHA-256, SHA-512, progress/cancellation and exact hashed-byte reporting
+- reusable `SafeOutputService` transaction boundary with temporary output, explicit overwrite policy, same-directory finalization and failure/cancellation cleanup
 - hardened provider registry with truthful capabilities and deterministic resolution
 - bounded read-only partition, filesystem, boot/install and image-intelligence services
 - user-facing **Analyze** action with text/JSON reporting and Save JSON
@@ -41,7 +42,7 @@ Dragon DiskForge is a modern Windows application for inspecting, mounting, explo
 
 ## 0.6 Create + Convert + Verify — IN PROGRESS 🚧
 
-The first 0.6 engineering slice is implemented and validated. Mutating create/convert capabilities remain disabled until the safe output pipeline, rollback/cancellation behavior and format-specific writers are proven.
+Two of five top-level 0.6 engineering deliverables are now implemented and validated. Mutating Create/Convert UI capabilities remain disabled until real format pipelines use the shared transaction boundary and prove pipeline-level rollback/cancellation behavior.
 
 ### Dual SHA-256/SHA-512 verification foundation ✅
 
@@ -54,9 +55,22 @@ The first 0.6 engineering slice is implemented and validated. Mutating create/co
 - explicit Windows CI gate
 - PR #41 implementation run #292 passed the verification gate plus the complete Windows regression/build/package path
 
-**Current 0.6 engineering completion:** approximately **20%** based on 1 of 5 top-level roadmap deliverables.
+### Safe output transaction foundation ✅
 
-**Next 0.6 priority:** establish a reusable safe output-transaction layer with temporary output, explicit overwrite policy, same-volume atomic finalization where supported, cleanup on cancellation/failure and rollback-oriented tests before enabling any Create/Convert UI action.
+- `SafeOutputService` writes to a unique temporary file in the destination directory
+- `FailIfExists` refuses both pre-existing and racing destinations
+- `ReplaceExisting` promotes only a completed temporary output
+- temporary output is flushed before finalization
+- cancellation/writer failure/failed commit preserve an existing destination and clean the temporary output when possible
+- missing destination directories and unknown overwrite policies fail closed
+- result metadata reports normalized destination path, committed byte count and whether replacement occurred
+- PR #42 implementation run #296 and final synchronized run #297 passed the safe-output gate plus the complete Windows regression/build/clean-package/artifact path
+
+**Current 0.6 engineering completion:** approximately **40%** based on 2 of 5 top-level roadmap deliverables.
+
+**Next 0.6 priority:** build the first real format-producing pipeline on top of `SafeOutputService`, with bounded progress/cancellation and rollback tests, before any Create/Convert UI capability is enabled. The strongest candidate is a truthful guest-image-to-RAW export path over the already proven QCOW2/VMDK guest-byte readers, followed by additional creation/split-join/sparse-compression work.
+
+See [`docs/OUTPUT-TRANSACTIONS.md`](docs/OUTPUT-TRANSACTIONS.md) for the shared mutation boundary.
 
 ## 0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅
 
@@ -196,11 +210,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, SHA-256/SHA-512 verification, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
+CI validates Core, SHA-256/SHA-512 verification, safe output transactions, provider-registry invariants, physical and guest partition/filesystem intelligence, GPT/EBR integrity hardening, filesystem depth, bounded UDF traversal, NTFS/architecture hardening, boot/install intelligence, unified image intelligence, image reporting, QCOW2 and VMDK guest-byte translation, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs also build and independently verify a clean versioned ZIP candidate before publishing its SHA-256 sidecar and engineering artifact.
 
 ## Safety design
 
 Inspection and verification are read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
+
+The first 0.6 mutation primitive is deliberately not user-visible: `SafeOutputService` writes through a temporary file in the destination directory and commits only completed output according to an explicit overwrite policy. Writer failure and cancellation preserve an existing destination and clean temporary output when possible. No Create/Convert capability is enabled merely because this shared transaction layer exists.
 
 Partition/filesystem intelligence operates only on proven byte mappings. Physical and guest-relative offsets are modeled separately. Guest GPT checksums and EBR containment are validated before filesystem probing. UDF root traversal follows only validated Type 1 physical mappings and remains non-recursive. NTFS depth checks validate metadata only and never repair or traverse directories. Architecture reconciliation preserves conflicting evidence rather than guessing a winner.
 

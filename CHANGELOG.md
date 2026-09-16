@@ -33,18 +33,26 @@ The project follows semantic versioning while it evolves toward 1.0.
 - generated final-hardening fixtures covering valid GPT, corrupt GPT header/table checksums, invalid MBR status, escaping logical partitions and escaping EBR links
 - 0.6 dual verification foundation with `ImageVerificationInfo`, SHA-256 + SHA-512 in one bounded sequential pass, exact hashed byte count and a dedicated SHA-512 API
 - generated verification smoke coverage for multi-buffer input, empty files, missing files, monotonic progress and cancellation
+- reusable 0.6 `SafeOutputService` transaction boundary for future file-producing operations
+- explicit `FailIfExists` / `ReplaceExisting` overwrite policies with same-directory temporary output and finalization
+- generated safe-output smoke coverage for writer failure, cancellation, pre-existing/racing destinations, replacement and temporary-file cleanup
+- `docs/OUTPUT-TRANSACTIONS.md` contract for future creation/conversion/split-join writers
 
 ### Changed
-- development version remains **0.5.0-alpha.1** until the independent public-beta gate is complete; 0.6 engineering may proceed in parallel without weakening that gate
-- project progress advances to **63% toward 1.0** after validating the first 0.6 engineering slice
+- development version remains **0.5.0-alpha.1** until the independent public-beta gate is complete; 0.6 engineering proceeds in parallel without weakening that gate
+- project progress advances to **64% toward 1.0** after validating the second 0.6 engineering slice
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
-- **0.6 Create + Convert + Verify** is now in progress at approximately **20%** based on 1 of 5 top-level roadmap deliverables
+- **0.6 Create + Convert + Verify** advances to approximately **40%** based on 2 of 5 top-level roadmap deliverables
 - the existing `ComputeSha256Async` API remains compatible while the shared verification engine gains combined SHA-256/SHA-512 output
+- future file-producing pipelines must use the proven temporary-output transaction boundary before user-visible mutation capabilities are enabled
 - beta publication remains blocked by final suffix/package promotion and clean-machine/UAC/cross-process drag-out/manual regression gates
 
 ### Safety
 - all provider and intelligence paths remain read-only-first
-- the new 0.6 verification path is read-only and does not enable image creation, conversion or mutation
+- the 0.6 verification path is read-only and does not enable image creation, conversion or mutation
+- `SafeOutputService` does not expose Create/Convert UI; it stages output and commits only after the writer completes successfully
+- writer failure/cancellation does not intentionally publish partial destinations, and existing destinations are preserved on the proven rollback paths
+- unknown overwrite policy values and missing destination directories fail closed
 - guest-byte readers do not enable Direct Browse, extraction, Mount or write capabilities
 - common guest analysis consumes bytes only through proven bounded `IGuestByteReader` implementations
 - guest partition/filesystem offsets are modeled separately from physical container offsets
@@ -81,11 +89,13 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #39 / run #287 — common guest partition/filesystem intelligence
 - PR #40 / implementation run #289 — final guest GPT/EBR integrity hardening + complete regression/build/package-verification/artifact path
 - PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification foundation + complete Windows regression/build/package path
+- PR #42 / implementation run #296 and final synchronized run #297 — safe output transaction foundation + complete Windows regression/build/package/artifact path
 
 ### Planned
 - finish independent `0.5.0-beta.1` manual/package release gates without weakening the completed 0.5 engineering scope
-- continue 0.6 with a safe temporary-output/atomic-finalization transaction layer before exposing create/convert UI capabilities
-- add image creation/conversion, split/join and sparse/compression handling only after their backing paths and rollback/cancellation tests exist
+- continue 0.6 with the first real format-producing pipeline over the proven safe output transaction boundary
+- prove pipeline-level cancellation/rollback before any Create/Convert UI capability is enabled
+- add split/join and broader sparse/compression handling only after their backing paths and rollback/cancellation tests exist
 - promote to `0.5.0-beta.1` only when the independent beta gate is complete
 
 ## [0.3.0] - 2026-09-15

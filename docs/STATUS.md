@@ -12,19 +12,19 @@
 
 **0.5.0-alpha.1**
 
-The 0.5 engineering scope is complete, but the public beta version suffix is intentionally not promoted until the independent beta release gate passes. 0.6 engineering may continue in parallel without weakening that release gate.
+The 0.5 engineering scope is complete, but the public beta version suffix is intentionally not promoted until the independent beta release gate passes. 0.6 engineering continues in parallel without weakening that release gate.
 
 ## Overall project progress
 
-**63% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. The first verified 0.6 slice adds dual SHA-256/SHA-512 verification while preserving the existing SHA-256 API. Public beta publication remains separately gated by clean-machine/manual validation and final package/version promotion.
+**64% toward 1.0.** Milestones 0.1 through 0.5 have completed their required automated engineering scope. Two verified 0.6 slices now provide dual SHA-256/SHA-512 verification and the reusable safe output transaction boundary required by future mutating pipelines. Public beta publication remains separately gated by clean-machine/manual validation and final package/version promotion.
 
 ## Current milestone
 
 **0.6 Create + Convert + Verify — IN PROGRESS 🚧**
 
-Current 0.6 engineering completion is approximately **20%** (1 of 5 top-level roadmap deliverables).
+Current 0.6 engineering completion is approximately **40%** (2 of 5 top-level roadmap deliverables).
 
-### Proven 0.6 slice
+### Proven 0.6 slices
 
 1. **Dual SHA-256/SHA-512 verification foundation** ✅
    - `ImageVerificationInfo` reports SHA-256, SHA-512 and the exact hashed byte count
@@ -35,12 +35,25 @@ Current 0.6 engineering completion is approximately **20%** (1 of 5 top-level ro
    - generated smoke coverage includes multi-buffer input, empty files, missing files and pre-cancellation
    - PR #41 implementation run #292 passed the new verification gate plus the complete Windows regression/build/package path
 
+2. **Safe output transaction foundation** ✅
+   - `SafeOutputService` creates a unique temporary output in the destination directory
+   - explicit `FailIfExists` and `ReplaceExisting` policies
+   - temporary output is flushed before finalization
+   - new-file move and existing-file replacement occur only after the writer finishes successfully
+   - pre-existing and racing destinations are handled deterministically by policy
+   - writer failure and cancellation preserve existing destinations and clean temporary output when possible
+   - missing parent directories and unknown overwrite policies fail closed
+   - PR #42 implementation run #296 and final synchronized run #297 passed the safe-output gate plus complete provider/intelligence/Explorer/native Windows/Release/clean-package verification and artifact publication
+
 ### Remaining 0.6 roadmap deliverables
 
 - image creation and conversion pipeline
 - split/join and sparse/compression handling
-- temporary output + atomic finalization
-- cancellation/rollback safety for mutating pipelines
+- cancellation/rollback safety for real mutating pipelines
+
+### Next 0.6 priority
+
+Build the first real format-producing pipeline on top of `SafeOutputService`. A bounded guest-image-to-RAW export over the already proven QCOW2/VMDK guest readers is the strongest next conversion slice because it can exercise real progress, cancellation and rollback semantics without enabling unproven guest writes.
 
 ## Proven 0.5 slices
 
@@ -103,6 +116,7 @@ Current 0.6 engineering completion is approximately **20%** (1 of 5 top-level ro
 
 ### 0.6
 - PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification foundation + full Windows regression/build/package path
+- PR #42 / implementation run #296 and final run #297 — safe output transaction foundation + full Windows regression/build/package path
 
 ## Beta readiness
 
@@ -120,7 +134,7 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges and reject contradictory or unknown states instead of guessing.
 
-The new 0.6 verification API is read-only and does not enable image creation, conversion or mutation. SHA-256/SHA-512 verification reads the selected file sequentially and supports cancellation/progress without changing the image.
+The 0.6 verification API is read-only. The new safe output transaction primitive is intentionally not exposed as a user-visible Create/Convert capability: it only establishes a file-producing transaction boundary so future writers can stage completed output, apply explicit overwrite policy and avoid intentionally publishing partial destinations on normal failure/cancellation paths.
 
 The QCOW2 guest reader remains deliberately narrower than full QCOW2 support: no backing chains, encryption, compressed descriptors, external data files, dirty active metadata or extended L2. The VMDK guest reader remains deliberately narrow: one clean hosted-sparse `monolithicSparse` extent, no parent chain and no compressed/stream-optimized/zeroed-entry semantics. Both may feed bounded guest partition/filesystem analysis, but neither advertises Direct Browse, extraction or Mount. Physical and guest-relative offsets are represented separately, and guest GPT checksum/EBR containment checks run before filesystem probing.
 
