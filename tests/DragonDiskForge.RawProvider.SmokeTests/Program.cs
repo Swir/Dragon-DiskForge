@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Security.Cryptography;
 using DragonDiskForge.Core.Providers;
 
@@ -16,10 +17,7 @@ try
     await File.WriteAllBytesAsync(imgPath, Enumerable.Range(0, 4096).Select(i => (byte)(i % 251)).ToArray());
     await File.WriteAllBytesAsync(rawPath, new byte[2048]);
     await File.WriteAllBytesAsync(tinyPath, new byte[128]);
-
-    var renamedIso = new byte[0x9000];
-    "CD001"u8.CopyTo(renamedIso.AsSpan(0x8001, 5));
-    await File.WriteAllBytesAsync(renamedIsoPath, renamedIso);
+    await File.WriteAllBytesAsync(renamedIsoPath, CreateMinimalIsoImage());
 
     Check(await provider.CanHandleAsync(imgPath), "provider accepts a flat .img image");
     Check(await provider.CanHandleAsync(rawPath), "provider accepts a flat .raw image");
@@ -72,6 +70,30 @@ catch (Exception ex)
 finally
 {
     try { Directory.Delete(root, recursive: true); } catch { }
+}
+
+static byte[] CreateMinimalIsoImage()
+{
+    const int sectorSize = 2048;
+    const int descriptorLba = 16;
+    const int rootLba = 17;
+    const int rootRecordOffset = 156;
+
+    var image = new byte[18 * sectorSize];
+    var descriptor = image.AsSpan(descriptorLba * sectorSize, sectorSize);
+    descriptor[0] = 1; // Primary Volume Descriptor
+    "CD001"u8.CopyTo(descriptor.Slice(1, 5));
+    descriptor[6] = 1;
+
+    var rootRecord = descriptor.Slice(rootRecordOffset, 34);
+    rootRecord[0] = 34;
+    BinaryPrimitives.WriteUInt32LittleEndian(rootRecord.Slice(2, 4), rootLba);
+    BinaryPrimitives.WriteUInt32LittleEndian(rootRecord.Slice(10, 4), sectorSize);
+    rootRecord[25] = 0x02; // directory
+    rootRecord[32] = 1;
+    rootRecord[33] = 0;
+
+    return image;
 }
 
 static async Task<byte[]> HashAsync(string path)
