@@ -134,7 +134,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 52%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE and MDF/MDS CD families are real and tested.
+**Current 0.4 completion: approximately 59%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD and NRG families are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit provider capability reporting
@@ -210,10 +210,28 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ cancellation propagation
 - ✅ no fake Direct Browse, Mount or Convert
 - ✅ dedicated Windows CI smoke tests
-- ✅ PR #19 / run #181 passes MDF/MDS plus all previous provider/native/build/artifact regression gates
+- ✅ PR #19 / run #182 passes the final MDF/MDS branch head plus the complete previous provider/native/build/artifact regression path
+
+### NRG track-layout provider — ✅ complete
+- ✅ `.nrg` registration through `ITrackLayoutProvider` / `TrackLayout`
+- ✅ classic `NERO` v1 footer with big-endian 32-bit chunk-table offset
+- ✅ `NER5` v2 footer with big-endian 64-bit chunk-table offset
+- ✅ CUES v1 8-byte cue entries with BCD `00:MM:SS:FF` positions converted to real LBA
+- ✅ CUEX v2 8-byte cue entries with signed big-endian LBA
+- ✅ BCD cue track/index validation and lead-out handling
+- ✅ DAOI v1 32-bit and DAOX v2 64-bit byte-offset track tables
+- ✅ real logical StartSector resolved from cue index 1 rather than guessed from byte offsets
+- ✅ track byte ranges bounded before the metadata chunk table
+- ✅ supported sector-size and DAO mode validation
+- ✅ cue audio/data control cross-checked with DAO track mode
+- ✅ missing or ambiguous cue index 1 metadata rejected
+- ✅ terminating empty `END!` chunk required and trailing metadata rejected
+- ✅ chunk count/size safety limits and cancellation propagation
+- ✅ no fake Direct Browse, Mount or Convert
+- ✅ dedicated v1/v2 Windows CI smoke tests
+- ✅ PR #20 / run #185 passes NRG plus all previous provider/native/build/artifact gates before docs synchronization
 
 ### Remaining image families
-- ⬜ NRG
 - ⬜ CCD/IMG/SUB
 - ⬜ VMDK
 - ⬜ QCOW/QCOW2
@@ -221,7 +239,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ WIM/ESD
 - ⬜ FFU
 
-**Next provider:** **NRG**.
+**Next provider:** **CCD/IMG/SUB**.
 
 **Exit criteria:** providers expose consistent, truthful capabilities without turning Core into one monolithic parser.
 

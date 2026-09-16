@@ -30,15 +30,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - explicit MDF byte-offset handling for mixed-sector CD layouts
 - same-name MDF and footer-based ASCII/UTF-16 payload resolution, including `*.mdf`
 - dedicated MDF/MDS smoke tests covering mixed-sector tracks, corrupt signatures/offsets, missing payloads, unsupported sectors, traversal, wildcard/UTF-16 footers, DVD rejection, foreign extensions and cancellation
+- read-only Nero NRG v1/v2 track-layout provider using the shared `TrackLayout` capability
+- classic `NERO` v1 footer parsing with 32-bit chunk offsets and `NER5` v2 footer parsing with 64-bit chunk offsets
+- CUES v1 BCD MSF-to-LBA decoding and CUEX v2 signed-LBA decoding
+- DAOI v1 and DAOX v2 track-table parsing with explicit byte-range validation
+- dedicated NRG smoke tests covering v1/v2, mixed audio/data, CUES MSF conversion, bad footer/offset, missing `END!`, missing cue metadata, unknown modes, cue/DAO mismatch, metadata overlap, foreign extensions and cancellation
 
 ### Changed
-- the application provider registry now includes ISO9660/Joliet, RAW partition, IMA/floppy, BIN/CUE and MDF/MDS providers
+- the application provider registry now includes ISO9660/Joliet, RAW partition, IMA/floppy, BIN/CUE, MDF/MDS and NRG providers
 - RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
 - IMA/FLP images can be positively recognized by media geometry without enabling fake filesystem browsing
-- BIN/CUE and MDF/MDS images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
+- BIN/CUE, MDF/MDS and NRG images can be positively recognized by optical track layout without enabling fake filesystem/content browsing
 - Direct Browse tooltip explains when a provider recognized only a non-browse inspection capability
-- project progress advances to 36% toward 1.0 after the fourth real additional 0.4 image family
-- 0.4 milestone completion advances to approximately 52%
+- project progress advances to 37% toward 1.0 after the fifth real additional 0.4 image family
+- 0.4 milestone completion advances to approximately 59%
 
 ### Safety
 - RAW/IMG parsing is read-only and validates every referenced partition range against the image length
@@ -54,16 +59,20 @@ The project follows semantic versioning while it evolves toward 1.0.
 - MDS footer payload paths are confined to the descriptor directory; rooted/traversal paths are rejected
 - mixed-sector MDF layouts use explicit MDS byte offsets rather than inferred offsets
 - DVD-style MDS media is deliberately rejected until its separate layout is implemented and tested
-- RAW/IMG, IMA/FLP, BIN/CUE and MDF/MDS `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+- NRG parsing bounds every chunk before the footer, requires a terminating empty `END!` chunk and rejects trailing metadata
+- NRG DAO track ranges must end before the chunk table; unknown modes, malformed BCD/MSF positions and missing/ambiguous cue metadata are rejected
+- NRG cue audio/data control must agree with the DAO track mode rather than being guessed
+- RAW/IMG, IMA/FLP, BIN/CUE, MDF/MDS and NRG `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
 
 ### Verified
 - RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
 - PR #17 / run #165 passed Core, provider-registry, RAW/IMG, IMA/floppy, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
 - PR #18 / run #172 passed Core, provider-registry, RAW/IMG, IMA/floppy, BIN/CUE, mounted-history and drag-out smoke tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
-- PR #19 / run #181 passed Core, all provider smoke tests including MDF/MDS CD/DVD-scope safety, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication
+- PR #19 / run #182 passed the final MDF/MDS branch head with all provider smoke tests, ISO/native regression, WinUI Release x64 build and artifact publication
+- PR #20 / run #185 passed NRG v1/v2 smoke tests, all previous provider tests, mounted-history and drag-out tests, ISO direct-browse integration, native ISO/VHD/VHDX integration, restore, full WinUI Release x64 build and artifact publication before the documentation synchronization pass
 
 ### Planned
-- remaining 0.4 image providers: NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
+- remaining 0.4 image providers: CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 

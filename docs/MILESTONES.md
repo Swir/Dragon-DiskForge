@@ -74,7 +74,7 @@ The same project rule continues: no Explorer control becomes active before its b
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **52%**.
+Current milestone completion is approximately **59%**.
 
 ### Completed execution slices
 
@@ -135,10 +135,26 @@ Current milestone completion is approximately **52%**.
    - Direct Browse, Mount and Convert remain disabled until real backends exist
    - dedicated MDF/MDS smoke tests in Windows CI
 
+6. **NRG track-layout provider** ✅
+   - read-only `.nrg` support through `ITrackLayoutProvider` / `TrackLayout`
+   - classic `NERO` v1 footer and 32-bit chunk-table offset
+   - `NER5` v2 footer and 64-bit chunk-table offset
+   - CUES v1 BCD MSF-to-LBA decoding
+   - CUEX v2 signed-LBA decoding
+   - DAOI v1 and DAOX v2 bounded track byte ranges
+   - cue index 1 provides logical StartSector while DAO provides physical byte offsets
+   - cue audio/data control cross-checked against DAO mode
+   - malformed BCD/MSF, unsupported sector/mode, missing cue metadata and metadata overlap rejection
+   - terminating empty `END!` required; trailing metadata rejected
+   - cancellation propagation
+   - Direct Browse, Mount and Convert remain disabled until real backends exist
+   - dedicated NRG v1/v2 smoke tests in Windows CI
+
 ### Next execution slices
 
-- NRG provider
 - CCD/IMG/SUB provider
+- VMDK provider
+- QCOW/QCOW2 provider
 - remaining virtual-disk/container providers from `docs/ROADMAP.md`
 - continued hardening of the internal provider contract before any public plugin/API stability promise
 
@@ -147,6 +163,7 @@ Current milestone completion is approximately **52%**.
 - PR #16 / run #153 — new RAW/IMG provider tests passed before the final UI/docs synchronization pass
 - PR #17 / run #165 — IMA/floppy provider plus full ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
 - PR #18 / run #172 — BIN/CUE provider plus all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
-- PR #19 / run #181 — MDF/MDS CD provider plus explicit DVD-scope safety, all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
+- PR #19 / run #182 — final MDF/MDS CD branch head plus explicit DVD-scope safety, all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed
+- PR #20 / run #185 — NRG v1/v2 provider plus all previous provider tests, ISO/native-mount regression, WinUI Release x64 build and artifact publication passed before docs synchronization
 
 `docs/ROADMAP.md` remains the source of truth for exact provider order and completion state. A provider capability becomes user-visible only after its backing operation and tests exist.
