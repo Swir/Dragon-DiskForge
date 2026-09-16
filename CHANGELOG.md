@@ -6,9 +6,33 @@ The project follows semantic versioning while it evolves toward 1.0.
 
 ## [Unreleased]
 
+### Added
+- first non-ISO 0.4 image provider: read-only IMG/RAW partition inspection
+- MBR primary-partition parsing with boot flags and common partition-type names
+- bounded EBR traversal for logical partitions with loop and image-boundary protection
+- GPT parsing with 512/4096-byte logical-sector probing, entry-count/size limits and partition-name/type decoding
+- `IPartitionTableProvider` contract and `PartitionTable` provider capability
+- `.dd` raw-image extension support
+- dedicated RAW/IMG smoke tests covering valid MBR/EBR/GPT images, malformed images, cancellation and registry capability resolution
+
+### Changed
+- the application provider registry now includes the RAW partition provider alongside ISO9660/Joliet
+- RAW/IMG images can be positively recognized by provider metadata without enabling fake Mount or Direct Browse actions
+- Direct Browse tooltip now explains when a provider recognized only the partition-table capability
+- project progress advances to 33% toward 1.0 after the first real additional 0.4 image family
+
+### Safety
+- RAW/IMG parsing is read-only and validates every referenced partition range against the image length
+- EBR traversal is bounded and loop-protected
+- GPT entry count and entry size are bounded before allocation/iteration
+- invalid `.img`/`.raw` extensions alone never make an image supported
+- RAW/IMG `DirectBrowse`, Mount and Convert remain disabled until their real backend capabilities exist
+
+### Verified
+- RAW/IMG provider smoke tests passed in PR #16 / run #153 before the documentation/UI synchronization pass
+
 ### Planned
-- 0.4 Extended Image Providers
-- broader provider capability reporting, fallback and isolation
+- remaining 0.4 image providers: IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG, WIM/ESD and FFU
 
 ## [0.3.0] - 2026-09-15
 
