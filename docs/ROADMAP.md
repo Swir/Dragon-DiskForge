@@ -134,7 +134,7 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.4 Extended Image Providers — 🚧 in progress
 
-**Current 0.4 completion: approximately 59%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD and NRG families are real and tested.
+**Current 0.4 completion: approximately 65%.** Provider foundation plus IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS CD, NRG and CCD/IMG/SUB families are real and tested.
 
 ### Provider foundation — ✅ complete
 - ✅ explicit provider capability reporting
@@ -231,15 +231,30 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ✅ dedicated v1/v2 Windows CI smoke tests
 - ✅ PR #20 / run #185 passes NRG plus all previous provider/native/build/artifact gates before docs synchronization
 
+### CCD / IMG / SUB track-layout provider — ✅ complete
+- ✅ `.ccd`, same-name `.img` and validated same-name `.sub` registration
+- ✅ reuses `ITrackLayoutProvider` and explicit `TrackLayout` capability
+- ✅ CloneCD `[TRACK n]` MODE 0/1/2 decoding to AUDIO, MODE1/2352 and MODE2/2352
+- ✅ INDEX 0/1 parsing with INDEX 1 used as the logical track start
+- ✅ same-name IMG payload required, non-empty and aligned to 2352-byte raw sectors
+- ✅ optional same-name SUB sidecar accepted only at exactly 96 bytes per IMG sector
+- ✅ descriptor byte-size, line-count and line-length bounds
+- ✅ currently proven CloneCD descriptor versions 1–3 only; unvalidated future versions rejected
+- ✅ missing/duplicate/non-increasing INDEX 1, INDEX 0 after INDEX 1, unsupported modes and out-of-range positions rejected
+- ✅ CCD registration outranks generic RAW for ambiguous `.img` only after a valid same-name CCD descriptor is parsed; otherwise registry fallback remains available
+- ✅ cancellation propagation
+- ✅ no fake Direct Browse, Mount or Convert
+- ✅ dedicated Windows CI smoke tests
+- ✅ PR #21 / run #193 passes CCD/IMG/SUB plus all previous provider/native/build/artifact gates before docs synchronization
+
 ### Remaining image families
-- ⬜ CCD/IMG/SUB
 - ⬜ VMDK
 - ⬜ QCOW/QCOW2
 - ⬜ DMG
 - ⬜ WIM/ESD
 - ⬜ FFU
 
-**Next provider:** **CCD/IMG/SUB**.
+**Next provider:** **VMDK**.
 
 **Exit criteria:** providers expose consistent, truthful capabilities without turning Core into one monolithic parser.
 
