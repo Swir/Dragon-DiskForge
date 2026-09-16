@@ -29,11 +29,13 @@ try
 
     var v1Path = Path.Combine(root, "data-v1.nrg");
     CreateNrg(v1Path, version: 1,
-        new TrackSpec(1, 0x41, 0x00, 2048, 16));
+        new TrackSpec(1, 0x41, 0x00, 2048, 4),
+        new TrackSpec(2, 0x41, 0x00, 2048, 6));
     Expect(await provider.CanHandleAsync(v1Path), "Valid NERO/DAOI NRG should be recognized.");
     var v1 = await provider.ReadTrackLayoutAsync(v1Path);
-    Expect(v1.TrackCount == 1 && v1.DataTrackCount == 1, "NRG v1 should expose its data track.");
-    Expect(v1.Tracks[0].StartSector == 0 && v1.Tracks[0].SectorCount == 16, "NRG v1 CUES/DAOI metadata should produce a bounded track layout.");
+    Expect(v1.TrackCount == 2 && v1.DataTrackCount == 2, "NRG v1 should expose both data tracks.");
+    Expect(v1.Tracks[0].StartSector == 0 && v1.Tracks[0].SectorCount == 4, "NRG v1 first CUES/DAOI track should be bounded.");
+    Expect(v1.Tracks[1].StartSector == 4 && v1.Tracks[1].SectorCount == 6, "NRG v1 CUES BCD MSF metadata must convert to the real LBA.");
     var inspectV1 = await provider.InspectAsync(v1Path);
     Expect(inspectV1.Format == "NRG v1", "Inspect should identify NERO as NRG v1.");
 
@@ -139,7 +141,6 @@ static void CreateNrg(
 
     using var stream = new MemoryStream();
     var starts = new List<long>(tracks.Length);
-    long lba = 0;
 
     foreach (var track in tracks)
     {
@@ -157,19 +158,31 @@ static void CreateNrg(
 
     using (var cue = new MemoryStream())
     {
-        lba = 0;
-        for (var index = 0; index < tracks.Length; index++)
+        long lba = 0;
+        foreach (var track in tracks)
         {
-            var track = tracks[index];
             if (omittedCueTrack != track.Number)
             {
-                WriteCueEntry(cue, track.CueType, ToBcd(track.Number), 0, checked((int)lba));
-                WriteCueEntry(cue, track.CueType, ToBcd(track.Number), 1, checked((int)lba));
+                if (version == 2)
+                {
+                    WriteCueXEntry(cue, track.CueType, ToBcd(track.Number), 0, checked((int)lba));
+                    WriteCueXEntry(cue, track.CueType, ToBcd(track.Number), 1, checked((int)lba));
+                }
+                else
+                {
+                    WriteCueSEntry(cue, track.CueType, ToBcd(track.Number), 0, checked((int)lba));
+                    WriteCueSEntry(cue, track.CueType, ToBcd(track.Number), 1, checked((int)lba));
+                }
             }
+
             lba = checked(lba + track.SectorCount);
         }
 
-        WriteCueEntry(cue, 0x41, 0xAA, 1, checked((int)lba));
+        if (version == 2)
+            WriteCueXEntry(cue, 0x41, 0xAA, 1, checked((int)lba));
+        else
+            WriteCueSEntry(cue, 0x41, 0xAA, 1, checked((int)lba));
+
         WriteChunk(chunks, version == 2 ? "CUEX" : "CUES", cue.ToArray());
     }
 
@@ -249,14 +262,39 @@ static void WriteChunk(Stream stream, string id, ReadOnlySpan<byte> payload)
     stream.Write(payload);
 }
 
-static void WriteCueEntry(Stream stream, byte type, byte track, byte index, int lba)
+static void WriteCueXEntry(Stream stream, byte type, byte track, byte index, int lba)
 {
     Span<byte> entry = stackalloc byte[8];
     entry[0] = type;
     entry[1] = track;
-    entry[2] = index;
+    entry[2] = ToBcd(index);
     entry[3] = 0;
     BinaryPrimitives.WriteInt32BigEndian(entry.Slice(4, 4), lba);
+    stream.Write(entry);
+}
+
+static void WriteCueSEntry(Stream stream, byte type, byte track, byte index, int lba)
+{
+    var absoluteFrames = checked(lba + 150);
+    if (absoluteFrames < 0)
+        throw new ArgumentOutOfRangeException(nameof(lba));
+
+    var minute = absoluteFrames / (60 * 75);
+    var remainder = absoluteFrames % (60 * 75);
+    var second = remainder / 75;
+    var frame = remainder % 75;
+    if (minute > 99)
+        throw new ArgumentOutOfRangeException(nameof(lba), "Synthetic CUES fixture exceeds two-digit BCD minutes.");
+
+    Span<byte> entry = stackalloc byte[8];
+    entry[0] = type;
+    entry[1] = track;
+    entry[2] = ToBcd(index);
+    entry[3] = 0;
+    entry[4] = 0;
+    entry[5] = ToBcd(minute);
+    entry[6] = ToBcd(second);
+    entry[7] = ToBcd(frame);
     stream.Write(entry);
 }
 
