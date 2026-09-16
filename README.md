@@ -8,16 +8,16 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current version — 0.4.0-alpha.1
 
-## Project progress — 31% toward 1.0
+## Project progress — 33% toward 1.0
 
-`██████░░░░░░░░░░░░░░ 31%`
+`███████░░░░░░░░░░░░░ 33%`
 
-**Overall completion:** **31%**
+**Overall completion:** **33%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
-- `0.4 Extended Image Providers` — **~10%** 🚧
+- `0.4 Extended Image Providers` — **~30%** 🚧
 - `0.5 → 1.0` — planned / future milestones
 
 > This progress indicator is updated together with the roadmap, changelog and milestone status after meaningful project checkpoints. The percentage reflects completed roadmap milestones and proven functionality, not CI count alone.
@@ -106,7 +106,7 @@ Dragon Explorer is complete for the 0.3 scope and includes five proven slices.
 
 ### 0.4 Extended Image Providers 🚧
 
-The first 0.4 architecture slice is complete and proven:
+The provider foundation and the first additional image family are now implemented:
 
 - central Core `ProviderRegistry`
 - explicit provider capability reporting
@@ -116,11 +116,17 @@ The first 0.4 architecture slice is complete and proven:
 - cancellation remains a hard stop rather than being swallowed as a parser error
 - provider diagnostics for future UI/CLI reporting
 - duplicate provider-ID protection
-- existing ISO9660/Joliet direct browsing now resolves through the registry instead of hardcoded `.iso` UI logic
-- dedicated provider-registry smoke tests in CI
-- full run #145: registry + direct ISO + native ISO/VHD/VHDX regression + restore + WinUI Release x64 + artifact ✅
+- existing ISO9660/Joliet direct browsing resolves through the registry instead of hardcoded `.iso` UI logic
+- new read-only **IMG / RAW partition provider** for `.img`, `.raw` and `.dd`
+- MBR primary partitions plus bounded EBR logical-partition traversal
+- GPT parsing with 512/4096-byte logical-sector probing
+- strict partition/image boundary validation and corrupt-image rejection
+- common MBR and GPT partition types plus GPT partition names
+- dedicated `PartitionTable` capability; RAW does **not** advertise Direct Browse, Mount or Convert
+- dedicated provider-registry and RAW/IMG smoke tests in CI
+- full provider work remains gated by real tests before UI capabilities are enabled
 
-The next 0.4 work adds the first new image family. No format-specific UI is enabled until its real provider path and tests exist.
+The next 0.4 work continues with additional image families. Filesystem-level browsing for RAW images remains intentionally disabled until the filesystem layer is implemented and proven.
 
 The cross-process human drag gesture itself remains in [`docs/MANUAL-VALIDATION.md`](docs/MANUAL-VALIDATION.md), because GitHub Actions cannot reliably emulate a person dragging an item into Windows Explorer.
 
@@ -147,6 +153,7 @@ The visual specification lives in [`docs/DRAGON-DESIGN.md`](docs/DRAGON-DESIGN.m
 - isolated Windows service layer for native Storage operations
 - provider registry with explicit capabilities, fallback and failure isolation
 - provider-backed direct-browse architecture for formats that can be safely parsed without mounting
+- bounded read-only partition-table parsing for RAW disk images
 
 ## Build on Windows
 
@@ -156,13 +163,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-Automated validation runs Core smoke tests, provider-registry smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
+Automated validation runs Core smoke tests, provider-registry smoke tests, RAW/IMG partition-provider smoke tests, mounted-history smoke tests, drag-out safety smoke tests, real ISO direct-browse integration, native Windows ISO/VHD/VHDX integration, Explorer/Preview integration and a full Windows x64 Release build in GitHub Actions.
 
 Green CI runs publish a `DragonDiskForge-win-x64` artifact for desktop/manual validation.
 
 ## Safety design
 
-Inspection, hashing, preview, mounted-volume browsing and provider-backed direct ISO browsing are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
+Inspection, hashing, preview, mounted-volume browsing, provider-backed direct ISO browsing and RAW partition-table inspection are read-only-first. Native mount defaults to read-only. Copy out and drag-out are explicit copy operations; drag-out never advertises Move. Direct ISO browsing never mounts the image and refuses silent overwrite conflicts. RAW parsing validates partition metadata against the image boundary and does not expose filesystem browsing until that capability is real. Provider failures are isolated and do not silently turn into unsupported UI capabilities. Local history/workspace metadata never controls or substitutes for real Windows mount state. Create/convert and future destructive physical-media operations remain isolated behind explicit services and will require target validation and clear confirmation before execution.
 
 ## Project rule
 

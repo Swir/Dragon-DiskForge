@@ -8,7 +8,8 @@ namespace DragonDiskForge.App;
 public sealed partial class MainWindow
 {
     private readonly ProviderRegistry _providerRegistry = new([
-        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100)
+        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100),
+        new ProviderRegistration(new RawPartitionImageProvider(), Priority: 90)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
@@ -119,6 +120,11 @@ public sealed partial class MainWindow
 
     private static string BuildProviderUnavailableMessage(ProviderResolution resolution)
     {
+        if (resolution.Descriptor?.Capabilities.HasFlag(ProviderCapabilities.PartitionTable) == true)
+        {
+            return $"{resolution.Descriptor.DisplayName} recognized this image and can safely inspect its partition table. Direct filesystem browsing stays disabled until filesystem support is implemented and tested.";
+        }
+
         var failed = resolution.Diagnostics.Count(x => !string.IsNullOrWhiteSpace(x.ErrorMessage));
         return failed > 0
             ? $"No direct-browse provider accepted this image. {failed} provider probe(s) failed safely; native Mount may still be available."

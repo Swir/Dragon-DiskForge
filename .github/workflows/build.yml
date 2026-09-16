@@ -30,6 +30,9 @@ jobs:
       - name: Provider registry smoke tests
         run: dotnet run --project tests/DragonDiskForge.ProviderRegistry.SmokeTests/DragonDiskForge.ProviderRegistry.SmokeTests.csproj -c Release
 
+      - name: RAW/IMG partition-provider smoke tests
+        run: dotnet run --project tests/DragonDiskForge.RawPartition.SmokeTests/DragonDiskForge.RawPartition.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 

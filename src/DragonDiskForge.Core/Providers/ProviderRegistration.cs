@@ -18,9 +18,12 @@ public sealed record ProviderDescriptor(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        var displayName = provider is IDirectBrowseProvider direct
-            ? direct.DisplayName
-            : provider.Id;
+        var displayName = provider switch
+        {
+            IDirectBrowseProvider direct => direct.DisplayName,
+            IPartitionTableProvider partitions => partitions.DisplayName,
+            _ => provider.Id
+        };
 
         var extensions = provider.Extensions
             .Where(x => !string.IsNullOrWhiteSpace(x))

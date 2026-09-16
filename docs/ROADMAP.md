@@ -174,9 +174,33 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ---
 
-## 0.4 Extended Image Providers — 🚧 next
+## 0.4 Extended Image Providers — 🚧 in progress
 
-- ⬜ IMG / RAW partition parser
+### Provider foundation — ✅ complete
+- ✅ Explicit provider capability reporting
+- ✅ Provider fallback chain with extension-first ordering and signature/provider fallback
+- ✅ Provider isolation/error containment for probe and inspect failures
+- ✅ Cancellation remains a hard stop across provider fallback
+- ✅ Provider diagnostics and duplicate provider-ID protection
+- 🚧 Stable provider/plugin contract — internal Core contract is usable; public/third-party stability remains a later gate
+
+### IMG / RAW partition provider — ✅ complete
+- ✅ `.img`, `.raw` and `.dd` provider registration
+- ✅ MBR primary-partition parsing
+- ✅ Extended/EBR logical-partition traversal
+- ✅ EBR loop detection and bounded traversal
+- ✅ GPT primary-header and partition-entry parsing
+- ✅ 512-byte and 4096-byte GPT logical-sector probing
+- ✅ common MBR type-name decoding
+- ✅ common GPT partition-type GUID decoding and UTF-16 partition names
+- ✅ strict partition-range validation against the image length
+- ✅ malformed/fake extension rejection
+- ✅ cancellation propagation
+- ✅ dedicated `PartitionTable` capability
+- ✅ RAW provider deliberately does not advertise Direct Browse, Mount or Convert
+- ✅ dedicated RAW/IMG smoke-test project integrated into Windows CI
+
+### Remaining image families
 - ⬜ IMA / floppy images
 - ⬜ BIN/CUE
 - ⬜ MDF/MDS
@@ -187,10 +211,8 @@ This file is the source of truth for project progress. Every meaningful feature 
 - ⬜ DMG
 - ⬜ WIM/ESD
 - ⬜ FFU
-- ⬜ Stable provider/plugin contract
-- ⬜ Capability reporting per provider
-- ⬜ Provider fallback chain
-- ⬜ Provider isolation/error containment
+
+**Current 0.4 completion:** approximately **30%**. The first non-ISO image family is real and tested; the remaining format providers still need implementation.
 
 **Exit criteria:** providers expose consistent capabilities without turning Core into one monolithic parser.
 
@@ -198,8 +220,10 @@ This file is the source of truth for project progress. Every meaningful feature 
 
 ## 0.5 Partitions + File Systems + Image Intelligence — ⬜ planned
 
-- ⬜ MBR partition-table inspection
-- ⬜ GPT partition-table inspection
+> The RAW provider now supplies a proven low-level MBR/GPT partition-table parser. Milestone 0.5 still owns cross-provider partition intelligence, filesystem recognition and the user-facing intelligence layer; those items remain planned until that integration is implemented and tested.
+
+- ⬜ MBR partition-table inspection across supported image providers
+- ⬜ GPT partition-table inspection across supported image providers
 - ⬜ ISO9660/UDF recognition
 - ⬜ FAT/FAT32/exFAT recognition
 - ⬜ NTFS metadata inspection where supported

@@ -7,7 +7,8 @@ public enum ProviderCapabilities
     Inspect = 1 << 0,
     DirectBrowse = 1 << 1,
     Search = 1 << 2,
-    CopyOut = 1 << 3
+    CopyOut = 1 << 3,
+    PartitionTable = 1 << 4
 }
 
 public static class ProviderCapabilityExtensions
@@ -23,6 +24,9 @@ public static class ProviderCapabilityExtensions
                 | ProviderCapabilities.Search
                 | ProviderCapabilities.CopyOut;
         }
+
+        if (provider is IPartitionTableProvider)
+            capabilities |= ProviderCapabilities.PartitionTable;
 
         return capabilities;
     }
