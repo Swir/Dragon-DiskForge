@@ -24,7 +24,7 @@ Released version: **0.3.0**.
 
 Development version: **0.4.0-alpha.1**.
 
-Current milestone completion is approximately **83%**.
+Current milestone completion is approximately **89%**.
 
 ### Completed execution slices
 
@@ -38,26 +38,27 @@ Current milestone completion is approximately **83%**.
 8. **VMDK sparse metadata provider** ✅
 9. **QCOW / QCOW2 metadata provider** ✅
 10. **DMG / UDIF metadata provider** ✅
+11. **WIM / ESD metadata provider** ✅
 
-### DMG / UDIF execution slice ✅
+### WIM / ESD execution slice ✅
 
-- `.dmg` single-file UDIF images
-- `IDmgMetadataProvider` + `DmgMetadataInfo`
-- shared `VirtualDiskMetadata` capability
-- trailing 512-byte big-endian `koly` trailer validation
-- version/header/flags, data/resource fork, segment, checksum, XML, image-variant and sector metadata
-- all physical metadata ranges bounded before reading
-- logical size derived from 512-byte sector count
-- XML plist bounded to 16 MiB with DTD/external resolution disabled
-- bounded `blkx` entry counting without `mish` block-map decoding
-- multi-segment images rejected until companion-segment handling exists
+- `.wim` and `.esd` standalone Part 1/1 containers
+- `IWimMetadataProvider` + `WimMetadataInfo`
+- truthful `ContainerMetadata` capability
+- 208-byte little-endian `MSWIM\0\0\0` header validation
+- standard WIM version `68864` and solid/ESD version `3584`
+- flags, chunk size, GUID, part/image counts and boot-index validation
+- lookup-table, XML, boot-metadata and integrity resource descriptors
+- resource stored-size/flag packing validated
+- all resource ranges bounded against the physical file
+- split/spanned and `WRITE_IN_PROGRESS` states rejected
+- unknown flags, invalid chunk geometry and invalid boot metadata rejected
 - cancellation propagation
-- no decompression, virtual-sector I/O, Direct Browse, Mount or Convert
+- no decompression, file-tree traversal/extraction, encrypted ESD handling, Direct Browse, Mount or Convert
 - dedicated Windows CI smoke tests
 
 ### Next execution slices
 
-- WIM/ESD provider
 - FFU provider
 - provider-contract hardening before any public stability promise
 
@@ -71,6 +72,7 @@ Current milestone completion is approximately **83%**.
 - PR #21 / run #198 — CCD/IMG/SUB final head
 - PR #22 / run #205 — VMDK final head
 - PR #23 / run #212 — QCOW/QCOW2 final head
-- PR #24 / run #214 — DMG/UDIF code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact before documentation synchronization
+- PR #24 / run #219 — DMG/UDIF final head
+- PR #25 / run #222 — WIM/ESD code head passed provider tests, Explorer safety, ISO/native Windows integration, Release x64 build and artifact before documentation synchronization
 
 A capability becomes user-visible only after its real backing path and tests exist.

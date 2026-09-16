@@ -14,13 +14,13 @@
 
 ## Overall project progress
 
-**41% toward 1.0** — 0.1, 0.2 and 0.3 are complete. Milestone 0.4 now has its provider foundation plus nine additional image families implemented and validated.
+**42% toward 1.0** — 0.1, 0.2 and 0.3 are complete. Milestone 0.4 now has its provider foundation plus ten additional image families implemented and validated.
 
 ## Current milestone
 
 **0.4 Extended Image Providers — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **83%**.
+Current milestone completion is approximately **89%**.
 
 ## Proven 0.4 slices
 
@@ -34,20 +34,22 @@ Current milestone completion is approximately **83%**.
 8. VMDK sparse metadata provider ✅
 9. QCOW/QCOW2 metadata provider ✅
 10. DMG/UDIF metadata provider ✅
+11. WIM/ESD metadata provider ✅
 
-### DMG / UDIF proven scope
+### WIM / ESD proven scope
 
-- single-file UDIF `.dmg` images with trailing 512-byte `koly` trailer
-- `IDmgMetadataProvider` + `DmgMetadataInfo`
-- shared `VirtualDiskMetadata` capability
-- big-endian trailer version/header/flags/fork/segment/checksum/XML/image-variant/sector metadata
-- all physical ranges bounded before reads and kept before the final trailer
-- logical virtual size from the UDIF 512-byte sector count
-- optional XML plist limited to 16 MiB
-- XML DTD and external resolution disabled
-- bounded `blkx` entry counting without decoding `mish` block maps
-- multi-segment images explicitly rejected until companion-segment handling exists
-- no decompression, guest-sector translation, Direct Browse, Mount or Convert
+- standalone `.wim` / `.esd` Part 1/1 containers
+- `IWimMetadataProvider` + `WimMetadataInfo`
+- truthful `ContainerMetadata` capability
+- 208-byte little-endian `MSWIM\0\0\0` header parsing
+- standard WIM version `68864` and solid/ESD version `3584`
+- flags, chunk size, GUID, part/image counts and boot index
+- lookup-table, XML, boot-metadata and integrity resource descriptors
+- resource flags from the upper descriptor byte and stored size from the lower 56 bits
+- all physical resource ranges bounded before use
+- split/spanned images rejected until companion-part support exists
+- `WRITE_IN_PROGRESS`, unknown flags, invalid chunk size, invalid BootIndex and out-of-file resources rejected
+- no resource decompression, XML/file-tree traversal, extraction, encrypted ESD handling, Direct Browse, Mount or Convert
 
 ## Proven validation checkpoints
 
@@ -59,16 +61,17 @@ Current milestone completion is approximately **83%**.
 - PR #21 / run #198 — CCD/IMG/SUB
 - PR #22 / run #205 — final VMDK head + full regression/build/artifact
 - PR #23 / run #212 — final QCOW/QCOW2 head + full regression/build/artifact
-- PR #24 / run #214 — DMG/UDIF + all previous providers, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
+- PR #24 / run #219 — final DMG/UDIF head + full regression/build/artifact
+- PR #25 / run #222 — WIM/ESD + all previous providers, Explorer safety, ISO/native Windows integration, Release x64 build and artifact
 
 ## Next 0.4 provider
 
-**WIM / ESD** — bounded read-only WIM header/resource metadata inspection first. Resource decompression, file extraction and encrypted ESD handling stay disabled until separately implemented and tested.
+**FFU** — bounded read-only Full Flash Update metadata inspection first. Flashing/writing and any physical-device mutation remain disabled until separately implemented and tested.
 
 ## Current safety state
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
 
-VMDK, QCOW and DMG currently expose metadata only; none exposes guest-sector/block translation, filesystem browsing, Mount or Convert.
+VMDK, QCOW and DMG expose metadata only. WIM/ESD exposes container metadata only and does not decompress resources or traverse/extract its embedded file trees.
 
 Interactive UAC and the real cross-process Explorer drag gesture remain manual QA cases in `docs/MANUAL-VALIDATION.md`.

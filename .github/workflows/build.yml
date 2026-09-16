@@ -57,6 +57,9 @@ jobs:
       - name: DMG / UDIF metadata smoke tests
         run: dotnet run --project tests/DragonDiskForge.Dmg.SmokeTests/DragonDiskForge.Dmg.SmokeTests.csproj -c Release
 
+      - name: WIM / ESD metadata smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Wim.SmokeTests/DragonDiskForge.Wim.SmokeTests.csproj -c Release
+
       - name: Mount history smoke tests
         run: dotnet run --project tests/DragonDiskForge.MountHistory.SmokeTests/DragonDiskForge.MountHistory.SmokeTests.csproj -c Release
 
