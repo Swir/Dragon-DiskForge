@@ -16,18 +16,19 @@
 
 ## Overall project progress
 
-**47% toward 1.0** — milestones 0.1 through 0.4 are complete. Milestone 0.5 now has validated cross-provider partition intelligence plus a bounded filesystem-recognition foundation.
+**50% toward 1.0** — milestones 0.1 through 0.4 are complete. Milestone 0.5 now has validated cross-provider partition intelligence, bounded filesystem recognition, and bounded boot/installer intelligence.
 
 ## Current milestone
 
 **0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **30%**.
+Current milestone completion is approximately **55%**.
 
 ## Proven 0.5 slices
 
 1. Cross-provider partition intelligence ✅
 2. Bounded filesystem-recognition foundation ✅
+3. Boot + installer intelligence foundation ✅
 
 ### Partition intelligence proven scope
 
@@ -40,18 +41,28 @@ Current milestone completion is approximately **30%**.
 ### Filesystem recognition proven scope
 
 - read-only recognition against bounded physical image regions
-- provider-recognized whole-file analysis where physical-byte mapping is truthful
 - partition scanning only after provider-reported physical ranges pass partition-intelligence validation
-- FAT12/FAT16/FAT32 classification + label/serial/sector/cluster metadata
-- exFAT serial + sector/cluster geometry
-- NTFS boot metadata + serial + cluster geometry
-- ext2/ext3/ext4 recognition + label/UUID/block size
-- ISO9660 + Joliet descriptor/label metadata
-- UDF VRS recognition through ordered `BEA01`, `NSR02|NSR03`, `TEA01`
+- FAT12/FAT16/FAT32, exFAT, supported NTFS boot metadata and ext2/ext3/ext4 recognition
+- ISO9660/Joliet descriptor/label metadata and UDF VRS recognition
 - blank images produce no guessed filesystem
 - invalid partition layouts stop before filesystem probing
-- cancellation remains a hard stop
 - no guest-sector translation inside sparse/compressed virtual disks
+
+### Boot + installer intelligence proven scope
+
+- bounded El Torito boot-record and boot-catalog discovery in direct-browse physical ISO images
+- validation-entry checksum/key validation
+- default and section-entry parsing with bounded catalog windows
+- BIOS and UEFI bootability only from real boot catalog platform evidence
+- boot-image load ranges bounded against the physical image
+- Direct Browse tree traversal limited by directory count, entry count and virtual depth
+- only real non-reparse files become installer evidence
+- traversal-style virtual paths are rejected
+- Windows install media requires setup + boot WIM + install payload evidence
+- Linux evidence covers casper, Debian-style and Anaconda-style media layouts
+- architecture hints from standard EFI fallback filenames and bounded installer directory evidence
+- filesystem markers never fabricate BIOS/UEFI bootability
+- no execution, extraction, mount, repair or writes
 
 ## Proven validation checkpoints
 
@@ -71,11 +82,12 @@ Current milestone completion is approximately **30%**.
 
 ### 0.5
 - PR #28 / run #232 — docs-synchronized cross-provider partition intelligence + full regression/build/artifact
-- PR #29 / run #234 — filesystem-recognition code head + dedicated generated-fixture tests + complete provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
+- PR #29 / run #235 — docs-synchronized bounded filesystem recognition + full regression/build/artifact
+- PR #30 / run #240 — boot/installer code head + dedicated tests + all existing provider/Explorer/native Windows/Release x64/artifact checks before documentation synchronization
 
 ## Next engineering focus
 
-**Bootability / BIOS / UEFI and installer intelligence**, grounded in existing provider, partition and direct-browse evidence. Richer UDF/FAT/NTFS reader depth remains in 0.5 and must not be confused with the bounded recognition already proven.
+**Cross-source image metadata aggregation and evidence-backed health/corruption warnings**, while deepening UDF/FAT/NTFS readers where a bounded read path is available. Guest-sector translation remains a separate prerequisite for filesystem intelligence inside sparse/compressed virtual disks.
 
 The planned first public beta remains `0.5.0-beta.1` and is not ready until the agreed 0.5 scope and beta gates are proven.
 
@@ -83,6 +95,6 @@ The planned first public beta remains `0.5.0-beta.1` and is not ready until the 
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
 
-Filesystem recognition does not imply filesystem traversal, repair or write support, and does not claim access to guest sectors in sparse/compressed virtual-disk formats.
+Filesystem recognition does not imply filesystem traversal, repair or write support. Installer evidence does not imply code execution. El Torito metadata is the only current source for BIOS/UEFI bootability claims.
 
 Interactive UAC and the real cross-process Explorer drag gesture remain manual QA cases in `docs/MANUAL-VALIDATION.md`.

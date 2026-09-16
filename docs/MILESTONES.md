@@ -36,12 +36,13 @@ Closing 0.4 completes the internal engineering contract only. It does not declar
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **30%**.
+Current milestone completion is approximately **55%**.
 
 ### Completed execution slices
 
 1. **Cross-provider partition intelligence** ✅
 2. **Bounded filesystem-recognition foundation** ✅
+3. **Boot + installer intelligence foundation** ✅
 
 ### Cross-provider partition intelligence ✅
 
@@ -58,24 +59,33 @@ Current milestone completion is approximately **30%**.
 - provider-integrated `FileSystemRecognitionService`
 - physical whole-file scanning only where byte mapping is truthful
 - partition-scoped scanning after structural validation of provider-reported physical ranges
-- FAT12/FAT16/FAT32 recognition and basic metadata
-- exFAT boot metadata
-- supported NTFS boot metadata
-- ext2/ext3/ext4 superblock recognition and metadata
-- ISO9660/Joliet descriptors and volume label
-- UDF VRS recognition
-- generated sparse test fixtures rather than committed binary images
-- false-positive, invalid-layout and cancellation coverage
+- FAT12/FAT16/FAT32, exFAT, supported NTFS, ext2/ext3/ext4 recognition
+- ISO9660/Joliet and UDF VRS recognition
+- generated sparse fixtures, false-positive and cancellation coverage
 - no sparse/compressed virtual guest-sector translation
 - no mount, traversal, extraction, repair or writes
-- PR #29 / run #234 code head passed the new filesystem gate plus all existing provider, Explorer, native Windows, Release x64 and artifact checks before documentation synchronization
+- PR #29 / run #235 docs-synchronized full regression/build/artifact ✅
+
+### Boot + installer intelligence foundation ✅
+
+- provider-integrated `BootInstallerIntelligenceService`
+- El Torito boot record and catalog discovery bounded to physical ISO sectors
+- validation-entry key/checksum and catalog section validation
+- bootable entry load-range validation
+- explicit BIOS/UEFI/other platform evidence
+- bounded Direct Browse tree traversal with cycle/depth/entry controls
+- only non-reparse files can become installer evidence
+- Windows setup/boot/install payload evidence
+- Linux casper, Debian-style and Anaconda-style evidence
+- standard EFI fallback architecture hints
+- bootability remains independent from installer file markers
+- no execution, extraction, mount, repair or writes
+- PR #30 / run #240 code head passed the new boot/installer gate plus all existing provider, Explorer, native Windows, Release x64 and artifact checks before documentation synchronization
 
 ### Remaining execution slices
 
 - richer UDF/FAT/NTFS metadata and reader depth
-- bootability + BIOS/UEFI intelligence
-- Windows/Linux installer recognition
-- architecture + cross-source label/UUID/GUID aggregation
+- cross-source architecture + label/UUID/GUID aggregation
 - health/corruption warnings backed by proven metadata checks
 - virtual guest-sector readers before inspecting filesystems inside sparse/compressed virtual disks
 
