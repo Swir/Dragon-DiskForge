@@ -78,7 +78,7 @@ try
         new TrackSpec(1, 1, 6, 5));
     Expect(!await provider.CanHandleAsync(badIndexOrder.Ccd), "CCD INDEX 0 after INDEX 1 must be rejected.");
 
-    var futureVersion = CreateCloneCdSet(root, "future-version", withSub: false, version: 4,
+    var futureVersion = CreateCloneCdSetCore(root, "future-version", withSub: false, version: 4,
         new TrackSpec(1, 1, null, 0));
     Expect(!await provider.CanHandleAsync(futureVersion.Ccd), "Unvalidated future CloneCD descriptor versions must be rejected.");
 
@@ -127,9 +127,9 @@ static CloneCdSet CreateCloneCdSet(
     string name,
     bool withSub,
     params TrackSpec[] tracks)
-    => CreateCloneCdSet(root, name, withSub, version: 3, tracks);
+    => CreateCloneCdSetCore(root, name, withSub, version: 3, tracks);
 
-static CloneCdSet CreateCloneCdSet(
+static CloneCdSet CreateCloneCdSetCore(
     string root,
     string name,
     bool withSub,
@@ -157,7 +157,7 @@ static CloneCdSet CreateCloneCdSet(
 
 static void WriteCcd(string path, int version, params TrackSpec[] tracks)
 {
-    using var writer = new StreamWriter(path, append: false, new System.Text.UTF8Encoding(false));
+    using var writer = new StreamWriter(path, false, new System.Text.UTF8Encoding(false));
     writer.WriteLine("[CloneCD]");
     writer.WriteLine($"Version={version}");
     writer.WriteLine();
