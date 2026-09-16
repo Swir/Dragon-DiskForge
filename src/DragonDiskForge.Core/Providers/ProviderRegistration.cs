@@ -24,6 +24,7 @@ public sealed record ProviderDescriptor(
             IPartitionTableProvider partitions => partitions.DisplayName,
             IMediaGeometryProvider media => media.DisplayName,
             ITrackLayoutProvider tracks => tracks.DisplayName,
+            IVirtualDiskMetadataProvider virtualDisk => virtualDisk.DisplayName,
             _ => provider.Id
         };
 
