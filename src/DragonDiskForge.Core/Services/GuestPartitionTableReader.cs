@@ -383,7 +383,7 @@ public static class GuestPartitionTableReader
     {
         var crc = 0xFFFFFFFFu;
         foreach (var value in data)
-            crc = Crc32Table[(crc ^ value) & 0xFF] ^ (crc >> 8);
+            crc = Crc32Table[(int)((crc ^ value) & 0xFF)] ^ (crc >> 8);
         return ~crc;
     }
 
@@ -404,7 +404,7 @@ public static class GuestPartitionTableReader
             var count = checked((int)Math.Min((ulong)buffer.Length, remaining));
             await ReadExactlyAtAsync(reader, currentOffset, buffer.AsMemory(0, count), cancellationToken);
             for (var i = 0; i < count; i++)
-                crc = Crc32Table[(crc ^ buffer[i]) & 0xFF] ^ (crc >> 8);
+                crc = Crc32Table[(int)((crc ^ buffer[i]) & 0xFF)] ^ (crc >> 8);
             currentOffset = checked(currentOffset + (ulong)count);
             remaining -= (ulong)count;
         }
@@ -416,9 +416,9 @@ public static class GuestPartitionTableReader
     {
         const uint polynomial = 0xEDB88320u;
         var table = new uint[256];
-        for (var i = 0u; i < table.Length; i++)
+        for (var i = 0; i < table.Length; i++)
         {
-            var value = i;
+            var value = (uint)i;
             for (var bit = 0; bit < 8; bit++)
                 value = (value & 1) != 0 ? polynomial ^ (value >> 1) : value >> 1;
             table[i] = value;
