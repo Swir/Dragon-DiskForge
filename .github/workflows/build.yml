@@ -30,6 +30,9 @@ jobs:
       - name: SHA-256/SHA-512 verification smoke tests
         run: dotnet run --project tests/DragonDiskForge.Verification.SmokeTests/DragonDiskForge.Verification.SmokeTests.csproj -c Release
 
+      - name: Safe output transaction smoke tests
+        run: dotnet run --project tests/DragonDiskForge.SafeOutput.SmokeTests/DragonDiskForge.SafeOutput.SmokeTests.csproj -c Release
+
       - name: Provider registry smoke tests
         run: dotnet run --project tests/DragonDiskForge.ProviderRegistry.SmokeTests/DragonDiskForge.ProviderRegistry.SmokeTests.csproj -c Release
 
