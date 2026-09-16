@@ -16,32 +16,42 @@
 
 ## Overall project progress
 
-**45% toward 1.0** — milestones 0.1 through 0.4 are complete and the first validated 0.5 intelligence slice is now in place.
+**47% toward 1.0** — milestones 0.1 through 0.4 are complete. Milestone 0.5 now has validated cross-provider partition intelligence plus a bounded filesystem-recognition foundation.
 
 ## Current milestone
 
 **0.5 Partitions + File Systems + Image Intelligence — IN PROGRESS 🚧**
 
-Current milestone completion is approximately **11%**.
+Current milestone completion is approximately **30%**.
 
 ## Proven 0.5 slices
 
 1. Cross-provider partition intelligence ✅
+2. Bounded filesystem-recognition foundation ✅
 
-### Cross-provider partition intelligence proven scope
+### Partition intelligence proven scope
 
-- provider-agnostic `PartitionIntelligenceService`
-- resolves through `ProviderRegistry` using the truthful `PartitionTable` capability
-- stable structural findings with explicit severity
-- duplicate partition indexes detected
-- zero-length partitions detected
-- LBA arithmetic overflow detected
-- byte offset and byte size checked against provider-reported LBA geometry
-- partition ranges bounded against the physical image
-- overlapping partition byte ranges detected
-- bootable partition count and partition-table metadata preserved
-- capability-driven fake providers prove the service is not tied to one image format
-- no filesystem-health claims, writes, repairs or mounts
+- provider-agnostic analysis through `ProviderRegistry` + `PartitionTable`
+- duplicate index / zero length / LBA overflow / byte geometry / bounds / overlap findings
+- stable findings and explicit severities
+- capability-driven test providers
+- no filesystem-health claims, writes, repair or mount side effects
+
+### Filesystem recognition proven scope
+
+- read-only recognition against bounded physical image regions
+- provider-recognized whole-file analysis where physical-byte mapping is truthful
+- partition scanning only after provider-reported physical ranges pass partition-intelligence validation
+- FAT12/FAT16/FAT32 classification + label/serial/sector/cluster metadata
+- exFAT serial + sector/cluster geometry
+- NTFS boot metadata + serial + cluster geometry
+- ext2/ext3/ext4 recognition + label/UUID/block size
+- ISO9660 + Joliet descriptor/label metadata
+- UDF VRS recognition through ordered `BEA01`, `NSR02|NSR03`, `TEA01`
+- blank images produce no guessed filesystem
+- invalid partition layouts stop before filesystem probing
+- cancellation remains a hard stop
+- no guest-sector translation inside sparse/compressed virtual disks
 
 ## Proven validation checkpoints
 
@@ -56,22 +66,23 @@ Current milestone completion is approximately **11%**.
 - PR #23 / run #212 — QCOW/QCOW2
 - PR #24 / run #219 — DMG/UDIF
 - PR #25 / run #222 — WIM/ESD
-- PR #26 / run #226 — final FFU head + full regression/build/artifact
-- PR #27 / run #228 — provider-contract hardening + complete provider/native/build/artifact regression
+- PR #26 / run #226 — FFU
+- PR #27 / run #228 — provider-contract hardening
 
 ### 0.5
-- PR #28 / run #231 — partition-intelligence code head + dedicated tests + full provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
+- PR #28 / run #232 — docs-synchronized cross-provider partition intelligence + full regression/build/artifact
+- PR #29 / run #234 — filesystem-recognition code head + dedicated generated-fixture tests + complete provider/Explorer/native Windows/Release x64/artifact regression before documentation synchronization
 
 ## Next engineering focus
 
-**Bounded filesystem recognition and metadata.** The next slice should build on the provider/capability layer and avoid mount-only assumptions. Planned filesystem scope includes ISO9660/UDF, FAT/FAT32/exFAT, NTFS metadata where supported and ext-family recognition, followed by boot/install intelligence and corruption warnings.
+**Bootability / BIOS / UEFI and installer intelligence**, grounded in existing provider, partition and direct-browse evidence. Richer UDF/FAT/NTFS reader depth remains in 0.5 and must not be confused with the bounded recognition already proven.
 
-The planned first public beta remains `0.5.0-beta.1` and is not considered ready until the agreed 0.5 scope and beta gates are proven.
+The planned first public beta remains `0.5.0-beta.1` and is not ready until the agreed 0.5 scope and beta gates are proven.
 
 ## Current safety state
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Parsers and intelligence services validate metadata offsets/ranges against the physical image and reject contradictory or unknown states instead of guessing.
 
-Partition intelligence reports structural metadata findings only; it does not claim filesystem health or modify partition tables.
+Filesystem recognition does not imply filesystem traversal, repair or write support, and does not claim access to guest sectors in sparse/compressed virtual-disk formats.
 
 Interactive UAC and the real cross-process Explorer drag gesture remain manual QA cases in `docs/MANUAL-VALIDATION.md`.
