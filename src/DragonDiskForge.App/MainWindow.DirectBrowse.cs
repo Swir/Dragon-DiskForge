@@ -12,7 +12,8 @@ public sealed partial class MainWindow
         new ProviderRegistration(new RawPartitionImageProvider(), Priority: 90),
         new ProviderRegistration(new FloppyImageProvider(), Priority: 80),
         new ProviderRegistration(new CueSheetImageProvider(), Priority: 70),
-        new ProviderRegistration(new MdsImageProvider(), Priority: 60)
+        new ProviderRegistration(new MdsImageProvider(), Priority: 60),
+        new ProviderRegistration(new NrgImageProvider(), Priority: 50)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
