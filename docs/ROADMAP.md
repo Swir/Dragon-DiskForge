@@ -48,7 +48,7 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 
 ## 0.5 Partitions + File Systems + Image Intelligence — 🚧 in progress
 
-**Current 0.5 completion: approximately 30%.** Cross-provider partition intelligence and the bounded filesystem-recognition foundation are implemented and validated.
+**Current 0.5 completion: approximately 55%.** Cross-provider partition intelligence, bounded filesystem recognition, and boot/installer intelligence are implemented and validated.
 
 ### Cross-provider partition intelligence — ✅ complete
 - ✅ provider-agnostic `PartitionIntelligenceService`
@@ -70,26 +70,44 @@ Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, prog
 - ✅ ISO9660/Joliet descriptor recognition and volume label
 - ✅ UDF VRS recognition (`BEA01` / `NSR02|NSR03` / `TEA01`)
 - ✅ generated sparse fixtures, false-positive checks and cancellation coverage
-- ✅ structurally invalid partition layouts rejected before filesystem probing
 - ✅ explicit refusal to pretend sparse/compressed virtual-disk guest sectors are physical bytes
-- ✅ PR #29 / run #234 passed this code slice plus the complete existing provider/native/build/artifact regression before documentation synchronization
+- ✅ PR #29 / final docs-synchronized run #235 passed full Windows regression/build/artifact
+
+### Boot + installer intelligence foundation — ✅ complete
+- ✅ `BootInstallerIntelligenceService` with explicit boot and installer evidence models
+- ✅ bounded El Torito boot-record/catalog discovery
+- ✅ validation-entry key/checksum, section-header and boot-indicator validation
+- ✅ physical boot-image load-range bounds
+- ✅ BIOS and UEFI bootability derived only from El Torito platform entries
+- ✅ bounded provider-backed Direct Browse traversal with cycle/depth/entry limits
+- ✅ installer markers are accepted only from real files, never directory-name lookalikes or reparse-point evidence
+- ✅ traversal-style provider paths are rejected
+- ✅ Windows setup + boot WIM + install payload recognition
+- ✅ Linux casper, Debian-style and Anaconda-style installer/live evidence
+- ✅ bounded EFI fallback filename architecture hints
+- ✅ file markers never fabricate BIOS/UEFI bootability
+- ✅ dedicated smoke tests and full regression gate
+- ✅ PR #30 / run #240 passed the code slice plus the complete prior provider/native/build/artifact path before documentation synchronization
+
+See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](BOOT-INSTALLER-INTELLIGENCE.md) for the evidence contract.
 
 ### Filesystem family depth
-- 🚧 ISO9660/UDF — ISO direct browsing already proven; bounded ISO/Joliet and UDF recognition now proven; richer UDF metadata/traversal remains
+- 🚧 ISO9660/UDF — ISO direct browsing proven; bounded ISO/Joliet and UDF recognition proven; richer UDF metadata/traversal remains
 - 🚧 FAT/FAT32/exFAT — recognition/geometry proven; deeper reader functionality remains
 - 🚧 NTFS metadata — bounded boot metadata proven; deeper supported metadata remains
 - ✅ ext-family recognition — ext2/ext3/ext4 recognition and basic metadata proven
 
-### Remaining 0.5 scope
-- ⬜ bootability + BIOS/UEFI detection
-- ⬜ Windows/Linux installer recognition
-- ⬜ architecture and cross-source labels/UUID/GUID aggregation
+### Image-intelligence depth
+- ✅ bootability + BIOS/UEFI foundation through bounded El Torito evidence
+- ✅ Windows/Linux installer-recognition foundation through bounded Direct Browse file evidence
+- 🚧 architecture intelligence — bounded EFI and installer-directory hints exist; cross-source aggregation remains
+- ⬜ cross-source label/UUID/GUID aggregation
 - ⬜ health/corruption warnings grounded in proven metadata checks
-- ⬜ virtual guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
+- ⬜ virtual guest-sector readers before filesystems inside sparse/compressed virtual disks can be analyzed
 
 **0.5 rule:** image intelligence must build on truthful provider byte mappings/capabilities. No format-specific UI shortcut may imply access the Core cannot actually perform.
 
-**Next engineering focus:** bootability/BIOS/UEFI and installer intelligence using existing provider + direct-browse evidence, while continuing to deepen filesystem metadata safely.
+**Next engineering focus:** cross-source metadata aggregation and evidence-backed health/corruption findings, while deepening filesystem reader paths without weakening byte-mapping boundaries.
 
 ---
 

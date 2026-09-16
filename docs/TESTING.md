@@ -25,24 +25,33 @@ The suite uses capability-driven providers and verifies clean layouts plus dupli
 dotnet run --project tests/DragonDiskForge.FileSystemRecognition.SmokeTests/DragonDiskForge.FileSystemRecognition.SmokeTests.csproj -c Release
 ```
 
-Fixtures are generated as bounded/sparse temporary images at runtime. The suite proves:
-
-- FAT12, FAT16 and FAT32 BPB/cluster-count classification
-- FAT label, serial, logical-sector and allocation-unit metadata
-- exFAT OEM/geometry/serial recognition
-- NTFS OEM/BPB/serial/cluster recognition
-- ext2/ext3/ext4 superblock + feature classification, label, UUID and block size
-- ISO9660 primary descriptor recognition
-- Joliet variant and UCS-2 volume label handling
-- ordered UDF `BEA01` / `NSR02|NSR03` / `TEA01` VRS recognition
-- filesystem scanning inside provider-reported partition ranges
-- preservation of partition index and physical offset in evidence
-- blank recognized images do not receive guessed filesystems
-- unrecognized images are rejected at the provider gate
-- structurally invalid partition layouts are rejected before filesystem probing
-- pre-cancelled recognition stops immediately
+Fixtures are generated as bounded/sparse temporary images at runtime. The suite proves FAT12/FAT16/FAT32, exFAT, supported NTFS boot metadata, ext2/ext3/ext4, ISO9660/Joliet and UDF VRS recognition; partition-scoped physical ranges; false-positive resistance; invalid-layout refusal; and cancellation.
 
 The recognition tests intentionally do not pretend physical bytes in VMDK/QCOW/DMG containers are guest filesystem sectors.
+
+## Boot + installer intelligence
+
+```powershell
+dotnet run --project tests/DragonDiskForge.BootInstallerIntelligence.SmokeTests/DragonDiskForge.BootInstallerIntelligence.SmokeTests.csproj -c Release
+```
+
+The generated-fixture suite proves:
+
+- bounded El Torito boot-record/catalog discovery
+- validation-entry checksum/key checks
+- BIOS default-entry and EFI section-entry parsing
+- physical boot-image load-range validation
+- hybrid BIOS + UEFI bootability evidence
+- Windows setup/boot-WIM/install-payload evidence
+- Linux casper installer/live evidence
+- standard EFI fallback architecture hints
+- filesystem markers without a boot catalog do not fabricate bootability
+- malformed catalog checksums fail closed
+- out-of-file boot load ranges fail closed
+- providers without truthful Direct Browse support are rejected
+- cancellation remains a hard stop
+
+The service also bounds Direct Browse traversal and rejects reparse-point or traversal-style evidence.
 
 ## Image-provider gates
 
@@ -119,14 +128,15 @@ Every green CI run uploads `DragonDiskForge-win-x64` as a temporary workflow art
 4. Provider-registry smoke tests.
 5. Partition-intelligence smoke tests.
 6. Filesystem-recognition smoke tests.
-7. All dedicated image-provider smoke tests.
-8. Mount-history and drag-out safety smoke tests.
-9. Provider-backed ISO direct-browse integration.
-10. Native Windows ISO/VHD/VHDX + mounted Explorer integration.
-11. Configure MSBuild.
-12. Restore solution.
-13. Build WinUI Release x64.
-14. Upload Windows x64 artifact.
+7. Boot + installer intelligence smoke tests.
+8. All dedicated image-provider smoke tests.
+9. Mount-history and drag-out safety smoke tests.
+10. Provider-backed ISO direct-browse integration.
+11. Native Windows ISO/VHD/VHDX + mounted Explorer integration.
+12. Configure MSBuild.
+13. Restore solution.
+14. Build WinUI Release x64.
+15. Upload Windows x64 artifact.
 
 A feature is not complete because code was committed. Its relevant test path and the required full regression/build gate must pass first.
 

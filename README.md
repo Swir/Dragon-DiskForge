@@ -8,17 +8,17 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## Current development version — 0.5.0-alpha.1
 
-## Project progress — 47% toward 1.0
+## Project progress — 50% toward 1.0
 
-`█████████░░░░░░░░░░░ 47%`
+`██████████░░░░░░░░░░ 50%`
 
-**Overall completion:** **47%**
+**Overall completion:** **50%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
 - `0.3 Dragon Explorer` — **100%** ✅
 - `0.4 Extended Image Providers` — **100%** ✅
-- `0.5 Partitions + File Systems + Image Intelligence` — **~30%** 🚧
+- `0.5 Partitions + File Systems + Image Intelligence` — **~55%** 🚧
 - `0.6 → 1.0` — planned / future milestones
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count alone never increases completion.
@@ -36,7 +36,7 @@ The project combines a native WinUI 3 experience with a distinctive **Dragon / f
 
 ## 0.5 Partitions + File Systems + Image Intelligence 🚧
 
-Two substantial 0.5 slices are now implemented and validated.
+Three substantial 0.5 slices are now implemented and validated.
 
 ### Cross-provider partition intelligence ✅
 
@@ -44,40 +44,46 @@ Two substantial 0.5 slices are now implemented and validated.
 - resolves metadata through `ProviderRegistry` + truthful `PartitionTable`
 - stable structural findings and severity levels
 - duplicate-index, zero-length, LBA-overflow, geometry, bounds and overlap checks
-- fake capability-driven providers prove the service is not hard-wired to RAW/IMG
-- no writes, repairs, mount side effects or fake filesystem-health claims
+- capability-driven tests prove the service is not hard-wired to RAW/IMG
 - PR #28 / run #232 passed the docs-synchronized full Windows regression/build/artifact path ✅
 
 ### Bounded filesystem recognition foundation ✅
 
 - provider-integrated `FileSystemRecognitionService`
-- whole-file recognition for providers whose image bytes map directly to the physical file
-- partition-scoped recognition only after `PartitionIntelligenceService` validates provider-reported physical partition ranges
-- FAT12 / FAT16 / FAT32 classification from bounded BPB geometry and cluster counts
-- exFAT boot metadata, serial and sector/cluster geometry
-- NTFS boot metadata, volume serial and cluster geometry
-- ext2 / ext3 / ext4 recognition from superblock magic and feature flags, plus label/UUID/block size
-- ISO9660 primary descriptor recognition with Joliet variant/label metadata
-- UDF Volume Recognition Sequence (`BEA01` → `NSR02/NSR03` → `TEA01`)
-- blank recognized images remain “no filesystem detected” rather than receiving a guessed result
-- structurally invalid partition layouts are rejected before probing filesystem bytes
-- pre-cancelled analysis remains a hard stop
-- generated sparse fixtures keep large binary test images out of Git
-- PR #29 / run #234 passed the filesystem gate plus every prior provider, Explorer/native Windows, Release x64 and artifact check before documentation synchronization ✅
+- whole-file recognition only where physical-byte mapping is truthful
+- partition-scoped recognition only after structural partition validation
+- FAT12/FAT16/FAT32, exFAT, supported NTFS boot metadata and ext2/ext3/ext4 recognition
+- ISO9660/Joliet descriptor recognition and UDF Volume Recognition Sequence detection
+- generated sparse fixtures, false-positive checks and cancellation coverage
+- no fake guest-sector access inside sparse/compressed VMDK, QCOW/QCOW2, DMG or container formats
+- PR #29 / run #235 completed the docs-synchronized full Windows regression/build/artifact path ✅
 
-This slice deliberately does **not** translate guest sectors inside sparse/compressed VMDK, QCOW/QCOW2, DMG or other virtual/container formats. Those formats keep only their already-proven metadata capabilities until real virtual-sector readers exist.
+See [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md).
 
-See [`docs/FILESYSTEM-RECOGNITION.md`](docs/FILESYSTEM-RECOGNITION.md) for the recognition contract and safety boundaries.
+### Boot + installer intelligence foundation ✅
+
+- new `BootInstallerIntelligenceService` with explicit evidence models
+- bounded El Torito boot-record/catalog parsing and validation
+- validation-entry checksum, section headers, boot indicators and physical load ranges are checked before use
+- BIOS (`0x00`) and UEFI (`0xEF`) boot support is reported only from real boot-catalog entries
+- installer evidence is collected only through a truthful provider-backed Direct Browse path
+- traversal is bounded by directory, entry and depth limits and ignores reparse-point evidence
+- Windows install media recognition requires `setup.exe`, `sources/boot.wim` and a real install payload (`install.wim`, `install.esd` or `install.swm`)
+- Linux evidence covers casper, Debian-style and Anaconda-style installer/live layouts
+- EFI fallback filenames provide bounded architecture hints for x86, x86_64, ARM, ARM64 and RISC-V 64
+- filesystem marker files never fabricate bootability
+- PR #30 / run #240 passed the new intelligence gate plus all prior providers, Explorer/native Windows integration, Release x64 build and artifact publication before documentation synchronization ✅
+
+See [`docs/BOOT-INSTALLER-INTELLIGENCE.md`](docs/BOOT-INSTALLER-INTELLIGENCE.md).
 
 ### Remaining 0.5 work
 
 - richer ISO9660/UDF metadata and UDF traversal where proven
 - FAT/FAT32/exFAT reader depth beyond recognition
 - deeper supported NTFS metadata
-- bootability + BIOS/UEFI intelligence
-- Windows/Linux installer recognition
-- architecture, labels and UUID/GUID aggregation
+- cross-source architecture, labels and UUID/GUID aggregation beyond current bounded hints
 - health/corruption warnings backed by real metadata validation
+- virtual guest-sector reader paths before filesystems inside sparse/compressed virtual disks can be analyzed
 
 ## 0.4 Extended Image Providers — COMPLETE ✅
 
@@ -97,7 +103,7 @@ Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution s
 - isolated Windows native-storage layer
 - hardened provider registry with explicit capabilities/fallback/failure isolation
 - bounded read-only partition, filesystem, optical-layout, virtual-disk and container metadata parsers
-- provider-agnostic partition and filesystem intelligence services
+- provider-agnostic partition, filesystem and boot/install intelligence services
 
 ## Build on Windows
 
@@ -107,13 +113,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
+CI validates Core, provider-registry invariants, partition intelligence, filesystem recognition, boot/install intelligence, all proven image providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration and a full Windows x64 Release build. Green runs publish `DragonDiskForge-win-x64`.
 
 ## Safety design
 
 Inspection is read-only-first. Native mounts default to read-only. Metadata parsers validate offsets and lengths before reading and reject contradictory structures rather than inventing an interpretation.
 
-Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Neither service repairs, mounts or mutates images.
+Partition intelligence reports structural layout findings only. Filesystem recognition reports bounded evidence only. Boot/install intelligence reports bootability only from validated boot metadata and installer families only from bounded file evidence. These services do not repair, execute, mount or mutate images.
 
 VMDK, QCOW and DMG expose only proven metadata. WIM/ESD and FFU expose bounded container metadata only. FFU does not interpret write-descriptor destinations, access physical devices, write sectors or apply images.
 
