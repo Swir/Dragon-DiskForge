@@ -7,73 +7,52 @@ The project follows semantic versioning while it evolves toward 1.0.
 ## [Unreleased]
 
 ### Added
-- read-only IMG/RAW partition inspection with MBR, bounded EBR and GPT parsing
-- read-only IMA/FLP media geometry with FAT-style BPB validation
-- read-only BIN/CUE, MDF/MDS CD, NRG v1/v2 and CCD/IMG/SUB optical track-layout providers
-- read-only VMware hosted sparse VMDK v1, QCOW/QCOW2 and DMG/UDIF metadata providers
-- read-only WIM/ESD and FFU container metadata providers
-- hardened provider registration/descriptor contract and deterministic equal-priority ordering
-- provider-agnostic cross-provider partition intelligence through `PartitionTable`
-- bounded filesystem recognition for FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS
-- bounded El Torito boot/installer intelligence and architecture evidence
-- unified identity/health intelligence with source provenance
-- WinUI **Analyze** action backed by text/JSON `ImageReportService` and Save JSON
-- required `by Swir` + GitHub navigation footer
-- deeper exFAT/FAT32/UDF evidence and bounded NTFS `$MFT`/`$MFTMirr` hardening
-- cross-source architecture reconciliation without guessed conflict resolution
-- clean Windows x64 ZIP candidate, manifest, SHA-256 sidecar and independent package verification
-- bounded non-recursive UDF Type 1 root-directory traversal
-- generic read-only `IGuestByteReader` engine contract
-- bounded `Qcow2GuestByteReader` for QCOW2 v2/v3 standard uncompressed active L1/L2 mappings
-- bounded `VmdkSparseGuestByteReader` for clean single-extent hosted sparse v1 `monolithicSparse` images
-- bounded `GuestPartitionTableReader` for guest-visible MBR/EBR/GPT metadata over proven `IGuestByteReader` sources
-- bounded `GuestFileSystemRecognitionService` for guest FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS evidence
-- dedicated guest-relative filesystem models and separate guest sections in text/JSON reports
-- final guest GPT/EBR integrity hardening: GPT primary-header CRC32, partition-entry-array CRC32, GPT geometry/metadata placement validation, MBR/EBR status validation and extended-container containment
-- generated final-hardening fixtures covering valid GPT, corrupt GPT header/table checksums, invalid MBR status, escaping logical partitions and escaping EBR links
-- 0.6 dual verification foundation with `ImageVerificationInfo`, SHA-256 + SHA-512 in one bounded sequential pass, exact hashed byte count and a dedicated SHA-512 API
-- generated verification smoke coverage for multi-buffer input, empty files, missing files, monotonic progress and cancellation
-- reusable 0.6 `SafeOutputService` transaction boundary for future file-producing operations
-- explicit `FailIfExists` / `ReplaceExisting` overwrite policies with same-directory temporary output and finalization
-- generated safe-output smoke coverage for writer failure, cancellation, pre-existing/racing destinations, replacement and temporary-file cleanup
-- `docs/OUTPUT-TRANSACTIONS.md` contract for future creation/conversion/split-join writers
-- `RawImagePipelineService` as the first real 0.6 image creation/conversion pipeline
-- transactional explicit-length blank RAW creation
-- bounded generic `IGuestByteReader` → RAW materialization with a fixed 1 MiB transfer buffer
-- explicit QCOW2 → RAW conversion over the proven standard-uncompressed QCOW2 reader subset
-- explicit hosted-sparse VMDK → RAW conversion over the proven clean `monolithicSparse` reader subset
-- generated RAW pipeline tests for exact bytes/lengths, replacement/refusal, cancellation, reader failure, rollback, temporary cleanup and real QCOW2/VMDK materialization
-- `docs/RAW-IMAGE-PIPELINES.md` safety/scope contract
+- hardened provider registry with deterministic resolution, failure isolation and truthful capabilities
+- read-only providers for IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB, VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU
+- provider-agnostic partition intelligence and bounded physical filesystem recognition
+- bounded boot/installer intelligence, identity/health aggregation and architecture reconciliation
+- Windows **Analyze** action with text/JSON reports and Save JSON
+- required `by Swir` + GitHub footer
+- deeper exFAT/FAT32/UDF/NTFS metadata evidence and bounded physical UDF root traversal
+- generic read-only `IGuestByteReader` contract
+- bounded QCOW2 standard-uncompressed and hosted-sparse VMDK guest-byte readers
+- guest-relative MBR/EBR/GPT and filesystem intelligence with GPT CRC/geometry and EBR containment hardening
+- clean Windows x64 package candidate, deterministic manifest, SHA-256 sidecar, icon and independent ZIP verification
+- combined SHA-256 + SHA-512 verification with exact hashed-byte reporting
+- reusable `SafeOutputService` with explicit `FailIfExists` / `ReplaceExisting` policies
+- transactional blank RAW creation and generic guest-byte → RAW materialization
+- explicit QCOW2 → RAW and hosted-sparse VMDK → RAW conversion entry points for the proven reader subsets
+- `SplitImagePipelineService` for transactional split-set creation and validated join
+- versioned `dragon-split-manifest.json` with SHA-256 for every split part
+- bounded generated split-part naming and a 10,000-part safety ceiling
+- `GzipImagePipelineService` for transactional whole-file gzip transport compression/decompression
+- caller-required decompressed output ceiling
+- gzip minimum-envelope, magic, compression-method and reserved-header-bit validation before output staging
+- `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md` and `docs/SPLIT-COMPRESSION-PIPELINES.md`
+- dedicated smoke tests for dual verification, safe output, RAW pipelines and split/join + gzip pipelines
 
 ### Changed
-- development version remains **0.5.0-alpha.1** until the independent public-beta gate is complete; 0.6 engineering proceeds in parallel without weakening that gate
-- project progress advances to **66% toward 1.0** after validating four of five top-level 0.6 engineering deliverables
+- project progress advances to **68% toward 1.0** after the complete automated 0.6 engineering scope is validated
+- **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
-- **0.6 Create + Convert + Verify** advances to approximately **80%**
-- image creation/conversion foundation is now backed by real blank RAW plus QCOW2/VMDK guest-to-RAW output rather than only a transaction primitive
-- cancellation/rollback is now verified through a real file-producing guest export pipeline
-- progress for file-producing operations reserves `1.0` for successful transaction commit
-- source/destination identity is explicitly refused for file-backed conversion
-- current output lengths beyond the `FileStream` domain fail before mutation
-- the existing `ComputeSha256Async` API remains compatible while the shared verification engine gains combined SHA-256/SHA-512 output
-- beta publication remains blocked by final suffix/package promotion and clean-machine/UAC/cross-process drag-out/manual regression gates
+- **0.6 Create + Convert + Verify** reaches **100% automated engineering complete** after all five top-level deliverables pass
+- current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
+- the next roadmap milestone is **0.7 Physical Media Tools**, beginning with non-destructive discovery and safety infrastructure
+- file-producing progress reserves `1.0` for successful publication/commit
 
 ### Safety
-- provider and intelligence paths remain read-only-first
+- inspection/provider/intelligence paths remain read-only-first
+- unsupported UI actions remain disabled rather than simulated
 - source containers and guest address spaces remain read-only during RAW export
-- all current file-producing Core pipelines publish destinations through `SafeOutputService`
-- cancellation after a real guest read does not intentionally publish a partial destination
-- guest-reader failure during replacement preserves the previously committed destination on the proven rollback path
-- pre-existing destination refusal occurs before source consumption under `FailIfExists`
-- no Create/Convert WinUI capability is enabled merely because the Core pipeline exists
-- materializing already-proven sparse guest mappings to flat RAW does not claim sparse-container writing or compressed-container decoding support
-- guest-byte readers do not gain Direct Browse, extraction or Mount capabilities
-- guest partition/filesystem offsets remain separate from physical container offsets
-- guest GPT metadata is not trusted until header and partition-entry checksums validate
-- guest EBR links and logical partitions cannot escape the declared extended-partition container
-- QCOW2 unsupported backing/encryption/dirty/external-data/compressed/extended-L2 states fail closed
-- VMDK unsupported parent/split/unclean/compressed/stream-optimized states fail closed
-- existing filesystem/UDF/NTFS bounds, cancellation, failure-isolation and truthful-capability rules remain intact
+- single-file outputs publish through `SafeOutputService`
+- split sets stage every part plus integrity metadata in a sibling temporary directory before final directory publication
+- join validates manifest version, geometry, safe filenames, physical lengths and SHA-256 before successful final output publication
+- gzip decompression requires an explicit maximum output byte count to bound expansion
+- malformed/truncated gzip input fails closed on the tested paths
+- split/join + gzip work does not claim sparse-container writing or unsupported format-internal compression decoding
+- QCOW2 backing/encryption/dirty/external-data/compressed/extended-L2 states remain unsupported on the proven guest-reader path
+- VMDK parent/split/unclean/compressed/stream-optimized states remain unsupported on the proven guest-reader path
+- physical-device writes are not exposed; future 0.7 work remains behind dedicated safety design and validation
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -91,25 +70,25 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #28 / run #232 — partition intelligence
 - PR #29 / run #235 — filesystem recognition
 - PR #30 / run #242 — boot/installer intelligence
-- PR #31 / run #245 — unified identity/health implementation
-- PR #32 / run #260 — Windows Analyze/report surface
+- PR #31 / run #245 — unified identity/health
+- PR #32 / run #260 — Windows Analyze/reporting
 - PR #33 / run #262 — deeper filesystem evidence
 - PR #34 / run #266 — NTFS/architecture hardening + clean-package foundation
 - PR #35 / run #270 — version metadata + strict package verification
 - PR #36 / run #274 — bounded UDF root traversal
-- PR #37 / run #277 — bounded QCOW2 standard guest-byte reader
-- PR #38 / run #284 — bounded hosted-sparse VMDK guest-byte reader
-- PR #39 / run #287 — common guest partition/filesystem intelligence
-- PR #40 / implementation run #289 — final guest GPT/EBR integrity hardening + complete regression/build/package-verification/artifact path
-- PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification foundation + complete Windows regression/build/package path
-- PR #42 / implementation run #296 and final synchronized run #298 — safe output transaction foundation + complete Windows regression/build/package/artifact path
-- PR #43 / implementation run #300 — RAW creation + guest-to-RAW conversion, real pipeline rollback/cancellation and complete Windows regression/build/package/artifact path
+- PR #37 / run #277 — QCOW2 guest reader
+- PR #38 / run #284 — hosted-sparse VMDK guest reader
+- PR #39 / run #287 — guest partition/filesystem intelligence
+- PR #40 / implementation run #289 — guest GPT/EBR integrity hardening
+- PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification
+- PR #42 / implementation run #296 and final run #298 — safe output transaction foundation
+- PR #43 / implementation run #300 — RAW creation + guest-to-RAW conversion
+- PR #44 / implementation run #304 — transactional split/join + bounded gzip transport pipelines; final documentation-synchronized CI required before merge
 
 ### Planned
-- finish independent `0.5.0-beta.1` manual/package release gates without weakening the completed 0.5 engineering scope
-- complete 0.6 with safe split/join and explicitly bounded sparse/compression handling
-- keep all new file-producing paths behind the proven transaction boundary and format-specific tests
-- promote to `0.5.0-beta.1` only when the independent beta gate is complete
+- complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
+- begin 0.7 with read-only physical-device discovery and explicit safety/refusal contracts
+- keep destructive physical operations disabled until separately designed, implemented and independently validated
 
 ## [0.3.0] - 2026-09-15
 - Dragon Explorer, search/Preview/Copy out, Recent/Favorites, mounted history, multi-image workspace, safe drag-out, ISO direct browsing and Windows x64 artifacts
