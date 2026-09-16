@@ -80,6 +80,23 @@ try
             "A VMDK grain-directory pointer outside the physical file must be rejected.");
     }
 
+    var directoryInsideData = Path.Combine(root, "directory-inside-data.vmdk");
+    CreateReadableSparseVmdk(directoryInsideData);
+    PatchUInt64(directoryInsideData, 48, FirstDataSector);
+    await ExpectThrowsAsync<InvalidDataException>(
+        () => VmdkSparseGuestByteReader.OpenAsync(directoryInsideData).AsTask(),
+        "The active VMDK grain directory must stay inside the declared metadata overhead region.");
+
+    var grainTableInsideData = Path.Combine(root, "grain-table-inside-data.vmdk");
+    CreateReadableSparseVmdk(grainTableInsideData);
+    PatchUInt32(grainTableInsideData, RedundantDirectorySector * SectorSize, FirstDataSector);
+    await using (var reader = await VmdkSparseGuestByteReader.OpenAsync(grainTableInsideData))
+    {
+        await ExpectThrowsAsync<InvalidDataException>(
+            () => reader.ReadExactlyAsync(0, new byte[1]).AsTask(),
+            "VMDK grain tables must stay inside the declared metadata overhead region.");
+    }
+
     var grainOob = Path.Combine(root, "grain-oob.vmdk");
     CreateReadableSparseVmdk(grainOob);
     PatchUInt32(grainOob, RedundantTableSector * SectorSize, 4000);
@@ -128,7 +145,7 @@ try
     CreateReadableSparseVmdk(zeroedEntryFlag, flags: 0x00000007);
     await ExpectThrowsAsync<NotSupportedException>(
         () => VmdkSparseGuestByteReader.OpenAsync(zeroedEntryFlag).AsTask(),
-        "Zeroed-grain entry overloading must fail closed in the VMDK v1 reader slice.");
+        "Zeroed-grain entry overloading must fail closed in the VMDK v1 guest-byte reader slice.");
 
     var noDescriptor = Path.Combine(root, "no-descriptor.vmdk");
     CreateReadableSparseVmdk(noDescriptor, includeDescriptor: false);
@@ -216,6 +233,15 @@ static void PatchUInt32(string path, long offset, uint value)
 {
     Span<byte> raw = stackalloc byte[sizeof(uint)];
     BinaryPrimitives.WriteUInt32LittleEndian(raw, value);
+    using var stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.None);
+    stream.Position = offset;
+    stream.Write(raw);
+}
+
+static void PatchUInt64(string path, long offset, ulong value)
+{
+    Span<byte> raw = stackalloc byte[sizeof(ulong)];
+    BinaryPrimitives.WriteUInt64LittleEndian(raw, value);
     using var stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.None);
     stream.Position = offset;
     stream.Write(raw);
