@@ -8,7 +8,8 @@ public enum ProviderCapabilities
     DirectBrowse = 1 << 1,
     Search = 1 << 2,
     CopyOut = 1 << 3,
-    PartitionTable = 1 << 4
+    PartitionTable = 1 << 4,
+    MediaGeometry = 1 << 5
 }
 
 public static class ProviderCapabilityExtensions
@@ -27,6 +28,9 @@ public static class ProviderCapabilityExtensions
 
         if (provider is IPartitionTableProvider)
             capabilities |= ProviderCapabilities.PartitionTable;
+
+        if (provider is IMediaGeometryProvider)
+            capabilities |= ProviderCapabilities.MediaGeometry;
 
         return capabilities;
     }
