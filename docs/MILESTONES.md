@@ -36,13 +36,14 @@ Closing 0.4 completes the internal engineering contract only. It does not declar
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **55%**.
+Current milestone completion is approximately **70%**.
 
 ### Completed execution slices
 
 1. **Cross-provider partition intelligence** ✅
 2. **Bounded filesystem-recognition foundation** ✅
 3. **Boot + installer intelligence foundation** ✅
+4. **Unified identity + health intelligence foundation** ✅
 
 ### Cross-provider partition intelligence ✅
 
@@ -80,13 +81,29 @@ Current milestone completion is approximately **55%**.
 - standard EFI fallback architecture hints
 - bootability remains independent from installer file markers
 - no execution, extraction, mount, repair or writes
-- PR #30 / run #240 code head passed the new boot/installer gate plus all existing provider, Explorer, native Windows, Release x64 and artifact checks before documentation synchronization
+- PR #30 / run #242 docs-synchronized full regression/build/artifact ✅
+
+### Unified identity + health intelligence foundation ✅
+
+- provider-integrated `ImageIntelligenceService`
+- composes partition, filesystem and boot/installer intelligence without bypassing provider capabilities
+- aggregates partition names, filesystem labels/identifiers, WIM/ESD GUIDs and FFU PlatformIDs
+- carries bounded architecture hints from proven boot/installer evidence
+- maps structural partition findings into one shared health result
+- exFAT dirty/media-failure state checks
+- ext clean/error state checks
+- bounded NTFS and FAT32 primary/backup boot-metadata consistency checks
+- health reads bounded to already recognized filesystem regions and the physical file
+- metadata-only sparse/compressed/container formats remain outside guest filesystem probing
+- generated fixture coverage for exFAT, NTFS, ext, WIM, FFU, mapping refusal and cancellation
+- no repair, mount, extraction or writes
+- PR #31 / run #245 code/test head passed the dedicated gate plus full provider/native/build/artifact regression before docs synchronization
 
 ### Remaining execution slices
 
-- richer UDF/FAT/NTFS metadata and reader depth
-- cross-source architecture + label/UUID/GUID aggregation
-- health/corruption warnings backed by proven metadata checks
+- richer UDF/FAT/exFAT/NTFS metadata and reader depth
+- additional evidence-backed health findings without broad “healthy” claims
+- stronger cross-source architecture reconciliation where multiple proven sources exist
 - virtual guest-sector readers before inspecting filesystems inside sparse/compressed virtual disks
 
 A capability becomes user-visible only after its real backing path and tests exist.
