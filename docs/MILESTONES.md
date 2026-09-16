@@ -36,7 +36,7 @@ Closing 0.4 completes the internal engineering contract only. It does not declar
 
 Development version: **0.5.0-alpha.1**.
 
-Current milestone completion is approximately **70%**.
+Current milestone completion is approximately **82%**.
 
 ### Completed execution slices
 
@@ -44,66 +44,68 @@ Current milestone completion is approximately **70%**.
 2. **Bounded filesystem-recognition foundation** ✅
 3. **Boot + installer intelligence foundation** ✅
 4. **Unified identity + health intelligence foundation** ✅
+5. **Windows Analyze + text/JSON reporting surface** ✅
+6. **Deeper bounded filesystem evidence** ✅
 
 ### Cross-provider partition intelligence ✅
 
 - capability-driven `PartitionIntelligenceService`
-- provider resolution through `ProviderRegistry` + `PartitionTable`
-- stable finding codes/severities
-- duplicate index, zero length, LBA overflow, byte-geometry, bounds and overlap checks
-- capability-driven fake providers
+- stable structural findings for duplicate indexes, zero length, arithmetic overflow, geometry, bounds and overlap
 - read-only analysis only
 - PR #28 / run #232 docs-synchronized full regression/build/artifact ✅
 
 ### Bounded filesystem-recognition foundation ✅
 
 - provider-integrated `FileSystemRecognitionService`
-- physical whole-file scanning only where byte mapping is truthful
-- partition-scoped scanning after structural validation of provider-reported physical ranges
-- FAT12/FAT16/FAT32, exFAT, supported NTFS, ext2/ext3/ext4 recognition
-- ISO9660/Joliet and UDF VRS recognition
-- generated sparse fixtures, false-positive and cancellation coverage
-- no sparse/compressed virtual guest-sector translation
-- no mount, traversal, extraction, repair or writes
+- physical whole-file or structurally validated partition-region scanning only
+- FAT12/FAT16/FAT32, exFAT, supported NTFS, ext2/ext3/ext4, ISO9660/Joliet and UDF VRS recognition
+- generated fixtures, false-positive and cancellation coverage
+- no sparse/compressed guest-sector translation
 - PR #29 / run #235 docs-synchronized full regression/build/artifact ✅
 
 ### Boot + installer intelligence foundation ✅
 
-- provider-integrated `BootInstallerIntelligenceService`
-- El Torito boot record and catalog discovery bounded to physical ISO sectors
-- validation-entry key/checksum and catalog section validation
-- bootable entry load-range validation
-- explicit BIOS/UEFI/other platform evidence
-- bounded Direct Browse tree traversal with cycle/depth/entry controls
-- only non-reparse files can become installer evidence
-- Windows setup/boot/install payload evidence
-- Linux casper, Debian-style and Anaconda-style evidence
-- standard EFI fallback architecture hints
-- bootability remains independent from installer file markers
-- no execution, extraction, mount, repair or writes
+- El Torito record/catalog and physical boot-image bounds
+- explicit BIOS/UEFI evidence
+- bounded Direct Browse traversal
+- Windows/Linux installer evidence and EFI fallback architecture hints
+- no execution, extraction, repair or writes
 - PR #30 / run #242 docs-synchronized full regression/build/artifact ✅
 
 ### Unified identity + health intelligence foundation ✅
 
-- provider-integrated `ImageIntelligenceService`
-- composes partition, filesystem and boot/installer intelligence without bypassing provider capabilities
-- aggregates partition names, filesystem labels/identifiers, WIM/ESD GUIDs and FFU PlatformIDs
-- carries bounded architecture hints from proven boot/installer evidence
-- maps structural partition findings into one shared health result
-- exFAT dirty/media-failure state checks
-- ext clean/error state checks
-- bounded NTFS and FAT32 primary/backup boot-metadata consistency checks
-- health reads bounded to already recognized filesystem regions and the physical file
-- metadata-only sparse/compressed/container formats remain outside guest filesystem probing
-- generated fixture coverage for exFAT, NTFS, ext, WIM, FFU, mapping refusal and cancellation
-- no repair, mount, extraction or writes
-- PR #31 / run #245 code/test head passed the dedicated gate plus full provider/native/build/artifact regression before docs synchronization
+- `ImageIntelligenceService` composes existing truthful capabilities
+- partition/filesystem/container/platform identity evidence
+- partition structural findings plus selected exFAT/ext/NTFS/FAT32 health checks
+- no invented physical mapping for metadata-only sparse/compressed/container formats
+- PR #31 / run #245 implementation head passed full regression/build/artifact before docs synchronization ✅
+
+### Windows Analyze + reporting surface ✅
+
+- bounded Analyze action in the WinUI result card
+- `ImageReportService` text/JSON reporting and Save JSON
+- unknown-input, serialization and cancellation tests
+- `by Swir` + GitHub footer
+- PR #32 / run #260 complete Windows CI and Release x64 artifact ✅
+
+### Deeper bounded filesystem evidence ✅
+
+- `FileSystemDepthService` operates only on recognized physical filesystem regions
+- exFAT main/backup boot-region checksum and redundancy checks
+- FAT32 FSInfo placement, signatures, free-count and next-free validation
+- UDF block-256 primary anchor validation
+- UDF descriptor tag checksum/location/CRC validation
+- UDF main descriptor-sequence inspection capped at 16 MiB
+- validated UDF primary/logical volume identity strings flow into the analysis/report path
+- generated valid/corrupt exFAT, FAT32, UDF and cancellation smoke tests
+- PR #33 / run #262 implementation head passed new filesystem-depth gate plus complete prior regression/build/artifact before docs synchronization ✅
 
 ### Remaining execution slices
 
-- richer UDF/FAT/exFAT/NTFS metadata and reader depth
-- additional evidence-backed health findings without broad “healthy” claims
-- stronger cross-source architecture reconciliation where multiple proven sources exist
+- deeper supported NTFS metadata/evidence
+- stronger cross-source architecture reconciliation when multiple proven sources exist
+- independently bounded UDF traversal where justified
 - virtual guest-sector readers before inspecting filesystems inside sparse/compressed virtual disks
+- final 0.5 beta-scope hardening and documentation synchronization
 
 A capability becomes user-visible only after its real backing path and tests exist.
