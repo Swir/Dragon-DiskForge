@@ -8,7 +8,8 @@ namespace DragonDiskForge.App;
 public sealed partial class MainWindow
 {
     private readonly ProviderRegistry _providerRegistry = new([
-        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100)
+        new ProviderRegistration(new Iso9660DirectBrowseProvider(), Priority: 100),
+        new ProviderRegistration(new RawPartitionImageProvider(), Priority: 90)
     ]);
     private Button? _directBrowseButton;
     private long _directBrowsePathCallbackToken;
