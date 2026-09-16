@@ -33,6 +33,9 @@ jobs:
       - name: Partition intelligence smoke tests
         run: dotnet run --project tests/DragonDiskForge.PartitionIntelligence.SmokeTests/DragonDiskForge.PartitionIntelligence.SmokeTests.csproj -c Release
 
+      - name: Filesystem recognition smoke tests
+        run: dotnet run --project tests/DragonDiskForge.FileSystemRecognition.SmokeTests/DragonDiskForge.FileSystemRecognition.SmokeTests.csproj -c Release
+
       - name: RAW/IMG partition-provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.RawPartition.SmokeTests/DragonDiskForge.RawPartition.SmokeTests.csproj -c Release
 
