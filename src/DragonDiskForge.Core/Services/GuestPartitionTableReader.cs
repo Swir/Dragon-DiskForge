@@ -17,8 +17,10 @@ public static class GuestPartitionTableReader
     private const int MaxExtendedPartitions = 128;
     private const int MaxGptEntries = 16_384;
     private const int MaxGptEntrySize = 4_096;
+    private const int CrcBufferSize = 64 * 1024;
     private static readonly int[] CandidateSectorSizes = [512, 4096];
     private static readonly HashSet<byte> ExtendedPartitionTypes = new() { 0x05, 0x0F, 0x85 };
+    private static readonly uint[] Crc32Table = CreateCrc32Table();
 
     private static readonly IReadOnlyDictionary<byte, string> MbrTypeNames =
         new Dictionary<byte, string>
@@ -132,6 +134,9 @@ public static class GuestPartitionTableReader
             if (type == 0 || sectorCount == 0)
                 continue;
 
+            if (status is not 0x00 and not 0x80)
+                throw new InvalidDataException($"Guest MBR partition slot {slot + 1} has an invalid boot-status byte 0x{status:X2}.");
+
             entries.Add(new MbrEntry(slot + 1, status, type, firstLba, sectorCount));
         }
 
@@ -159,8 +164,11 @@ public static class GuestPartitionTableReader
         int firstLogicalIndex,
         CancellationToken cancellationToken)
     {
+        ValidateRange(extendedContainer.FirstLba, extendedContainer.SectorCount, MbrSectorSize, reader.Length);
+
         var results = new List<PartitionInfo>();
         var baseExtendedLba = (ulong)extendedContainer.FirstLba;
+        var extendedEndLbaExclusive = checked(baseExtendedLba + extendedContainer.SectorCount);
         var currentEbrLba = baseExtendedLba;
         var visited = new HashSet<ulong>();
 
@@ -169,6 +177,8 @@ public static class GuestPartitionTableReader
             cancellationToken.ThrowIfCancellationRequested();
             if (!visited.Add(currentEbrLba))
                 throw new InvalidDataException("The guest MBR extended-partition chain contains a loop.");
+            if (currentEbrLba < baseExtendedLba || currentEbrLba >= extendedEndLbaExclusive)
+                throw new InvalidDataException("The guest EBR chain escapes its declared extended-partition container.");
 
             ValidateRange(currentEbrLba, 1, MbrSectorSize, reader.Length);
             var ebr = new byte[MbrSectorSize];
@@ -189,6 +199,10 @@ public static class GuestPartitionTableReader
             if (logical is not null)
             {
                 var absoluteFirstLba = checked(currentEbrLba + logical.FirstLba);
+                var logicalEndLbaExclusive = checked(absoluteFirstLba + logical.SectorCount);
+                if (absoluteFirstLba < baseExtendedLba || logicalEndLbaExclusive > extendedEndLbaExclusive)
+                    throw new InvalidDataException("A guest logical partition escapes its declared extended-partition container.");
+
                 ValidateRange(absoluteFirstLba, logical.SectorCount, MbrSectorSize, reader.Length);
                 results.Add(new PartitionInfo(
                     firstLogicalIndex + results.Count,
@@ -206,7 +220,11 @@ public static class GuestPartitionTableReader
             if (link is null || link.SectorCount == 0)
                 break;
 
-            currentEbrLba = checked(baseExtendedLba + link.FirstLba);
+            var nextEbrLba = checked(baseExtendedLba + link.FirstLba);
+            if (nextEbrLba < baseExtendedLba || nextEbrLba >= extendedEndLbaExclusive)
+                throw new InvalidDataException("The guest EBR link escapes its declared extended-partition container.");
+
+            currentEbrLba = nextEbrLba;
         }
 
         if (results.Count >= MaxExtendedPartitions)
@@ -229,27 +247,51 @@ public static class GuestPartitionTableReader
             return null;
 
         var headerSize = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(12, 4));
+        if (headerSize < 92 || headerSize > sectorSize)
+            throw new InvalidDataException("Guest GPT header size is outside the supported bounds.");
+
+        var expectedHeaderCrc = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(16, 4));
+        var headerForCrc = header.AsSpan(0, checked((int)headerSize)).ToArray();
+        headerForCrc.AsSpan(16, 4).Clear();
+        if (ComputeCrc32(headerForCrc) != expectedHeaderCrc)
+            throw new InvalidDataException("Guest GPT primary-header CRC32 does not match the declared checksum.");
+
         var currentLba = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(24, 8));
+        var backupLba = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(32, 8));
         var firstUsableLba = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(40, 8));
         var lastUsableLba = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(48, 8));
         var entryLba = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(72, 8));
         var entryCount = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(80, 4));
         var entrySize = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(84, 4));
+        var expectedEntryArrayCrc = BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(88, 4));
+        var guestSectors = reader.Length / (ulong)sectorSize;
 
-        if (headerSize < 92 || headerSize > sectorSize)
-            throw new InvalidDataException("Guest GPT header size is outside the supported bounds.");
         if (currentLba != 1)
             throw new InvalidDataException("Guest GPT primary header is not located at LBA 1.");
+        if (backupLba == currentLba || backupLba >= guestSectors)
+            throw new InvalidDataException("Guest GPT backup-header LBA is outside the guest address space.");
         if (firstUsableLba > lastUsableLba)
             throw new InvalidDataException("Guest GPT usable LBA range is invalid.");
+        if (firstUsableLba < 2 || lastUsableLba >= guestSectors || backupLba <= lastUsableLba)
+            throw new InvalidDataException("Guest GPT usable LBA range conflicts with the guest geometry or backup header.");
         if (entryCount == 0 || entryCount > MaxGptEntries)
             throw new InvalidDataException("Guest GPT partition-entry count exceeds the safety limit.");
         if (entrySize < 128 || entrySize > MaxGptEntrySize || entrySize % 8 != 0)
             throw new InvalidDataException("Guest GPT partition-entry size is invalid.");
+        if (entryLba < 2 || entryLba >= guestSectors)
+            throw new InvalidDataException("Guest GPT partition-entry array begins outside the supported primary metadata region.");
 
         var tableBytes = checked((ulong)entryCount * entrySize);
         var tableOffset = checked(entryLba * (ulong)sectorSize);
         EnsureByteRange(tableOffset, tableBytes, reader.Length, "Guest GPT partition-entry array");
+        var entryArrayEnd = checked(tableOffset + tableBytes);
+        var firstUsableOffset = checked(firstUsableLba * (ulong)sectorSize);
+        if (entryArrayEnd > firstUsableOffset)
+            throw new InvalidDataException("Guest GPT partition-entry array overlaps the declared usable guest area.");
+
+        var actualEntryArrayCrc = await ComputeCrc32Async(reader, tableOffset, tableBytes, cancellationToken);
+        if (actualEntryArrayCrc != expectedEntryArrayCrc)
+            throw new InvalidDataException("Guest GPT partition-entry-array CRC32 does not match the declared checksum.");
 
         var partitions = new List<PartitionInfo>();
         var entryBuffer = new byte[checked((int)entrySize)];
@@ -335,6 +377,53 @@ public static class GuestPartitionTableReader
         if (bytes > long.MaxValue)
             throw new InvalidDataException("Guest partition byte range exceeds the supported size.");
         return (long)bytes;
+    }
+
+    private static uint ComputeCrc32(ReadOnlySpan<byte> data)
+    {
+        var crc = 0xFFFFFFFFu;
+        foreach (var value in data)
+            crc = Crc32Table[(crc ^ value) & 0xFF] ^ (crc >> 8);
+        return ~crc;
+    }
+
+    private static async ValueTask<uint> ComputeCrc32Async(
+        IGuestByteReader reader,
+        ulong offset,
+        ulong length,
+        CancellationToken cancellationToken)
+    {
+        var crc = 0xFFFFFFFFu;
+        var remaining = length;
+        var currentOffset = offset;
+        var buffer = new byte[CrcBufferSize];
+
+        while (remaining > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var count = checked((int)Math.Min((ulong)buffer.Length, remaining));
+            await ReadExactlyAtAsync(reader, currentOffset, buffer.AsMemory(0, count), cancellationToken);
+            for (var i = 0; i < count; i++)
+                crc = Crc32Table[(crc ^ buffer[i]) & 0xFF] ^ (crc >> 8);
+            currentOffset = checked(currentOffset + (ulong)count);
+            remaining -= (ulong)count;
+        }
+
+        return ~crc;
+    }
+
+    private static uint[] CreateCrc32Table()
+    {
+        const uint polynomial = 0xEDB88320u;
+        var table = new uint[256];
+        for (var i = 0u; i < table.Length; i++)
+        {
+            var value = i;
+            for (var bit = 0; bit < 8; bit++)
+                value = (value & 1) != 0 ? polynomial ^ (value >> 1) : value >> 1;
+            table[i] = value;
+        }
+        return table;
     }
 
     private sealed record MbrEntry(
