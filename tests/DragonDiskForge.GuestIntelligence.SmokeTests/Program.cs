@@ -62,6 +62,8 @@ try
         () => service.AnalyzeAsync(invalidRange),
         "Guest partition layouts that extend beyond the virtual address space must fail closed.");
 
+    await VerifyPartitionStructureHardeningAsync();
+
     using (var cts = new CancellationTokenSource())
     {
         cts.Cancel();
@@ -100,6 +102,69 @@ static void VerifyGuestFat12(
         $"{container} filesystem offset must remain explicitly guest-relative.");
     Require(fileSystem.Label == "GUESTVOL",
         $"{container} guest filesystem recognition should preserve the FAT label.");
+}
+
+static async Task VerifyPartitionStructureHardeningAsync()
+{
+    var validGpt = CreateValidGptGuest();
+    await using (var reader = new MemoryGuestByteReader(validGpt))
+    {
+        var table = await GuestPartitionTableReader.TryReadAsync(reader);
+        Require(table is { Scheme: PartitionTableScheme.Gpt } && table.Partitions.Count == 1,
+            "A checksummed synthetic GPT should remain accepted.");
+        Require(table!.Partitions[0].FirstLba == 8 && table.Partitions[0].SectorCount == 13,
+            "Validated guest GPT geometry should remain intact.");
+    }
+
+    var badHeaderCrc = (byte[])validGpt.Clone();
+    badHeaderCrc[SectorSize + 56] ^= 0x01;
+    await using (var reader = new MemoryGuestByteReader(badHeaderCrc))
+    {
+        await ExpectThrowsAsync<InvalidDataException>(
+            async () => { _ = await GuestPartitionTableReader.TryReadAsync(reader); },
+            "Guest GPT header CRC corruption must fail closed.");
+    }
+
+    var badEntryArrayCrc = (byte[])validGpt.Clone();
+    badEntryArrayCrc[(2 * SectorSize) + 56] ^= 0x01;
+    await using (var reader = new MemoryGuestByteReader(badEntryArrayCrc))
+    {
+        await ExpectThrowsAsync<InvalidDataException>(
+            async () => { _ = await GuestPartitionTableReader.TryReadAsync(reader); },
+            "Guest GPT partition-entry-array CRC corruption must fail closed.");
+    }
+
+    var invalidStatus = new byte[8 * SectorSize];
+    WriteMbrEntry(invalidStatus.AsSpan(0, SectorSize), slot: 0, status: 0x7F, type: 0x01, firstLba: 1, sectorCount: 2);
+    WriteMbrSignature(invalidStatus.AsSpan(0, SectorSize));
+    await using (var reader = new MemoryGuestByteReader(invalidStatus))
+    {
+        await ExpectThrowsAsync<InvalidDataException>(
+            async () => { _ = await GuestPartitionTableReader.TryReadAsync(reader); },
+            "Guest MBR entries with invalid boot-status bytes must fail closed.");
+    }
+
+    var escapingLogical = CreateExtendedGuest();
+    var ebr = escapingLogical.AsSpan(SectorSize, SectorSize);
+    WriteMbrEntry(ebr, slot: 0, status: 0, type: 0x01, firstLba: 20, sectorCount: 1);
+    WriteMbrSignature(ebr);
+    await using (var reader = new MemoryGuestByteReader(escapingLogical))
+    {
+        await ExpectThrowsAsync<InvalidDataException>(
+            async () => { _ = await GuestPartitionTableReader.TryReadAsync(reader); },
+            "Logical partitions must not escape the declared extended-partition container.");
+    }
+
+    var escapingLink = CreateExtendedGuest();
+    ebr = escapingLink.AsSpan(SectorSize, SectorSize);
+    WriteMbrEntry(ebr, slot: 1, status: 0, type: 0x0F, firstLba: 20, sectorCount: 1);
+    WriteMbrSignature(ebr);
+    await using (var reader = new MemoryGuestByteReader(escapingLink))
+    {
+        await ExpectThrowsAsync<InvalidDataException>(
+            async () => { _ = await GuestPartitionTableReader.TryReadAsync(reader); },
+            "EBR links must not escape the declared extended-partition container.");
+    }
 }
 
 static void CreateQcow2WithFat12(string path, uint partitionSectors)
@@ -181,13 +246,8 @@ static void WriteMbrAndFat12(Span<byte> guest, uint partitionSectors)
     if (guest.Length < 4096)
         throw new InvalidOperationException("Synthetic guest fixture requires at least 4096 bytes.");
 
-    const int entry = 446;
-    guest[entry] = 0x80;
-    guest[entry + 4] = 0x01;
-    BinaryPrimitives.WriteUInt32LittleEndian(guest.Slice(entry + 8, 4), 1);
-    BinaryPrimitives.WriteUInt32LittleEndian(guest.Slice(entry + 12, 4), partitionSectors);
-    guest[510] = 0x55;
-    guest[511] = 0xAA;
+    WriteMbrEntry(guest.Slice(0, SectorSize), slot: 0, status: 0x80, type: 0x01, firstLba: 1, sectorCount: partitionSectors);
+    WriteMbrSignature(guest.Slice(0, SectorSize));
 
     var boot = guest.Slice(SectorSize, SectorSize);
     boot[0] = 0xEB;
@@ -207,6 +267,85 @@ static void WriteMbrAndFat12(Span<byte> guest, uint partitionSectors)
     "GUESTVOL   "u8.CopyTo(boot.Slice(43, 11));
     boot[510] = 0x55;
     boot[511] = 0xAA;
+}
+
+static byte[] CreateValidGptGuest()
+{
+    const int sectors = 64;
+    const int entryCount = 4;
+    const int entrySize = 128;
+    var bytes = new byte[sectors * SectorSize];
+
+    var mbr = bytes.AsSpan(0, SectorSize);
+    WriteMbrEntry(mbr, slot: 0, status: 0, type: 0xEE, firstLba: 1, sectorCount: sectors - 1);
+    WriteMbrSignature(mbr);
+
+    var entries = bytes.AsSpan(2 * SectorSize, entryCount * entrySize);
+    Guid.Parse("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7").TryWriteBytes(entries.Slice(0, 16));
+    Guid.Parse("11111111-2222-3333-4444-555555555555").TryWriteBytes(entries.Slice(16, 16));
+    BinaryPrimitives.WriteUInt64LittleEndian(entries.Slice(32, 8), 8);
+    BinaryPrimitives.WriteUInt64LittleEndian(entries.Slice(40, 8), 20);
+    Encoding.Unicode.GetBytes("GUESTDATA").CopyTo(entries.Slice(56));
+
+    var header = bytes.AsSpan(SectorSize, SectorSize);
+    "EFI PART"u8.CopyTo(header.Slice(0, 8));
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(8, 4), 0x00010000);
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(12, 4), 92);
+    BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(24, 8), 1);
+    BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(32, 8), sectors - 1);
+    BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(40, 8), 4);
+    BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(48, 8), sectors - 2);
+    Guid.Parse("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE").TryWriteBytes(header.Slice(56, 16));
+    BinaryPrimitives.WriteUInt64LittleEndian(header.Slice(72, 8), 2);
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(80, 4), entryCount);
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(84, 4), entrySize);
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(88, 4), ComputeCrc32(entries));
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(16, 4), 0);
+    BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(16, 4), ComputeCrc32(header.Slice(0, 92)));
+
+    return bytes;
+}
+
+static byte[] CreateExtendedGuest()
+{
+    var bytes = new byte[64 * SectorSize];
+    var mbr = bytes.AsSpan(0, SectorSize);
+    WriteMbrEntry(mbr, slot: 0, status: 0, type: 0x0F, firstLba: 1, sectorCount: 10);
+    WriteMbrSignature(mbr);
+    return bytes;
+}
+
+static void WriteMbrEntry(
+    Span<byte> sector,
+    int slot,
+    byte status,
+    byte type,
+    uint firstLba,
+    uint sectorCount)
+{
+    var offset = 446 + (slot * 16);
+    sector[offset] = status;
+    sector[offset + 4] = type;
+    BinaryPrimitives.WriteUInt32LittleEndian(sector.Slice(offset + 8, 4), firstLba);
+    BinaryPrimitives.WriteUInt32LittleEndian(sector.Slice(offset + 12, 4), sectorCount);
+}
+
+static void WriteMbrSignature(Span<byte> sector)
+{
+    sector[510] = 0x55;
+    sector[511] = 0xAA;
+}
+
+static uint ComputeCrc32(ReadOnlySpan<byte> data)
+{
+    var crc = 0xFFFFFFFFu;
+    foreach (var value in data)
+    {
+        crc ^= value;
+        for (var bit = 0; bit < 8; bit++)
+            crc = (crc & 1) != 0 ? 0xEDB88320u ^ (crc >> 1) : crc >> 1;
+    }
+    return ~crc;
 }
 
 static void WriteUInt32Little(byte[] bytes, int offset, uint value)
@@ -245,4 +384,26 @@ static void Require(bool condition, string message)
 {
     if (!condition)
         throw new InvalidOperationException(message);
+}
+
+file sealed class MemoryGuestByteReader(byte[] bytes) : IGuestByteReader
+{
+    private readonly byte[] _bytes = bytes ?? throw new ArgumentNullException(nameof(bytes));
+
+    public ulong Length => (ulong)_bytes.LongLength;
+
+    public ValueTask ReadExactlyAsync(
+        ulong guestOffset,
+        Memory<byte> destination,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (guestOffset > Length || (ulong)destination.Length > Length - guestOffset)
+            throw new InvalidDataException("Synthetic guest read exceeds the fixture bounds.");
+
+        _bytes.AsMemory(checked((int)guestOffset), destination.Length).CopyTo(destination);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
