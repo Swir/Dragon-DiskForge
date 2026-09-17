@@ -75,6 +75,9 @@ jobs:
       - name: Session/settings/diagnostic portability smoke tests
         run: dotnet run --project tests/DragonDiskForge.Portability.SmokeTests/DragonDiskForge.Portability.SmokeTests.csproj -c Release
 
+      - name: Windows shell integration smoke tests
+        run: dotnet run --project tests/DragonDiskForge.ShellIntegration.SmokeTests/DragonDiskForge.ShellIntegration.SmokeTests.csproj -c Release
+
       - name: RAW/IMG partition-provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.RawPartition.SmokeTests/DragonDiskForge.RawPartition.SmokeTests.csproj -c Release
 
