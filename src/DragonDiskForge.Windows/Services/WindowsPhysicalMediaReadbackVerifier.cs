@@ -48,11 +48,13 @@ public sealed class WindowsPhysicalMediaReadbackVerifier
         if (handle.IsInvalid)
             throw new Win32Exception(Marshal.GetLastWin32Error(), $"Could not open {current.DevicePath} for read-back verification.");
 
+        // The raw device handle is synchronous by design. Async stream methods still keep the
+        // calling pipeline responsive without falsely assuming cancellable overlapped device I/O.
         await using var stream = new FileStream(
             handle,
             FileAccess.Read,
             bufferSize: BufferSizeBytes,
-            isAsync: true);
+            isAsync: false);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var buffer = GC.AllocateUninitializedArray<byte>(BufferSizeBytes);
         long remaining = lengthBytes;
