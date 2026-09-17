@@ -119,17 +119,19 @@ See `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md` and `docs/SPLIT
 
 ## 0.7 Physical Media Tools — 🚧 in progress
 
-**Current required 0.7 engineering scope: 5/7 = ~71%.** The first safety foundation is implemented and passed full Windows CI in PR #45 implementation run #310. Development remains deliberately non-destructive until the remaining safety gates are proven.
+**Current required 0.7 engineering scope: 6/7 = ~86%.** The safety foundation and write-execution contract are implemented and passed full Windows CI. Development remains deliberately non-destructive until the final disposable-media write gate is proven.
 
 - ✅ read-only physical disk inventory with serial-backed stable device identity when available
 - ✅ capacity/bus/removable/system-disk evidence
 - ✅ explicit system-disk and ambiguous-device refusal policy
 - ✅ write-plan preview with source/destination identity checks
 - ✅ destructive-action confirmation contract bound to destination identity
-- ⬜ progress/cancellation/rollback-or-fail-safe design where technically possible
+- ✅ bounded progress/cancellation plus explicit fail-safe recovery semantics after any destination write attempt
 - ⬜ separately validated physical write path only after safety gates are proven
 
-The current inventory opens Windows physical disks query-only and records evidence rather than guessing. Missing stable identity, unknown capacity, system-disk targets, invalid/physical-device sources and oversized source images fail closed before any destructive operation can exist.
+The execution coordinator revalidates the destination identity and exact confirmation token immediately before I/O, rechecks source length after opening the file, writes through a bounded injected sink contract, reports monotonic progress, isolates progress-observer failures, and distinguishes safe pre-write refusal/cancellation from failures or cancellation after destination mutation may have begun. Once any destination write is attempted, an abnormal exit is fail-closed as `DestinationMayBeModified` + `RequiresRecovery`; no generic rollback is claimed.
+
+PR #46 implementation run #319 passed the expanded physical-media safety gate plus the complete existing provider/intelligence/Explorer/native Windows/Release/clean-package regression path. The PR still intentionally contains no Windows physical-device writer and exposes no destructive UI action.
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 

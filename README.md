@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application for inspecting, moun
 
 The public beta suffix is intentionally not promoted until the independent release gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work beyond the 0.5 beta scope continues on `main` without weakening that gate.
 
-## Project progress — 73% toward 1.0
+## Project progress — 74% toward 1.0
 
-`███████████████░░░░░ 73%`
+`███████████████░░░░░ 74%`
 
-**Overall completion:** **73%**
+**Overall completion:** **74%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -20,7 +20,7 @@ The public beta suffix is intentionally not promoted until the independent relea
 - `0.4 Extended Image Providers` — **100%** ✅
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
 - `0.6 Create + Convert + Verify` — **100%** ✅
-- `0.7 Physical Media Tools` — **~71% (5/7)** 🚧
+- `0.7 Physical Media Tools` — **~86% (6/7)** 🚧
 - `0.8 Windows Integration + Power Tools` — planned
 - `0.9 Quality, Security + Beta Hardening` — planned
 - `1.0 Production Release` — planned
@@ -44,11 +44,12 @@ The public beta suffix is intentionally not promoted until the independent relea
 - SHA-256 + SHA-512 verification in one bounded sequential pass
 - checksum-verified clean Windows x64 package-candidate pipeline
 - query-only Windows physical-disk inventory with capacity/bus/removable/system-disk evidence
-- fail-closed physical-media write-plan preview and destination-bound confirmation contract; no physical write path is exposed
+- fail-closed physical-media write-plan preview and destination-bound confirmation contract
+- bounded physical-write execution contract with destination revalidation and explicit recovery semantics; no Windows physical writer is exposed
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
 
-The first safety-first slice is implemented and validated: **5/7 roadmap deliverables (~71%)**.
+The safety-first engineering scope is now **6/7 roadmap deliverables (~86%)**.
 
 ### Read-only physical disk inventory ✅
 
@@ -70,9 +71,21 @@ The first safety-first slice is implemented and validated: **5/7 roadmap deliver
 - otherwise eligible plans still require an exact destination-bound confirmation token
 - refused plans never receive a confirmation token
 
-PR #45 implementation run #310 passed the dedicated physical-media safety gate, real read-only physical inventory/system-disk detection on the Windows runner, all existing provider/intelligence/Explorer/native mount tests, the x64 Release build and clean-package verification.
+### Bounded execution + recovery semantics ✅
 
-Remaining 0.7 work is deliberately harder: bounded progress/cancellation/fail-safe semantics for a physical write operation, followed only then by a separately validated physical write path under dedicated disposable-media safety gates. **No physical-device write capability is user-visible today.**
+- `PhysicalMediaWriteExecutionService` operates only through an injected `IPhysicalMediaWriteSink`
+- current destination identity and exact confirmation are revalidated before the first write attempt
+- source length is rechecked after opening
+- sequential transfer is bounded to a 4 KiB–8 MiB buffer range with a 1 MiB default
+- progress is monotonic and observer failures are isolated from destructive I/O
+- cancellation before any write is safe and distinct from cancellation after modification may have begun
+- after any destination write attempt, abnormal termination is marked as possibly modified and requiring recovery/rewrite
+- successful accepted chunks carry SHA-256 operation evidence without claiming device read-back verification
+- no generic rollback is claimed for physical media
+
+PR #46 implementation run #319 passed the expanded physical-media safety gate, all existing provider/intelligence/Explorer/native mount tests, the real query-only physical inventory/system-disk checks, the x64 Release build and clean-package verification.
+
+The remaining 0.7 deliverable is deliberately hardware-gated: a Windows physical-device writer must be separately validated on dedicated **disposable test media** before it can be considered for exposure. **No physical-device write capability is user-visible today.**
 
 See [`docs/PHYSICAL-MEDIA-SAFETY.md`](docs/PHYSICAL-MEDIA-SAFETY.md).
 
@@ -169,7 +182,7 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, dual hashing, safe output transactions, RAW creation/export, split/join + gzip pipelines, physical-media safety, provider invariants, physical and guest partition/filesystem intelligence, UDF/NTFS depth, boot/install intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, query-only physical-disk inventory, native ISO/VHD/VHDX integration, the full Windows x64 Release build and the independently verified clean ZIP package candidate.
+CI validates Core, dual hashing, safe output transactions, RAW creation/export, split/join + gzip pipelines, physical-media planning/execution safety, provider invariants, physical and guest partition/filesystem intelligence, UDF/NTFS depth, boot/install intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, query-only physical-disk inventory, native ISO/VHD/VHDX integration, the full Windows x64 Release build and the independently verified clean ZIP package candidate.
 
 ## Safety design
 
@@ -177,7 +190,7 @@ Inspection and verification are read-only-first. Native mounts default to read-o
 
 0.6 file-producing Core APIs remain separate from user-visible Create/Convert UX. `SafeOutputService` publishes only completed single-file outputs. Split sets are staged in a sibling directory and published only after all parts plus their integrity manifest are complete. Gzip decompression requires an explicit output-size ceiling.
 
-Physical-device writes are not part of the current product surface. The 0.7 foundation now proves query-only inventory, system-disk identification, ambiguous-target refusal, capacity/source checks and an explicit destination-bound confirmation contract. A physical writer still does not exist and cannot be inferred from these planning APIs.
+Physical-device writes are not part of the current product surface. The 0.7 foundation proves query-only inventory, system-disk identification, ambiguous-target refusal, capacity/source checks, destination-bound confirmation and bounded fail-safe execution semantics through an injected sink. A Windows physical-device writer still does not exist and cannot be inferred from the Core execution contract.
 
 ## Project rule
 

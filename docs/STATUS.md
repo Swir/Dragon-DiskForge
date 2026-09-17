@@ -17,13 +17,13 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**73% toward 1.0.** Milestones 0.1 through 0.6 are complete, and the validated 0.7 safety foundation has completed 5 of 7 current 0.7 deliverables.
+**74% toward 1.0.** Milestones 0.1 through 0.6 are complete, and 6 of 7 current 0.7 Physical Media Tools deliverables are implemented and validated.
 
 ## Current roadmap position
 
-**0.7 Physical Media Tools — IN PROGRESS 🚧 — 5/7 (~71%)**
+**0.7 Physical Media Tools — IN PROGRESS 🚧 — 6/7 (~86%)**
 
-The milestone remains safety-first. PR #45 implementation run #310 passed the dedicated physical-media safety tests, real query-only physical-disk inventory/system-disk detection on Windows, the complete existing regression suite, Release x64 build and clean-package verification.
+PR #45 established query-only physical inventory and fail-closed planning. PR #46 implementation run #319 then passed the expanded execution-contract tests plus the complete existing regression suite, Windows integration, Release x64 build and clean-package verification.
 
 ### Read-only physical-disk inventory ✅
 - canonical `\\.\PhysicalDriveN` discovery
@@ -43,11 +43,21 @@ The milestone remains safety-first. PR #45 implementation run #310 passed the de
 - exact destination-bound destructive confirmation token only for otherwise eligible plans
 - refused plans receive no confirmation token
 
-### Remaining 0.7 scope ⬜
-- progress/cancellation/rollback-or-fail-safe design for a physical write operation
-- separately validated physical write path only after those safety gates are proven
+### Physical write execution contract ✅
+- injected `IPhysicalMediaWriteSink`; no platform writer is exposed by the Core contract
+- destination identity and exact confirmation are revalidated before the first write attempt
+- source file length is rechecked after opening
+- bounded sequential buffer with monotonic byte progress
+- SHA-256 evidence covers only chunks accepted successfully by the sink and is not presented as read-back verification
+- progress callbacks are observational and isolated from the destructive I/O path
+- safe pre-write cancellation/refusal is distinguished from cancellation/failure after mutation may have started
+- every abnormal exit after a destination write attempt reports that the destination may be modified and requires recovery/rewrite
+- no generic rollback is claimed for physical media
 
-No physical-device write capability is currently user-visible or implemented by this slice. See `docs/PHYSICAL-MEDIA-SAFETY.md`.
+### Remaining 0.7 scope ⬜
+- separately validated Windows physical write path only after the safety contract is exercised under dedicated disposable-media conditions
+
+No physical-device write capability is currently user-visible. See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
 ## 0.6 closing scope
 
@@ -134,6 +144,7 @@ PR #44 implementation run #304 and its final synchronized CI closed the required
 
 ### 0.7
 - PR #45 / implementation run #310 — query-only physical-disk inventory, system-disk evidence, fail-closed write-plan preview and destination-bound confirmation contract
+- PR #46 / implementation run #319 — bounded physical-write execution contract, destination revalidation, cancellation/failure recovery semantics and full Windows regression/build/package validation
 
 ## Beta readiness
 
@@ -151,7 +162,7 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Metadata parsers, guest readers and intelligence services validate offsets/ranges and reject unsupported or contradictory states rather than guessing.
 
-The 0.7 physical inventory path requests query-only physical-disk handles. A missing stable identity, unknown capacity or system-disk target fails closed in the write-plan preview. The confirmation token is planning metadata only; there is no physical-device writer or user-visible destructive action in this slice.
+The 0.7 physical inventory path requests query-only physical-disk handles. A missing stable identity, unknown capacity or system-disk target fails closed in the write-plan preview. The new execution coordinator remains platform-writer-agnostic: it validates identity/confirmation/source state, bounds sequential transfer and makes partial-mutation recovery state explicit, but it does not open `PhysicalDriveN` for write access and is not wired to a destructive UI action.
 
 0.6 file-producing Core operations are not automatically exposed as Create/Convert UI actions. Single-file output uses the safe transaction boundary; split sets stage in a sibling directory and publish only after all parts plus integrity metadata are complete. Gzip decompression requires an explicit maximum output size.
 
