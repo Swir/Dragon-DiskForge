@@ -18,7 +18,7 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**80% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and two verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
+**81% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and three verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
 
 ## Current roadmap position
 
@@ -100,9 +100,7 @@ PR #50 implementation run #356 and Disposable Media Guard #28 passed before the 
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
-### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 2/7 (~29%)
-
-PR #51 completes two automation-safe quality slices without weakening the manual beta gate.
+### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 3/7 (~43%)
 
 #### Crash/diagnostic release-support hardening ✅
 
@@ -122,7 +120,21 @@ PR #51 completes two automation-safe quality slices without weakening the manual
 - recognition runtime and managed allocations are bounded
 - benchmark evidence is emitted as JSON and uploaded as a dedicated CI artifact
 
-The first benchmark attempt exposed an invalid blank RAW fixture and correctly failed run #359. The fixture was corrected in the same development iteration to contain a valid MBR partition. Exact implementation head `44a075a471f38a8350587400e72f4a4e781954ac` then passed full Windows build/package run #360 and Disposable Media Guard #32, including the new crash/privacy tests and performance gate.
+PR #51 implementation head `44a075a471f38a8350587400e72f4a4e781954ac` passed full Windows build/package run #360 and Disposable Media Guard #32, including the crash/privacy tests and performance gate.
+
+#### Parsing/package/privileged-boundary security review ✅
+
+- the desktop application manifest explicitly requests `asInvoker` with `uiAccess=false`; normal desktop startup does not request ambient administrator elevation
+- a dedicated Security Boundary workflow regression-tests the reviewed invariants on Windows
+- per-user shell integration remains rooted in `HKCU\Software\Classes`, does not write HKLM and does not modify Windows `UserChoice`
+- the public CLI remains isolated from the physical-media execution service, Windows raw-write sink and destructive test opt-in contract
+- clean packaging continues excluding debug/test payloads and binds the app, CLI and shell-helper entry points by SHA-256
+- default CI execution remains incapable of enabling destructive disposable-media writes
+- physical-media safety tests prove fail-closed behavior for system disks, unstable identity, unknown/insufficient capacity and physical-device sources, plus exact destination-bound confirmation
+- shell command construction retains strict executable identity and quoting/injection rejection
+- parser/guest-reader security review relies on the existing bounded/truncated/OOB/cancellation regression suites and is documented without overstating formal sandbox guarantees
+
+PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this deliverable was marked complete. See `docs/SECURITY-BOUNDARIES.md`.
 
 #### Remaining 0.9 scope ⬜
 
@@ -130,9 +142,8 @@ The first benchmark attempt exposed an invalid blank RAW fixture and correctly f
 - normal-user UAC validation
 - real cross-process Explorer drag-out validation
 - accessibility/keyboard/screen-reader hardening
-- security review of parsing, packaging and privileged boundaries
 
-The first three remain explicit manual/real-environment gates. Accessibility and security-review work can continue in automation where evidence is real and repeatable.
+The first three remain explicit manual/real-environment gates. Accessibility hardening can continue in automation where evidence is real and repeatable.
 
 ## Proven validation checkpoints
 
@@ -183,10 +194,11 @@ The first three remain explicit manual/real-environment gates. Accessibility and
 
 ### 0.9
 - PR #51 / implementation run #360 + Disposable Media Guard #32 — sanitized crash/support evidence and large-image performance regression gate
+- PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — repeatable parsing/package/privileged security review and explicit asInvoker boundary
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering and clean-package candidate gates are green, but these independent release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary and clean-package candidate gates are green, but these independent release gates remain:
 
 - promote version/package metadata to the final beta suffix only at release time
 - launch and exercise the package on a clean supported Windows machine
@@ -196,11 +208,11 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 - complete basic clean-machine launch/open/mount/explore/verify/analyze regression
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-The new crash/support and benchmark evidence strengthen the beta-hardening path but do not replace any manual release gate.
+The security review strengthens the beta-hardening path but does not replace any manual release gate.
 
 ## Current safety state
 
-Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Shell integration is explicit, per-user, reversible and does not replace Windows default-app choices. Unsupported capabilities stay disabled.
+Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Shell integration is explicit, per-user, reversible and does not replace Windows default-app choices. Unsupported capabilities stay disabled. The desktop manifest is explicitly `asInvoker`, so ordinary startup does not request ambient elevation.
 
 Crash evidence is bounded, rotated and privacy-preserving; support export deliberately excludes raw exception messages, source-file paths and image contents. Performance fixtures are generated locally and removed after testing.
 

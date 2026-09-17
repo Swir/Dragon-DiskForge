@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 
 The public beta suffix is intentionally not promoted until the independent gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work may continue beyond the 0.5 beta scope without weakening that release gate.
 
-## Project progress — 80% toward 1.0
+## Project progress — 81% toward 1.0
 
-`████████████████░░░░ 80%`
+`████████████████░░░░ 81%`
 
-**Overall completion:** **80%**
+**Overall completion:** **81%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -22,7 +22,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - `0.6 Create + Convert + Verify` — **100%** ✅
 - `0.7 Physical Media Tools` — **~86% (6/7)** 🚧
 - `0.8 Windows Integration + Power Tools` — **100%** ✅
-- `0.9 Quality, Security + Beta Hardening` — **~29% (2/7)** 🚧
+- `0.9 Quality, Security + Beta Hardening` — **~43% (3/7)** 🚧
 - `1.0 Production Release` — planned
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count, documentation-only edits and placeholders do not increase completion. Work may advance out of milestone order when a remaining milestone is blocked by a real hardware/manual gate.
@@ -50,6 +50,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - reversible per-user Windows Open With/context-menu integration without default-app takeover
 - bounded privacy-preserving crash history integrated into the support ZIP without raw exception messages, source-file paths or image contents
 - large-image performance regression gate with machine-readable benchmark evidence for verification and bounded RAW/IMG recognition
+- explicit desktop `asInvoker` execution plus repeatable security-boundary CI covering shell, CLI, package and destructive-write invariants
 - required **by Swir** + GitHub footer in the Windows UI
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
@@ -114,7 +115,7 @@ See [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md).
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current scope: **2/7 (~29%)**.
+Current scope: **3/7 (~43%)**.
 
 ### Crash + support evidence ✅
 
@@ -122,11 +123,17 @@ Unhandled WinUI failures are captured best-effort into a bounded rotated local c
 
 ### Large-image performance regression gate ✅
 
-CI now exercises real one-pass SHA-256/SHA-512 verification over a generated 128 MiB fixture and bounded filesystem recognition over a valid 8 GiB sparse RAW/IMG MBR fixture. The gate records timing, throughput and managed-allocation evidence, enforces conservative regression ceilings and publishes benchmark JSON as a dedicated artifact.
+CI exercises real one-pass SHA-256/SHA-512 verification over a generated 128 MiB fixture and bounded filesystem recognition over a valid 8 GiB sparse RAW/IMG MBR fixture. The gate records timing, throughput and managed-allocation evidence, enforces conservative regression ceilings and publishes benchmark JSON as a dedicated artifact.
 
 PR #51 implementation head `44a075a...` passed full Windows run #360 and Disposable Media Guard #32 before these roadmap items were marked complete. The first benchmark attempt correctly failed on an invalid blank RAW fixture; the test was fixed in the same iteration to use a real MBR-backed sparse fixture.
 
-Remaining 0.9 work: clean-machine runtime matrix, normal-user UAC, real cross-process Explorer drag-out, accessibility/keyboard/screen-reader hardening and a security review of parsing/package/privileged boundaries.
+### Security boundary review ✅
+
+The Windows desktop manifest explicitly remains `asInvoker` with `uiAccess=false`; ordinary startup therefore does not request ambient administrator elevation. A dedicated security-boundary workflow now regression-tests the high-value architectural invariants: HKCU-only shell integration with no `UserChoice` takeover, public CLI isolation from the raw physical writer, clean-package debug/test exclusion and SHA-256 entry-point binding, destructive-writer CI lockout, physical-media fail-closed/confirmation cases and shell command quoting/injection rejection.
+
+PR #52 exact implementation head `0ff048a...` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this roadmap item was marked complete. The review and its explicit limitations are documented in [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md).
+
+Remaining 0.9 work: clean-machine runtime matrix, normal-user UAC, real cross-process Explorer drag-out and accessibility/keyboard/screen-reader hardening.
 
 ## 0.6 Create + Convert + Verify — COMPLETE ✅
 
@@ -140,7 +147,7 @@ Public beta publication remains a separate release decision gated by [`docs/BETA
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering and clean-package candidate gates are green, but these independent manual/release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary and clean-package candidate gates are green, but these independent manual/release gates remain:
 
 - final beta suffix/package promotion
 - clean supported Windows launch and basic open/mount/explore/verify/analyze regression
@@ -168,11 +175,11 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, sanitized crash/support evidence, large-image performance regressions, shell integration, Release x64 build and independently verified clean ZIP package candidate.
+CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, sanitized crash/support evidence, large-image performance regressions, shell integration, the dedicated security-boundary gate, Release x64 build and independently verified clean ZIP package candidate.
 
 ## Safety design
 
-Inspection and image/media automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing. CLI state/settings commands are restricted to Dragon DiskForge local application state and diagnostic export; they do not modify inspected images or physical media. Shell integration is opt-in, per-user and reversible and never overwrites the user's default-app choice.
+Inspection and image/media automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing. CLI state/settings commands are restricted to Dragon DiskForge local application state and diagnostic export; they do not modify inspected images or physical media. Shell integration is opt-in, per-user and reversible and never overwrites the user's default-app choice. The desktop process is explicitly `asInvoker`; operations that need privileges must fail truthfully rather than relying on ambient elevation.
 
 Crash evidence is bounded and privacy-preserving: raw exception messages, source-file paths and image contents are never persisted. Performance fixtures are generated locally and deleted after the regression run.
 
@@ -182,4 +189,4 @@ Physical-device mutation remains outside the product surface. The Windows writer
 
 **No fake features.** A capability becomes enabled in the UI only after its real backing path exists and is testable.
 
-Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md), [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md) and [`CHANGELOG.md`](CHANGELOG.md).
+Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md), [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md), [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md) and [`CHANGELOG.md`](CHANGELOG.md).
