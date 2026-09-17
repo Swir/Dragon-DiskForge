@@ -38,7 +38,7 @@ try {
     $manifestPath = Join-Path $tempRoot "package-manifest.json"
     if (-not (Test-Path $manifestPath -PathType Leaf)) { throw "Package manifest is missing." }
     $manifest = Get-Content -Path $manifestPath -Raw | ConvertFrom-Json
-    if ([int]$manifest.schemaVersion -lt 4) { throw "Package manifest schema is too old for the shell-integration-enabled package: $($manifest.schemaVersion)." }
+    if ([int]$manifest.schemaVersion -lt 5) { throw "Package manifest schema is too old for the beta-manual-QA-enabled package: $($manifest.schemaVersion)." }
     if ([string]$manifest.product -ne "Dragon DiskForge") { throw "Unexpected package product '$($manifest.product)'." }
     if ([string]$manifest.version -ne $expected) { throw "Package manifest version '$($manifest.version)' does not match expected '$expected'." }
     if ([string]$manifest.architecture -ne "x64") { throw "Unexpected package architecture '$($manifest.architecture)'." }
@@ -47,7 +47,8 @@ try {
     $entryPoint = Join-Path $tempRoot ([string]$manifest.entryPoint)
     $cliEntryPoint = Join-Path $tempRoot ([string]$manifest.cliEntryPoint)
     $shellEntryPoint = Join-Path $tempRoot ([string]$manifest.shellIntegrationEntryPoint)
-    foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint)) {
+    $betaManualQaEntryPoint = Join-Path $tempRoot ([string]$manifest.betaManualQaEntryPoint)
+    foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint, $betaManualQaEntryPoint)) {
         if (-not (Test-Path $required -PathType Leaf)) { throw "Manifest entry point is missing: $required" }
     }
 
@@ -62,9 +63,14 @@ try {
     $entryHash = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $cliHash = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $shellHash = (Get-FileHash -Path $shellEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+    $betaManualQaHash = (Get-FileHash -Path $betaManualQaEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($entryHash -ne ([string]$manifest.entryPointSha256).ToLowerInvariant()) { throw "Entry-point SHA-256 does not match the package manifest." }
     if ($cliHash -ne ([string]$manifest.cliEntryPointSha256).ToLowerInvariant()) { throw "CLI SHA-256 does not match the package manifest." }
     if ($shellHash -ne ([string]$manifest.shellIntegrationEntryPointSha256).ToLowerInvariant()) { throw "Shell-helper SHA-256 does not match the package manifest." }
+    if ($betaManualQaHash -ne ([string]$manifest.betaManualQaEntryPointSha256).ToLowerInvariant()) { throw "Beta manual-QA tool SHA-256 does not match the package manifest." }
+
+    & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaManualQaEntryPoint -Mode self-test
+    if ($LASTEXITCODE -ne 0) { throw "Packaged beta manual-QA evidence tool failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
 
     $versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($entryPoint)
     $productVersion = [string]$versionInfo.ProductVersion
@@ -88,6 +94,7 @@ try {
     Write-Host "EXE SHA-256: $entryHash"
     Write-Host "CLI SHA-256: $cliHash"
     Write-Host "Shell helper SHA-256: $shellHash"
+    Write-Host "Beta manual-QA tool SHA-256: $betaManualQaHash"
     Write-Host "CLI providers: $($providers.Count)"
 }
 finally {
