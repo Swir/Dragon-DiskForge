@@ -162,7 +162,7 @@ function Copy-BoundFile {
 
 function Invoke-BuildKit {
     $context = Get-CandidateContext -Package $PackagePath -PackageSidecar $PackageChecksumFile -Metadata $CandidateMetadataPath -MetadataSidecar $CandidateMetadataChecksumFile
-    $output = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDirectory))
+    $output = [System.IO.Path]::GetFullPath($OutputDirectory)
     if (-not (Test-Path -LiteralPath $output)) {
         New-Item -ItemType Directory -Path $output -Force | Out-Null
     }
@@ -194,7 +194,7 @@ function Invoke-BuildKit {
         publicRelease = $false
     }
 
-    $kitPath = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $QaKitPath))
+    $kitPath = [System.IO.Path]::GetFullPath($QaKitPath)
     Write-Utf8NoBom -Path $kitPath -Text (($kit | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
     Write-Sha256Sidecar -Path $kitPath | Out-Null
 
