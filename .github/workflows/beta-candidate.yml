@@ -1,0 +1,78 @@
+name: Dragon DiskForge Beta Candidate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dragon-beta-candidate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  beta-candidate:
+    name: Exact 0.5.0-beta.1 Windows x64 candidate
+    runs-on: windows-latest
+    env:
+      BETA_VERSION: 0.5.0-beta.1
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: PowerShell 7 beta candidate contract self-test
+        shell: pwsh
+        run: ./scripts/beta-candidate.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 beta candidate contract self-test
+        shell: powershell
+        run: .\scripts\beta-candidate.ps1 -Mode self-test
+
+      - name: Promote workspace metadata to beta suffix
+        shell: pwsh
+        run: ./scripts/beta-candidate.ps1 -Mode prepare
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore beta candidate
+        run: msbuild DragonDiskForge.sln /restore /p:Configuration=Release /p:Platform=x64
+
+      - name: Build beta candidate
+        run: msbuild DragonDiskForge.sln /m /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=false
+
+      - name: Build exact Windows x64 beta package
+        shell: pwsh
+        run: ./scripts/package-windows.ps1 -ExpectedVersion $env:BETA_VERSION
+
+      - name: Verify exact Windows x64 beta package
+        shell: pwsh
+        run: ./scripts/verify-package.ps1 -ExpectedVersion $env:BETA_VERSION
+
+      - name: Bind candidate metadata to source commit and package hash
+        shell: pwsh
+        run: ./scripts/beta-candidate.ps1 -Mode metadata -ExpectedPrefix 0.5.0 -BetaSuffix beta.1 -SourceCommit $env:SOURCE_COMMIT -WorkflowRunId '${{ github.run_id }}'
+
+      - name: Publish non-public beta candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: DragonDiskForge-0.5.0-beta.1-win-x64-candidate-${{ github.run_id }}
+          path: |
+            artifacts/windows/DragonDiskForge-win-x64.zip
+            artifacts/windows/DragonDiskForge-win-x64.zip.sha256
+            artifacts/windows/beta-candidate.json
+            artifacts/windows/beta-candidate.json.sha256
+          if-no-files-found: error
+          retention-days: 30
