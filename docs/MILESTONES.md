@@ -77,19 +77,51 @@ Required engineering scope: **100% complete**.
 - no Create/Convert WinUI capability is enabled by Core-only work
 - PR #44 implementation run #304 passed the split/join + gzip gate plus full provider/intelligence/Explorer/native Windows/Release/clean-package validation
 
-**0.6 exit:** final documentation-synchronized PR-head CI must be green before merge; after that the milestone is closed.
+**0.6 exit:** complete. Final documentation-synchronized PR-head CI passed before merge.
 
-## 0.7 Physical Media Tools — PLANNED ⬜
+## 0.7 Physical Media Tools — IN PROGRESS 🚧
 
-The next milestone is safety-first. Initial work must be non-destructive:
+Current required engineering scope: **5/7 (~71%)**.
 
-- read-only physical-disk discovery and stable identity
-- system/removable/bus/capacity evidence
-- refusal rules for system disks and ambiguous targets
-- write-plan preview and explicit confirmation design
-- separately validated write path only after safety infrastructure is proven
+### 1. Read-only physical-disk inventory ✅
+- canonical Windows `\\.\PhysicalDriveN` enumeration
+- physical disk handles opened query-only (`dwDesiredAccess = 0`)
+- serial-backed stable identity when Windows reports sufficient identity material
+- ambiguous/access-denied identity remains explicitly untrusted
 
-No physical-device write capability is currently user-visible.
+### 2. Physical-device evidence ✅
+- capacity evidence
+- bus/removable/vendor/product/revision/serial evidence
+- Windows system volume mapped to its backing physical-disk extents
+- evidence is retained rather than inferred silently
+
+### 3. Hard refusal policy ✅
+- system-disk targets are refused, not merely warned
+- destinations without stable identity are refused
+- destinations with unknown capacity are refused
+- refused plans never receive a destructive confirmation token
+
+### 4. Write-plan preview ✅
+- Core preview models image-to-disk intent without performing a write
+- physical-device sources and same-device source/destination are refused
+- source images larger than destination capacity are refused
+- smaller images surface trailing-capacity warnings
+
+### 5. Destination-bound confirmation contract ✅
+- otherwise eligible plans require exact explicit confirmation
+- confirmation binds physical disk number plus stable identity material
+- token matching is exact and case-sensitive
+- another disk's token cannot confirm the plan
+
+### Remaining 0.7 work ⬜
+- bounded progress/cancellation plus rollback-or-fail-safe semantics for a physical write operation
+- separately validated physical write path only after the safety contract is proven under dedicated disposable-media conditions
+
+PR #45 implementation run #310 passed the dedicated physical-media safety smoke gate, real read-only physical inventory and system-disk refusal on Windows, all existing provider/intelligence/Explorer/native mount checks, the full Release x64 build and clean-package verification.
+
+See `docs/PHYSICAL-MEDIA-SAFETY.md`.
+
+**No physical-device write implementation or user-visible destructive action exists in this slice.**
 
 ## Beta release track
 

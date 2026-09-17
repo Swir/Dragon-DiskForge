@@ -28,16 +28,23 @@ The project follows semantic versioning while it evolves toward 1.0.
 - `GzipImagePipelineService` for transactional whole-file gzip transport compression/decompression
 - caller-required decompressed output ceiling
 - gzip minimum-envelope, magic, compression-method and reserved-header-bit validation before output staging
+- read-only Windows physical-disk inventory with canonical `PhysicalDriveN`, capacity, bus/removable evidence and system-volume disk extents
+- serial-backed stable physical-device identity where Windows reports sufficient identity material
+- `PhysicalMediaSafetyService` write-plan preview with fail-closed target/source/capacity checks
+- destination-bound exact confirmation contract for otherwise eligible physical-media plans
+- `docs/PHYSICAL-MEDIA-SAFETY.md`
 - `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md` and `docs/SPLIT-COMPRESSION-PIPELINES.md`
-- dedicated smoke tests for dual verification, safe output, RAW pipelines and split/join + gzip pipelines
+- dedicated smoke tests for dual verification, safe output, RAW pipelines, split/join + gzip and physical-media safety
+- real query-only physical-disk inventory/system-disk refusal coverage in the Windows native integration test
 
 ### Changed
-- project progress advances to **68% toward 1.0** after the complete automated 0.6 engineering scope is validated
+- project progress advances to **73% toward 1.0** after 5 of 7 current 0.7 Physical Media Tools deliverables are implemented and validated
 - **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
-- **0.6 Create + Convert + Verify** reaches **100% automated engineering complete** after all five top-level deliverables pass
+- **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
+- **0.7 Physical Media Tools** is now **in progress at 5/7 (~71%)**
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
-- the next roadmap milestone is **0.7 Physical Media Tools**, beginning with non-destructive discovery and safety infrastructure
+- the Windows integration gate now verifies query-only physical-disk enumeration and system-disk refusal in addition to native mount behavior
 - file-producing progress reserves `1.0` for successful publication/commit
 
 ### Safety
@@ -52,7 +59,10 @@ The project follows semantic versioning while it evolves toward 1.0.
 - split/join + gzip work does not claim sparse-container writing or unsupported format-internal compression decoding
 - QCOW2 backing/encryption/dirty/external-data/compressed/extended-L2 states remain unsupported on the proven guest-reader path
 - VMDK parent/split/unclean/compressed/stream-optimized states remain unsupported on the proven guest-reader path
-- physical-device writes are not exposed; future 0.7 work remains behind dedicated safety design and validation
+- physical-disk inventory requests query-only handles and does not request write access
+- system disks, ambiguous identity, unknown capacity, physical-device sources and oversized source images fail closed in the physical-media write-plan preview
+- refused physical-media plans receive no destructive confirmation token
+- no physical-device writer or user-visible destructive physical-media action is implemented by the 0.7 safety slice
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -83,11 +93,13 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification
 - PR #42 / implementation run #296 and final run #298 — safe output transaction foundation
 - PR #43 / implementation run #300 — RAW creation + guest-to-RAW conversion
-- PR #44 / implementation run #304 — transactional split/join + bounded gzip transport pipelines; final documentation-synchronized CI required before merge
+- PR #44 / implementation run #304 — transactional split/join + bounded gzip transport pipelines
+- PR #45 / implementation run #310 — read-only physical-disk inventory, real Windows system-disk evidence, fail-closed write-plan preview and destination-bound confirmation contract; full Windows x64 regression/build/package path green
 
 ### Planned
 - complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
-- begin 0.7 with read-only physical-device discovery and explicit safety/refusal contracts
+- finish 0.7 with bounded physical-write progress/cancellation/fail-safe semantics
+- add a separately validated physical write path only after those safety gates pass under dedicated disposable-media conditions
 - keep destructive physical operations disabled until separately designed, implemented and independently validated
 
 ## [0.3.0] - 2026-09-15

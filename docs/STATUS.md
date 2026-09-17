@@ -17,13 +17,37 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**68% toward 1.0.** Milestones 0.1 through 0.6 have completed their required automated engineering scope.
+**73% toward 1.0.** Milestones 0.1 through 0.6 are complete, and the validated 0.7 safety foundation has completed 5 of 7 current 0.7 deliverables.
 
 ## Current roadmap position
 
-**0.7 Physical Media Tools — PLANNED ⬜**
+**0.7 Physical Media Tools — IN PROGRESS 🚧 — 5/7 (~71%)**
 
-The next milestone must start read-only and safety-first. No physical-device write capability is currently exposed.
+The milestone remains safety-first. PR #45 implementation run #310 passed the dedicated physical-media safety tests, real query-only physical-disk inventory/system-disk detection on Windows, the complete existing regression suite, Release x64 build and clean-package verification.
+
+### Read-only physical-disk inventory ✅
+- canonical `\\.\PhysicalDriveN` discovery
+- query-only handles (`dwDesiredAccess = 0`)
+- capacity evidence
+- bus/removable/vendor/product/revision/serial evidence where Windows reports it
+- system-volume to physical-disk extent evidence
+- serial-backed stable identity when sufficient identity material exists
+- explicit ambiguous identity when stable identity cannot be proven
+
+### Physical-media safety planning ✅
+- source/destination plan preview without writes
+- hard refusal of system-disk targets
+- hard refusal of ambiguous identity and unknown capacity
+- hard refusal of physical-device sources and same-device source/destination
+- hard refusal when image length exceeds destination capacity
+- exact destination-bound destructive confirmation token only for otherwise eligible plans
+- refused plans receive no confirmation token
+
+### Remaining 0.7 scope ⬜
+- progress/cancellation/rollback-or-fail-safe design for a physical write operation
+- separately validated physical write path only after those safety gates are proven
+
+No physical-device write capability is currently user-visible or implemented by this slice. See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
 ## 0.6 closing scope
 
@@ -69,7 +93,7 @@ The next milestone must start read-only and safety-first. No physical-device wri
 - sparse-container writing is **not** claimed
 - format-internal QCOW2/VMDK/DMG compression decoding is **not** claimed
 
-PR #44 implementation run #304 passed the new split/join + gzip gate plus the complete provider/intelligence/Explorer/native Windows/Release/clean-package verification path. Documentation synchronization is required to pass its own final CI before merge.
+PR #44 implementation run #304 and its final synchronized CI closed the required 0.6 engineering scope.
 
 ## Proven validation checkpoints
 
@@ -108,6 +132,9 @@ PR #44 implementation run #304 passed the new split/join + gzip gate plus the co
 - PR #43 / implementation run #300 — RAW creation + guest-to-RAW conversion
 - PR #44 / implementation run #304 — transactional split/join + bounded gzip transport pipelines
 
+### 0.7
+- PR #45 / implementation run #310 — query-only physical-disk inventory, system-disk evidence, fail-closed write-plan preview and destination-bound confirmation contract
+
 ## Beta readiness
 
 The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering and clean-package candidate gates are complete. Remaining blockers are independent release gates:
@@ -123,6 +150,8 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 ## Current safety state
 
 Inspection remains read-only-first. Unsupported capabilities stay disabled. Metadata parsers, guest readers and intelligence services validate offsets/ranges and reject unsupported or contradictory states rather than guessing.
+
+The 0.7 physical inventory path requests query-only physical-disk handles. A missing stable identity, unknown capacity or system-disk target fails closed in the write-plan preview. The confirmation token is planning metadata only; there is no physical-device writer or user-visible destructive action in this slice.
 
 0.6 file-producing Core operations are not automatically exposed as Create/Convert UI actions. Single-file output uses the safe transaction boundary; split sets stage in a sibling directory and publish only after all parts plus integrity metadata are complete. Gzip decompression requires an explicit maximum output size.
 

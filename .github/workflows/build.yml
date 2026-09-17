@@ -39,6 +39,9 @@ jobs:
       - name: Split/join + gzip pipeline smoke tests
         run: dotnet run --project tests/DragonDiskForge.SplitCompression.SmokeTests/DragonDiskForge.SplitCompression.SmokeTests.csproj -c Release
 
+      - name: Physical media safety smoke tests
+        run: dotnet run --project tests/DragonDiskForge.PhysicalMediaSafety.SmokeTests/DragonDiskForge.PhysicalMediaSafety.SmokeTests.csproj -c Release
+
       - name: Provider registry smoke tests
         run: dotnet run --project tests/DragonDiskForge.ProviderRegistry.SmokeTests/DragonDiskForge.ProviderRegistry.SmokeTests.csproj -c Release
 
@@ -117,7 +120,7 @@ jobs:
       - name: ISO direct-browse integration
         run: dotnet run --project tests/DragonDiskForge.DirectBrowse.IntegrationTests/DragonDiskForge.DirectBrowse.IntegrationTests.csproj -c Release
 
-      - name: Native Windows mount integration
+      - name: Native Windows mount + physical inventory integration
         run: dotnet run --project tests/DragonDiskForge.Windows.IntegrationTests/DragonDiskForge.Windows.IntegrationTests.csproj -c Release
 
       - name: Setup MSBuild

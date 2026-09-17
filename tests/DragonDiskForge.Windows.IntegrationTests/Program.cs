@@ -21,20 +21,23 @@ if (!IsAdministrator())
 var tempRoot = Path.Combine(Path.GetTempPath(), $"dragon-diskforge-mount-{Guid.NewGuid():N}");
 Directory.CreateDirectory(tempRoot);
 var service = new WindowsDiskImageMountService();
+var physicalInventory = new WindowsPhysicalDiskInventoryService();
+var physicalSafety = new PhysicalMediaSafetyService();
 var explorer = new MountedFileSystemExplorerService();
 var previewer = new FilePreviewService();
 
 try
 {
+    await ValidatePhysicalDiskInventoryAsync();
     await ValidateVirtualDiskAsync(new ImageCase("VHD", ".vhd", AssignDriveLetter: false));
     await ValidateVirtualDiskAsync(new ImageCase("VHDX", ".vhdx", AssignDriveLetter: true));
     await ValidateIsoAsync();
     await ValidateUnsupportedFormatErrorAsync();
-    Console.WriteLine("\nDragon DiskForge Windows mount integration tests passed.");
+    Console.WriteLine("\nDragon DiskForge Windows mount and physical inventory integration tests passed.");
 }
 catch (Exception ex)
 {
-    Console.Error.WriteLine($"FAIL  Windows mount integration test: {ex}");
+    Console.Error.WriteLine($"FAIL  Windows integration test: {ex}");
     Environment.ExitCode = 1;
 }
 finally
@@ -60,6 +63,42 @@ finally
     catch
     {
         // Best-effort cleanup; the hosted runner is disposable.
+    }
+}
+
+async Task ValidatePhysicalDiskInventoryAsync()
+{
+    Console.WriteLine("\nINFO  Querying Windows physical disks through read-only handles...");
+    var disks = await physicalInventory.GetDisksAsync();
+
+    Check(disks.Count > 0, "read-only physical inventory discovers at least one disk");
+    Check(disks.Select(x => x.DiskNumber).Distinct().Count() == disks.Count, "physical inventory disk numbers are unique");
+    Check(disks.All(x => x.DevicePath.Equals($@"\\.\PhysicalDrive{x.DiskNumber}", StringComparison.OrdinalIgnoreCase)),
+        "physical inventory binds every record to its canonical device path");
+    Check(disks.All(x => x.Evidence.Contains("inventory:win32-read-only-query")),
+        "physical inventory records read-only query provenance");
+    Check(disks.Where(x => x.CapacityBytes.HasValue).All(x => x.CapacityBytes > 0),
+        "reported physical capacities are positive");
+
+    var systemDisks = disks.Where(x => x.IsSystemDisk).ToArray();
+    Check(systemDisks.Length > 0, "physical inventory identifies the Windows system disk by volume extent");
+
+    foreach (var disk in systemDisks)
+    {
+        var sourceLength = disk.CapacityBytes is > 1 ? Math.Min(1024L * 1024, disk.CapacityBytes.Value) : 1L;
+        var plan = physicalSafety.PreviewImageToDiskWrite(
+            Path.Combine(tempRoot, "system-disk-refusal.img"),
+            sourceLength,
+            disk);
+        Check(plan.IsRefused, $"write-plan safety refuses system disk PhysicalDrive{disk.DiskNumber}");
+        Check(plan.ConfirmationToken is null, $"system disk PhysicalDrive{disk.DiskNumber} never receives a confirmation token");
+    }
+
+    foreach (var disk in disks)
+    {
+        Console.WriteLine(
+            $"INFO  PhysicalDrive{disk.DiskNumber}: {disk.DisplayName}; capacity={disk.CapacityBytes?.ToString() ?? "unknown"}; " +
+            $"bus={disk.BusType}; removable={disk.IsRemovable}; system={disk.IsSystemDisk}; stableIdentity={disk.HasStableIdentity}");
     }
 }
 

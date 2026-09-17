@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application for inspecting, moun
 
 The public beta suffix is intentionally not promoted until the independent release gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work beyond the 0.5 beta scope continues on `main` without weakening that gate.
 
-## Project progress — 68% toward 1.0
+## Project progress — 73% toward 1.0
 
-`██████████████░░░░░░ 68%`
+`███████████████░░░░░ 73%`
 
-**Overall completion:** **68%**
+**Overall completion:** **73%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -20,7 +20,7 @@ The public beta suffix is intentionally not promoted until the independent relea
 - `0.4 Extended Image Providers` — **100%** ✅
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
 - `0.6 Create + Convert + Verify` — **100%** ✅
-- `0.7 Physical Media Tools` — planned
+- `0.7 Physical Media Tools` — **~71% (5/7)** 🚧
 - `0.8 Windows Integration + Power Tools` — planned
 - `0.9 Quality, Security + Beta Hardening` — planned
 - `1.0 Production Release` — planned
@@ -43,10 +43,42 @@ The public beta suffix is intentionally not promoted until the independent relea
 - required **by Swir** + GitHub footer in the Windows UI
 - SHA-256 + SHA-512 verification in one bounded sequential pass
 - checksum-verified clean Windows x64 package-candidate pipeline
+- query-only Windows physical-disk inventory with capacity/bus/removable/system-disk evidence
+- fail-closed physical-media write-plan preview and destination-bound confirmation contract; no physical write path is exposed
+
+## 0.7 Physical Media Tools — IN PROGRESS 🚧
+
+The first safety-first slice is implemented and validated: **5/7 roadmap deliverables (~71%)**.
+
+### Read-only physical disk inventory ✅
+
+- canonical `\\.\PhysicalDriveN` discovery on Windows
+- handles are opened query-only (`dwDesiredAccess = 0`)
+- capacity from `IOCTL_DISK_GET_LENGTH_INFO`
+- vendor/product/revision/serial, bus and removable evidence from `IOCTL_STORAGE_QUERY_PROPERTY`
+- Windows system volume mapped to backing physical disk extents
+- serial-backed stable identity when Windows exposes sufficient identity material
+- ambiguous or access-denied identity remains explicitly untrusted
+
+### Fail-closed physical-media planning ✅
+
+- `PhysicalMediaSafetyService` previews image-to-disk intent without writing
+- system disks are refused, not merely warned
+- missing stable identity or unknown destination capacity is refused
+- physical-device sources and same-device source/destination are refused
+- source images larger than the destination are refused
+- otherwise eligible plans still require an exact destination-bound confirmation token
+- refused plans never receive a confirmation token
+
+PR #45 implementation run #310 passed the dedicated physical-media safety gate, real read-only physical inventory/system-disk detection on the Windows runner, all existing provider/intelligence/Explorer/native mount tests, the x64 Release build and clean-package verification.
+
+Remaining 0.7 work is deliberately harder: bounded progress/cancellation/fail-safe semantics for a physical write operation, followed only then by a separately validated physical write path under dedicated disposable-media safety gates. **No physical-device write capability is user-visible today.**
+
+See [`docs/PHYSICAL-MEDIA-SAFETY.md`](docs/PHYSICAL-MEDIA-SAFETY.md).
 
 ## 0.6 Create + Convert + Verify — COMPLETE ✅
 
-All five top-level 0.6 engineering deliverables are now implemented and validated.
+All five top-level 0.6 engineering deliverables are implemented and validated.
 
 ### Verification ✅
 
@@ -98,7 +130,7 @@ All five top-level 0.6 engineering deliverables are now implemented and validate
 
 The proven QCOW2 and hosted-sparse VMDK readers already translate their supported sparse/unallocated guest mappings read-only. `RawImagePipelineService` can materialize those proven mappings to flat RAW. Dragon DiskForge does **not** claim sparse QCOW2/VMDK container writing, QCOW2 compressed-cluster decoding, VMDK stream-optimized decoding or DMG `blkx` decompression.
 
-PR #44 implementation run #304 passed the new split/join + gzip gate plus the complete provider/intelligence/Explorer/native Windows/Release/clean-package verification path. Final documentation synchronization is validated separately on the PR head before merge.
+PR #44 implementation run #304 passed the new split/join + gzip gate plus the complete provider/intelligence/Explorer/native Windows/Release/clean-package verification path.
 
 See [`docs/OUTPUT-TRANSACTIONS.md`](docs/OUTPUT-TRANSACTIONS.md), [`docs/RAW-IMAGE-PIPELINES.md`](docs/RAW-IMAGE-PIPELINES.md) and [`docs/SPLIT-COMPRESSION-PIPELINES.md`](docs/SPLIT-COMPRESSION-PIPELINES.md).
 
@@ -137,7 +169,7 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, dual hashing, safe output transactions, RAW creation/export, split/join + gzip pipelines, provider invariants, physical and guest partition/filesystem intelligence, UDF/NTFS depth, boot/install intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native ISO/VHD/VHDX integration, the full Windows x64 Release build and the independently verified clean ZIP package candidate.
+CI validates Core, dual hashing, safe output transactions, RAW creation/export, split/join + gzip pipelines, physical-media safety, provider invariants, physical and guest partition/filesystem intelligence, UDF/NTFS depth, boot/install intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, query-only physical-disk inventory, native ISO/VHD/VHDX integration, the full Windows x64 Release build and the independently verified clean ZIP package candidate.
 
 ## Safety design
 
@@ -145,7 +177,7 @@ Inspection and verification are read-only-first. Native mounts default to read-o
 
 0.6 file-producing Core APIs remain separate from user-visible Create/Convert UX. `SafeOutputService` publishes only completed single-file outputs. Split sets are staged in a sibling directory and published only after all parts plus their integrity manifest are complete. Gzip decompression requires an explicit output-size ceiling.
 
-Physical-device writes are not part of the current product surface. Future high-impact operations remain gated behind dedicated safety design, device identity checks, explicit confirmation and independent validation.
+Physical-device writes are not part of the current product surface. The 0.7 foundation now proves query-only inventory, system-disk identification, ambiguous-target refusal, capacity/source checks and an explicit destination-bound confirmation contract. A physical writer still does not exist and cannot be inferred from these planning APIs.
 
 ## Project rule
 
