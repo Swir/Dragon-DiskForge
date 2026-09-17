@@ -25,7 +25,9 @@
                            Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
             <Border Grid.Column="1" Style="{StaticResource DragonStatusPillStyle}" VerticalAlignment="Center">
-                <TextBlock x:Name="TabCountText" Text="0 tabs" FontWeight="SemiBold" />
+                <TextBlock x:Name="TabCountText" Text="0 tabs" FontWeight="SemiBold"
+                           AutomationProperties.Name="Open Explorer tab count"
+                           AutomationProperties.LiveSetting="Polite" />
             </Border>
         </Grid>
 
@@ -34,7 +36,9 @@
                      Visibility="Collapsed"
                      IsAddTabButtonVisible="False"
                      TabWidthMode="SizeToContent"
-                     TabCloseRequested="WorkspaceTabs_TabCloseRequested" />
+                     TabCloseRequested="WorkspaceTabs_TabCloseRequested"
+                     AutomationProperties.Name="Dragon Explorer image tabs"
+                     AutomationProperties.HelpText="Use Ctrl+Tab to move between open image browsing sessions. Closing a tab does not unmount its image." />
 
             <Border x:Name="EmptyState"
                     Margin="8,0,8,0"
@@ -43,7 +47,8 @@
                     BorderThickness="1"
                     CornerRadius="22"
                     Padding="30"
-                    MinHeight="300">
+                    MinHeight="300"
+                    AutomationProperties.Name="Explorer workspace empty state">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                     <Border Width="70" Height="70" CornerRadius="20"
                             Background="{ThemeResource DragonEmberSoftBrush}">
