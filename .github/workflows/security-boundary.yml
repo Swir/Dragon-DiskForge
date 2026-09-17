@@ -1,0 +1,28 @@
+name: Dragon DiskForge Security Boundary
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: dragon-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-boundary:
+    name: Security boundaries remain fail-closed
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Security boundary smoke tests
+        run: dotnet run --project tests/DragonDiskForge.SecurityBoundary.SmokeTests/DragonDiskForge.SecurityBoundary.SmokeTests.csproj -c Release
