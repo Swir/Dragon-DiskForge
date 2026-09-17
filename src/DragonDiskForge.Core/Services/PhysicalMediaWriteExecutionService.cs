@@ -45,6 +45,7 @@ public sealed class PhysicalMediaWriteExecutionService
                 PhysicalMediaWriteExecutionStatus.RefusedBeforeWrite,
                 bytesWritten: 0,
                 plan.SourceLengthBytes,
+                destinationMayBeModified: false,
                 hash: null,
                 error: preflightFailure);
         }
@@ -55,6 +56,7 @@ public sealed class PhysicalMediaWriteExecutionService
                 PhysicalMediaWriteExecutionStatus.CancelledBeforeWrite,
                 bytesWritten: 0,
                 plan.SourceLengthBytes,
+                destinationMayBeModified: false,
                 hash: null,
                 error: "Operation was cancelled before any destination write.");
         }
@@ -63,6 +65,7 @@ public sealed class PhysicalMediaWriteExecutionService
         byte[]? rentedBuffer = null;
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         long bytesWritten = 0;
+        var writeAttempted = false;
 
         try
         {
@@ -104,6 +107,10 @@ public sealed class PhysicalMediaWriteExecutionService
 
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // From this point onward a sink failure/cancellation may have happened after a
+                // partial device transfer even if the sink could not report a completed chunk.
+                // Fail closed and require recovery for every exception after a write was attempted.
+                writeAttempted = true;
                 await sink.WriteAsync(
                     bytesWritten,
                     rentedBuffer.AsMemory(0, read),
@@ -121,33 +128,34 @@ public sealed class PhysicalMediaWriteExecutionService
                 PhysicalMediaWriteExecutionStatus.Completed,
                 bytesWritten,
                 plan.SourceLengthBytes,
+                destinationMayBeModified: true,
                 hash: CurrentHashHex(hash),
                 error: null);
         }
         catch (OperationCanceledException)
         {
-            var started = bytesWritten > 0;
             return Result(
-                started
+                writeAttempted
                     ? PhysicalMediaWriteExecutionStatus.CancelledAfterWriteStarted
                     : PhysicalMediaWriteExecutionStatus.CancelledBeforeWrite,
                 bytesWritten,
                 plan.SourceLengthBytes,
-                hash: started ? CurrentHashHex(hash) : null,
-                error: started
-                    ? "Operation was cancelled after destination modification began; the destination may be incomplete and requires recovery/rewrite."
+                destinationMayBeModified: writeAttempted,
+                hash: bytesWritten > 0 ? CurrentHashHex(hash) : null,
+                error: writeAttempted
+                    ? "Operation was cancelled after a destination write was attempted; the destination may be incomplete and requires recovery/rewrite."
                     : "Operation was cancelled before any destination write.");
         }
         catch (Exception ex)
         {
-            var started = bytesWritten > 0;
             return Result(
-                started
+                writeAttempted
                     ? PhysicalMediaWriteExecutionStatus.FailedAfterWriteStarted
                     : PhysicalMediaWriteExecutionStatus.FailedBeforeWrite,
                 bytesWritten,
                 plan.SourceLengthBytes,
-                hash: started ? CurrentHashHex(hash) : null,
+                destinationMayBeModified: writeAttempted,
+                hash: bytesWritten > 0 ? CurrentHashHex(hash) : null,
                 error: ex.Message);
         }
         finally
@@ -216,18 +224,18 @@ public sealed class PhysicalMediaWriteExecutionService
         PhysicalMediaWriteExecutionStatus status,
         long bytesWritten,
         long totalBytes,
+        bool destinationMayBeModified,
         string? hash,
         string? error)
     {
-        var destinationModified = bytesWritten > 0;
-        var recoveryRequired = destinationModified
+        var recoveryRequired = destinationMayBeModified
             && status != PhysicalMediaWriteExecutionStatus.Completed;
 
         return new PhysicalMediaWriteExecutionResult(
             status,
             bytesWritten,
             totalBytes,
-            DestinationMayBeModified: destinationModified,
+            DestinationMayBeModified: destinationMayBeModified,
             RequiresRecovery: recoveryRequired,
             WrittenSha256Hex: hash,
             ErrorMessage: error);
