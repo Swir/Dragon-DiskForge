@@ -174,13 +174,13 @@ $milestoneStatus = if ($milestoneGeometry.Percentage -ge 100.0) { 'COMPLETE' } e
 $projectStatus = if ($overallPercentage -ge 100.0) { 'COMPLETE' } else { 'IN PROGRESS' }
 
 $overallFillElement = if ($overallPercentage -gt 0) {
-    "  <rect x=\"50\" y=\"126\" width=\"$overallFill\" height=\"14\" rx=\"7\" fill=\"url(#progressGradient)\" clip-path=\"url(#trackClip)\" filter=\"url(#softGlow)\"/>"
+    '  <rect x="50" y="126" width="{0}" height="14" rx="7" fill="url(#progressGradient)" clip-path="url(#trackClip)" filter="url(#softGlow)"/>' -f $overallFill
 } else {
     ''
 }
 
 $milestoneFillElement = if ($milestoneGeometry.Percentage -gt 0) {
-    "  <rect x=\"170\" y=\"50\" width=\"$milestoneFill\" height=\"12\" rx=\"6\" fill=\"url(#miniGradient)\" clip-path=\"url(#miniTrackClip)\" filter=\"url(#miniGlow)\"/>"
+    '  <rect x="170" y="50" width="{0}" height="12" rx="6" fill="url(#miniGradient)" clip-path="url(#miniTrackClip)" filter="url(#miniGlow)"/>' -f $milestoneFill
 } else {
     ''
 }
