@@ -165,6 +165,69 @@ try
     Check(!File.Exists(Path.Combine(exportRoot, "outside.txt")),
         "blocked reparse-ancestor copy-out creates no destination file");
 
+    await explorer.CopyOutAsync(root, file, exportRoot);
+    var copiedFile = Path.Combine(exportRoot, "dragon.txt");
+    Check(File.Exists(copiedFile) && await File.ReadAllTextAsync(copiedFile) == "dragon",
+        "Explorer copy-out transaction commits a complete single file");
+
+    await explorer.CopyOutAsync(root, folder, exportRoot);
+    var copiedNestedFile = Path.Combine(exportRoot, "Folder", "Nested", "safe.txt");
+    Check(File.Exists(copiedNestedFile) && await File.ReadAllTextAsync(copiedNestedFile) == "safe",
+        "Explorer directory copy-out commits only after the staged tree is complete");
+
+    var cancelFile = Path.Combine(root, "cancel-file.bin");
+    await File.WriteAllBytesAsync(cancelFile, new byte[1024 * 1024]);
+    using (var cts = new CancellationTokenSource())
+    {
+        try
+        {
+            await explorer.CopyOutAsync(
+                root,
+                cancelFile,
+                exportRoot,
+                new CancelOnFirstProgress(cts),
+                cts.Token);
+            Check(false, "cancelled single-file copy-out reports cancellation");
+        }
+        catch (OperationCanceledException)
+        {
+            Check(true, "cancelled single-file copy-out reports cancellation");
+        }
+    }
+
+    Check(!File.Exists(Path.Combine(exportRoot, "cancel-file.bin")),
+        "cancelled single-file copy-out publishes no partial destination");
+    Check(!Directory.EnumerateFiles(exportRoot, "*.dragon-tmp", SearchOption.AllDirectories).Any(),
+        "cancelled single-file copy-out removes transactional temp files");
+
+    var cancelFolder = Path.Combine(root, "CancelFolder");
+    Directory.CreateDirectory(cancelFolder);
+    await File.WriteAllBytesAsync(Path.Combine(cancelFolder, "large.bin"), new byte[1024 * 1024]);
+    using (var cts = new CancellationTokenSource())
+    {
+        try
+        {
+            await explorer.CopyOutAsync(
+                root,
+                cancelFolder,
+                exportRoot,
+                new CancelOnFirstProgress(cts),
+                cts.Token);
+            Check(false, "cancelled directory copy-out reports cancellation");
+        }
+        catch (OperationCanceledException)
+        {
+            Check(true, "cancelled directory copy-out reports cancellation");
+        }
+    }
+
+    Check(!Directory.Exists(Path.Combine(exportRoot, "CancelFolder")),
+        "cancelled directory copy-out publishes no partial destination tree");
+    Check(!Directory.EnumerateDirectories(exportRoot, "*.dragon-copy-tmp", SearchOption.TopDirectoryOnly).Any(),
+        "cancelled directory copy-out removes its Dragon-owned staging tree");
+    Check(!Directory.EnumerateFiles(exportRoot, "*.dragon-tmp", SearchOption.AllDirectories).Any(),
+        "cancelled directory copy-out leaves no transactional temp file");
+
     var missing = Path.Combine(root, "missing.bin");
     try
     {
@@ -199,3 +262,18 @@ if (failures.Count > 0)
 }
 
 Console.WriteLine("\nDragon DiskForge Explorer safety smoke tests passed.");
+
+sealed class CancelOnFirstProgress : IProgress<double>
+{
+    private readonly CancellationTokenSource _cancellation;
+    private int _cancelled;
+
+    public CancelOnFirstProgress(CancellationTokenSource cancellation)
+        => _cancellation = cancellation;
+
+    public void Report(double value)
+    {
+        if (value > 0d && Interlocked.Exchange(ref _cancelled, 1) == 0)
+            _cancellation.Cancel();
+    }
+}

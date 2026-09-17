@@ -4,6 +4,8 @@ namespace DragonDiskForge.Core.Services;
 
 public sealed class MountedFileSystemExplorerService : IExplorerService
 {
+    private const string CopyStagingSuffix = ".dragon-copy-tmp";
+
     private static readonly EnumerationOptions ShallowOptions = new()
     {
         RecurseSubdirectories = false,
@@ -12,6 +14,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
     };
 
     private static readonly ExplorerPathSafetyValidator PathSafety = new();
+    private static readonly SafeOutputService SafeOutput = new();
 
     public Task<IReadOnlyList<ExplorerEntry>> ListAsync(
         string rootPath,
@@ -144,27 +147,44 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
 
         var plan = CollectCopyPlan(root, sourceDirectory, cancellationToken);
         var totalBytes = Math.Max(1L, plan.Files.Sum(x => x.Length));
-        Directory.CreateDirectory(destinationBase);
+        var stagingBase = Path.Combine(
+            destinationRoot,
+            $".{Path.GetFileName(destinationBase)}.{Guid.NewGuid():N}{CopyStagingSuffix}");
+        var committed = false;
 
-        foreach (var directory in plan.Directories)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.Combine(destinationBase, directory));
-        }
+            Directory.CreateDirectory(stagingBase);
 
-        long copiedBefore = 0;
-        foreach (var file in plan.Files)
+            foreach (var directory in plan.Directories)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Directory.CreateDirectory(CombineInsideDestinationRoot(stagingBase, directory));
+            }
+
+            long copiedBefore = 0;
+            foreach (var file in plan.Files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var safeFile = PathSafety.Validate(root, file.FullName, isDirectory: false);
+                var relative = Path.GetRelativePath(sourceDirectory, safeFile);
+                var destination = CombineInsideDestinationRoot(stagingBase, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                await CopyFileAsync(root, safeFile, destination, copiedBefore, totalBytes, progress, cancellationToken);
+                copiedBefore += file.Length;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            EnsureDestinationFree(destinationBase);
+            Directory.Move(stagingBase, destinationBase);
+            committed = true;
+            progress?.Report(1d);
+        }
+        finally
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var safeFile = PathSafety.Validate(root, file.FullName, isDirectory: false);
-            var relative = Path.GetRelativePath(sourceDirectory, safeFile);
-            var destination = Path.Combine(destinationBase, relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            await CopyFileAsync(root, safeFile, destination, copiedBefore, totalBytes, progress, cancellationToken);
-            copiedBefore += file.Length;
+            if (!committed)
+                TryDeleteDirectory(stagingBase);
         }
-
-        progress?.Report(1d);
     }
 
     private static CopyPlan CollectCopyPlan(
@@ -215,38 +235,35 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
-        source = PathSafety.Validate(root, source, isDirectory: false);
-
-        await using var input = new FileStream(
-            source,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 1024 * 128,
-            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
-        await using var output = new FileStream(
+        await SafeOutput.WriteAsync(
             destination,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 1024 * 128,
-            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
+            async (output, token) =>
+            {
+                var safeSource = PathSafety.Validate(root, source, isDirectory: false);
+                await using var input = new FileStream(
+                    safeSource,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 1024 * 128,
+                    options: FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        var buffer = new byte[1024 * 128];
-        long copiedCurrent = 0;
-        while (true)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
-            if (read <= 0)
-                break;
+                var buffer = new byte[1024 * 128];
+                long copiedCurrent = 0;
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), token);
+                    if (read <= 0)
+                        break;
 
-            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-            copiedCurrent += read;
-            progress?.Report(Math.Clamp((copiedBefore + copiedCurrent) / (double)totalBytes, 0d, 1d));
-        }
-
-        await output.FlushAsync(cancellationToken);
+                    await output.WriteAsync(buffer.AsMemory(0, read), token);
+                    copiedCurrent += read;
+                    progress?.Report(Math.Clamp((copiedBefore + copiedCurrent) / (double)totalBytes, 0d, 1d));
+                }
+            },
+            OutputOverwritePolicy.FailIfExists,
+            cancellationToken);
     }
 
     private static ExplorerEntry? TryCreateEntry(string path)
@@ -301,6 +318,14 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         return fullPath;
     }
 
+    private static string CombineInsideDestinationRoot(string destinationRoot, string relativePath)
+    {
+        var candidate = Path.GetFullPath(Path.Combine(destinationRoot, relativePath));
+        if (!IsInsideRoot(destinationRoot, candidate))
+            throw new InvalidOperationException("Copy-out destination path escaped the staging root.");
+        return candidate;
+    }
+
     private static bool IsInsideRoot(string root, string candidate)
     {
         var comparison = OperatingSystem.IsWindows()
@@ -322,6 +347,19 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
     {
         if (File.Exists(destination) || Directory.Exists(destination))
             throw new IOException($"Copy-out destination already contains an item named '{Path.GetFileName(destination)}'. Dragon DiskForge will not overwrite it.");
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch
+        {
+            // Preserve the original failure/cancellation. The staging path is uniquely Dragon-owned.
+        }
     }
 
     private sealed record CopyPlan(IReadOnlyList<FileInfo> Files, IReadOnlyList<string> Directories);
