@@ -136,7 +136,7 @@ See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current required engineering scope: **4/7 (~57%)**.
+Current required engineering scope: **5/7 (~71%)**.
 
 ### Completed
 - performance and large-image regression benchmarks ✅
@@ -164,6 +164,12 @@ Current required engineering scope: **4/7 (~57%)**.
   - self-contained CLI provider/analyze/dual-hash/state/diagnostics paths are exercised
   - self-contained per-user shell helper is exercised through register/status/unregister
   - machine-readable OS/build/package/runtime evidence is published for each matrix image
+- accessibility/keyboard/screen-reader hardening ✅
+  - explicit UI Automation names/help text on the primary browsing/library/mounted surfaces
+  - polite live status/path/count/preview metadata where dynamic announcements are useful
+  - stable keyboard access keys without adding hidden destructive shortcuts
+  - named list/tab collections and progress indicators for automation clients
+  - fail-closed XAML accessibility regression contract plus WinUI Release compile gate
 
 PR #51 implementation head passed full Windows run #360 and Disposable Media Guard #32 before the first two items were marked complete.
 
@@ -171,12 +177,13 @@ PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` pass
 
 PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before the clean-machine matrix was marked complete.
 
-See `docs/SECURITY-BOUNDARIES.md` and `docs/CLEAN-MACHINE-RUNTIME.md`.
+PR #54 exact implementation head `69490fe118614e9fb6bc39433756ccd0c50d5dd9` passed full Windows build #381, Accessibility Contract #1, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is repeatable automated semantics/compile evidence; it does not claim formal certification or a human Narrator/NVDA/JAWS session.
+
+See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACCESSIBILITY.md`.
 
 ### Remaining
 - normal-user UAC validation ⬜
 - real cross-process Explorer drag-out validation ⬜
-- accessibility/keyboard/screen-reader hardening ⬜
 
 ## 1.0 Production Release — PLANNED
 
@@ -184,6 +191,6 @@ Production release requires all final capability, package, documentation, checks
 
 ## Beta release track
 
-The first planned public beta remains **`0.5.0-beta.1`**. The package-only clean-machine runtime matrix, automated engineering, clean-package and security-boundary gates are green, but interactive WinUI clean-desktop launch, normal-user UAC, real cross-process drag-out, accessibility hardening, final beta suffix/package verification and public Release/checksum publication remain open.
+The first planned public beta remains **`0.5.0-beta.1`**. The package-only clean-machine runtime matrix, automated engineering, clean-package, security-boundary and accessibility-hardening gates are green, but interactive WinUI clean-desktop launch, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
 
 A capability becomes user-visible only after its real backing path and tests exist.
