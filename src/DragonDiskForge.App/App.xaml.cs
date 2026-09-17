@@ -13,6 +13,7 @@ public partial class App : Application
         var mainWindow = new MainWindow();
         mainWindow.EnableDirectBrowseUi();
         mainWindow.ConfigureBrandingFooter();
+        mainWindow.EnableSessionPortability();
         _window = mainWindow;
         _window.Activate();
     }
