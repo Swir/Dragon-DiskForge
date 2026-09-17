@@ -1,5 +1,7 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
+using DragonDiskForge.Cli;
 using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Services;
 
@@ -90,11 +92,70 @@ try
     }
     Require(!File.Exists(cancelledExport), "Cancelled export does not publish a partial destination.");
 
+    var cliState = Path.Combine(root, "cli", "app-state.json");
+    var cliExport = Path.Combine(root, "cli", "exported-state.json");
+    var cliDiagnostics = Path.Combine(root, "cli", "support.zip");
+    Directory.CreateDirectory(Path.GetDirectoryName(cliState)!);
+
+    var cliDisable = await RunCliAsync("restore-last-image", "off", "--state", cliState);
+    Require(cliDisable.ExitCode == 0 && string.IsNullOrWhiteSpace(cliDisable.Stderr),
+        "CLI can safely disable last-image restoration in isolated app state.");
+
+    var cliShow = await RunCliAsync("state-show", "--state", cliState, "--format", "json");
+    Require(cliShow.ExitCode == 0 && string.IsNullOrWhiteSpace(cliShow.Stderr),
+        "CLI state-show emits clean JSON without diagnostics on stdout.");
+    using (var document = JsonDocument.Parse(cliShow.Stdout))
+    {
+        Require(!document.RootElement.GetProperty("Settings").GetProperty("RestoreLastImage").GetBoolean(),
+            "CLI JSON state reflects the persisted restore setting.");
+    }
+
+    var cliExportResult = await RunCliAsync("state-export", cliExport, "--state", cliState);
+    Require(cliExportResult.ExitCode == 0 && File.Exists(cliExport),
+        "CLI exports portable settings/session state to a real file.");
+
+    var cliEnable = await RunCliAsync("restore-last-image", "on", "--state", cliState);
+    Require(cliEnable.ExitCode == 0, "CLI can re-enable last-image restoration.");
+
+    var cliImport = await RunCliAsync("state-import", cliExport, "--state", cliState);
+    Require(cliImport.ExitCode == 0 && string.IsNullOrWhiteSpace(cliImport.Stderr),
+        "CLI validates and imports portable state atomically.");
+    var restoredCliState = await new ApplicationPortabilityService(cliState).LoadAsync();
+    Require(!restoredCliState.Settings.RestoreLastImage,
+        "CLI import restores the exported setting rather than keeping later local mutations.");
+
+    var cliDiagnosticResult = await RunCliAsync("diagnostics", cliDiagnostics, "--state", cliState);
+    Require(cliDiagnosticResult.ExitCode == 0 && File.Exists(cliDiagnostics),
+        "CLI diagnostic command creates the sanitized support ZIP.");
+    using (var archive = ZipFile.OpenRead(cliDiagnostics))
+    {
+        Require(archive.Entries.All(x => !string.IsNullOrWhiteSpace(x.FullName)),
+            "CLI diagnostic bundle contains only named entries.");
+    }
+
+    var cliBadSetting = await RunCliAsync("restore-last-image", "maybe", "--state", cliState);
+    Require(cliBadSetting.ExitCode == 2 && cliBadSetting.Stderr.Contains("must be 'on' or 'off'", StringComparison.Ordinal),
+        "CLI rejects invalid restore setting values as a usage error.");
+
+    var cliBadImport = await RunCliAsync("state-import", invalid, "--state", cliState);
+    Require(cliBadImport.ExitCode == 3,
+        "CLI reports unsupported portable-state schemas as an input/operation error.");
+    Require(!(await new ApplicationPortabilityService(cliState).LoadAsync()).Settings.RestoreLastImage,
+        "Failed CLI import does not corrupt the previously persisted application state.");
+
     Console.WriteLine("Dragon DiskForge portability smoke tests passed.");
 }
 finally
 {
     try { Directory.Delete(root, recursive: true); } catch { }
+}
+
+static async Task<(int ExitCode, string Stdout, string Stderr)> RunCliAsync(params string[] args)
+{
+    using var stdout = new StringWriter();
+    using var stderr = new StringWriter();
+    var exitCode = await CliRunner.RunAsync(args, stdout, stderr);
+    return (exitCode, stdout.ToString(), stderr.ToString());
 }
 
 static void Require(bool condition, string message)
