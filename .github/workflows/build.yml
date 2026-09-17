@@ -69,6 +69,9 @@ jobs:
       - name: Image report smoke tests
         run: dotnet run --project tests/DragonDiskForge.ImageReport.SmokeTests/DragonDiskForge.ImageReport.SmokeTests.csproj -c Release
 
+      - name: Shared-Core CLI smoke tests
+        run: dotnet run --project tests/DragonDiskForge.Cli.SmokeTests/DragonDiskForge.Cli.SmokeTests.csproj -c Release
+
       - name: RAW/IMG partition-provider smoke tests
         run: dotnet run --project tests/DragonDiskForge.RawPartition.SmokeTests/DragonDiskForge.RawPartition.SmokeTests.csproj -c Release
 
