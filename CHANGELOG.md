@@ -49,6 +49,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - dedicated **Dragon DiskForge Accessibility Contract** workflow that validates the XAML contract and compiles the WinUI x64 Release app
 - fail-closed `scripts/beta-manual-qa.ps1` evidence workflow for exact-package clean-desktop, normal-user UAC and cross-process drag-out observations
 - dedicated **Dragon DiskForge Beta Manual QA Contract** workflow that self-tests the evidence contract under PowerShell 7 and Windows PowerShell 5.1
+- canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - `docs/ACCESSIBILITY.md` documenting the automated accessibility/keyboard contract and its human-testing limitations
 - `docs/SECURITY-BOUNDARIES.md` documenting reviewed parsing, packaging, shell, diagnostics and privileged-operation boundaries plus manual-gate limitations
 - `docs/CLEAN-MACHINE-RUNTIME.md` documenting the package-only runtime matrix and its explicit interactive/manual limitations
@@ -61,7 +62,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
-- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; the new evidence tooling makes the two remaining human gates reproducible but does not complete them
+- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; the new evidence tooling and mounted Explorer path hardening improve release confidence but do not complete either remaining human gate
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 now also records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
@@ -79,6 +80,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - shell integration is explicit, per-user and reversible; it does not write Windows `UserChoice`, HKLM, or replace default handlers
 - shell unregister removes only Dragon-owned application/verb keys and preserves unrelated handlers
 - shell command registration enforces the Dragon executable identity, quotes `%1`, and rejects quote injection
+- mounted Explorer paths fail closed when a component below the trusted root is a reparse point/junction; browse/search/preview/open/copy-out and drag-out share the same canonical boundary, and copy-out revalidates files before opening them
 - physical-disk planning refuses system disks, ambiguous identity, unknown capacity, physical-device sources, source-on-target and oversized inputs
 - the Windows writer candidate revalidates destination/source evidence, requires locked/dismounted target volumes and fails closed on unprovable topology
 - the disposable-media harness requires explicit destructive opt-in and exact destination-bound evidence; default CI execution cannot write physical media
