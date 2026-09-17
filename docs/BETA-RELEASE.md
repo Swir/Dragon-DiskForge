@@ -48,12 +48,14 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] run #270 clean artifact was independently downloaded and verified
 - [x] candidate package contains the fail-closed `tools/beta-manual-qa.ps1` evidence tool and binds its SHA-256 in package manifest schema 5
 - [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1, independently re-verifies the packaged tool hash and rejects evidence produced by a different running QA script
-- [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
+- [x] retained independently downloadable `0.5.0-beta.1` Windows x64 candidate from green `main`
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
 - [x] final beta version suffix embedded in application assemblies
 - [x] application icon and version metadata verified in a `0.5.0-beta.1` candidate after suffix promotion
 - [ ] final public package SHA-256 published with the Release
+
+Beta Candidate run #64 retained artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35282836549`, bound by `beta-candidate.json` to `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`. The nested package SHA-256 is `6d4191f5a3e6751328ff43b5d2beb609e747bfd042b96b28012fa3e292980e2d`. Independent read-back confirms the package contains exactly one `DragonDiskForge.App.exe`, no PDB payloads, manifest schema 5, `0.5.0-beta.1`, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. This is a retained non-public candidate, not a GitHub Release.
 
 ### Regression and manual QA
 - [x] Core smoke tests green
@@ -90,7 +92,7 @@ Passing records still require explicit human confirmation because hosted CI cann
 
 ## Current beta readiness
 
-**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package now also carries a fail-closed, exact-package-bound manual QA evidence tool, schema v3 binds evidence to the exact packaged copy that performs each record/verify operation, and the committed source metadata is promoted to `0.5.0-beta.1` with candidate verification of version/icon metadata. Remaining blockers are independent release gates: a retained independently downloadable final candidate from green `main`, clean-machine interactive launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
+**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package carries a fail-closed, exact-package-bound manual QA evidence tool, schema v3 binds evidence to the exact packaged copy that performs each record/verify operation, committed source metadata is promoted to `0.5.0-beta.1`, and Beta Candidate run #64 retained an independently downloadable candidate from fully green `main`. Remaining blockers are independent interactive/release gates: clean-machine interactive launch/open/mount/explore/verify/analyze regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/GitHub pre-release publication.
 
 ## Rule
 

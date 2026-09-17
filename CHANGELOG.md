@@ -52,6 +52,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - bounded desktop image-preview admission with a 64 MiB default byte cap and metadata-only fallback for oversized images
 - bounded image-signature admission for desktop rendering; spoofed or truncated image-extension files remain metadata-only
+- native Windows mount/unmount commit-boundary hardening that lets an already-launched storage mutation finish and then performs bounded live-state reconciliation instead of cancelling the helper mid-commit
 - `docs/ACCESSIBILITY.md` documenting the automated accessibility/keyboard contract and its human-testing limitations
 - `docs/SECURITY-BOUNDARIES.md` documenting reviewed parsing, packaging, shell, diagnostics and privileged-operation boundaries plus manual-gate limitations
 - `docs/CLEAN-MACHINE-RUNTIME.md` documenting the package-only runtime matrix and its explicit interactive/manual limitations
@@ -64,17 +65,19 @@ The project follows semantic versioning while it evolves toward 1.0.
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
-- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; the new evidence tooling and mounted Explorer path hardening improve release confidence but do not complete either remaining human gate
-- current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
+- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
+- current development metadata is promoted to **0.5.0-beta.1** after exact-head CI; this is candidate metadata and does not imply a public release
+- Beta Candidate run #64 on `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58` retained an independently verified non-public Windows x64 candidate; the nested package SHA-256 is `6d4191f5a3e6751328ff43b5d2beb609e747bfd042b96b28012fa3e292980e2d`
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 now also records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
-- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility and now self-tests the exact-package manual-QA evidence contract
+- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility and self-tests the exact-package manual-QA evidence contract
 
 ### Safety
 - inspection/provider/intelligence/image-media CLI paths remain read-only-first
 - unsupported UI actions remain disabled rather than simulated
 - the desktop manifest explicitly requests `asInvoker` and disables UI access; normal startup does not request ambient administrator elevation
+- caller cancellation is honored up to the native mount/unmount commit boundary; once Windows begins the storage mutation, Dragon DiskForge completes the helper wait and performs bounded live-state reconciliation instead of killing a potentially committed operation
 - file-producing Core operations publish through explicit transaction boundaries
 - state imports validate version/size/path data before atomically replacing local application state
 - diagnostic bundles intentionally exclude full saved-image paths and image contents
@@ -93,7 +96,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - beta manual-QA evidence cannot pass without explicit human confirmation from an interactive unelevated Windows session and exact release-package hash binding
 - no completion claim is made for the remaining 0.9 UAC/Explorer gates until a real desktop validation succeeds
 - no completion claim is made for 0.7 until a real dedicated disposable-media validation succeeds
-- performance fixtures are generated locally and removed after the regression run rather than committed as large binary test images
+- performance fixtures are generated locally and removed after testing rather than committed as large binary test images
 - the clean-machine runtime probe does not enable the physical writer and uses only a generated temporary image plus reversible per-user shell registration
 
 ### Verified
@@ -137,9 +140,10 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix on fresh Windows runner images
 - PR #54 / implementation run #381 + Accessibility Contract #1 + Disposable Media Guard #53 + Security Boundary #15 + Clean Machine Runtime #8 — automated accessibility/keyboard/screen-reader semantics hardening across the primary browsing surfaces
 - PR #55 / implementation run #389 + Beta Manual QA Contract #1 + Disposable Media Guard #61 + Security Boundary #23 + Clean Machine Runtime #16 + Accessibility Contract #9 — exact-package interactive beta-QA evidence contract, packaged/hash-bound tooling and fail-closed manual release evidence foundation
+- PR #73 / PR-head Build #456 + fully green `main` Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening, `0.5.0-beta.1` source promotion and retained exact Windows x64 candidate
 
 ### Planned
-- complete the independent `0.5.0-beta.1` interactive clean-desktop/UAC/cross-process drag-out/final-package release gates using the exact-package evidence workflow
+- complete the remaining `0.5.0-beta.1` interactive clean-desktop/UAC/cross-process drag-out gates against the retained exact candidate, then publish the final public ZIP/checksum/pre-release only if those observations pass
 - complete 0.7 only after real dedicated disposable-media writer validation
 - keep expanding accessibility regression coverage when future beta-facing surfaces are added
 - keep destructive physical operations out of the product UI until separately validated and deliberately exposed

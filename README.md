@@ -9,7 +9,7 @@
 ![.NET](https://img.shields.io/badge/.NET-10-02050A?style=for-the-badge&logo=dotnet&logoColor=62E5FF)
 ![WinUI](https://img.shields.io/badge/WinUI-3-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)
 ![Windows](https://img.shields.io/badge/Windows-x64%20%2F%20ARM64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)
-![Status](https://img.shields.io/badge/Status-0.5.0--alpha.1-02050A?style=for-the-badge&logoColor=62E5FF)
+![Status](https://img.shields.io/badge/Status-0.5.0--beta.1-02050A?style=for-the-badge&logoColor=62E5FF)
 
 [![Author](https://img.shields.io/badge/Author-Swir-0088FF?style=flat-square&logo=github)](https://github.com/Swir)
 [![Stars](https://img.shields.io/github/stars/Swir/Dragon-DiskForge?style=flat-square&color=0088FF)](https://github.com/Swir/Dragon-DiskForge/stargazers)
@@ -17,7 +17,7 @@
 
 **Universal Disk Image Manager for Windows — inspect, mount, explore, verify and analyze images through verified capability paths.**
 
-[**Status**](#current-development-version--050-alpha1) · [**Foundation**](#proven-product-foundation) · [**Build**](#build-on-windows) · [**Safety**](#safety-design) · [**Roadmap**](docs/ROADMAP.md)
+[**Status**](#current-development-version--050-beta1) · [**Foundation**](#proven-product-foundation) · [**Build**](#build-on-windows) · [**Safety**](#safety-design) · [**Roadmap**](docs/ROADMAP.md)
 
 </div>
 
@@ -25,9 +25,9 @@
 
 Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core toolkit for inspecting, mounting, exploring, verifying and analyzing disk images. The project follows a strict truthful-capability rule: unsupported actions remain disabled until a real engine path exists and is verified.
 
-## Current development version — 0.5.0-alpha.1
+## Current development version — 0.5.0-beta.1
 
-The public beta suffix is intentionally not promoted until the independent gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work may continue beyond the 0.5 beta scope without weakening that release gate.
+Source and clean-package metadata are now promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 ## Project progress — 83% toward 1.0
 
@@ -170,7 +170,7 @@ Exact implementation head `6451939...` passed full Windows build #374, Disposabl
 
 PR #54 adds explicit UI Automation names/help text to Direct Browse, Dragon Explorer, the multi-image workspace, Images and Mounted surfaces, plus polite live metadata for changing status/path/count/preview state and stable access keys for common actions. `scripts/accessibility-contract.ps1` fails on missing labels/live regions/named collections/progress indicators or duplicate per-view access keys, and the dedicated Windows workflow also compiles the WinUI x64 Release application.
 
-Exact implementation head `69490fe...` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before this roadmap item was marked complete. This is automated accessibility/keyboard hardening evidence, not formal accessibility certification or a human Narrator/NVDA/JAWS validation. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md).
+Exact implementation head `69490fe...` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is automated accessibility/keyboard hardening evidence, not formal accessibility certification or a human Narrator/NVDA/JAWS validation. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md).
 
 Remaining 0.9 work: normal-user UAC and real cross-process Explorer drag-out validation.
 
@@ -186,9 +186,8 @@ Public beta publication remains a separate release decision gated by [`docs/BETA
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime and accessibility-hardening gates are green, but these independent interactive/manual/release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime, accessibility-hardening and exact-candidate retention gates are green. Beta Candidate run #64 retained an independently verified Windows x64 package bound to `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`; it remains a non-public engineering candidate. These independent interactive/manual/release gates remain:
 
-- final beta suffix/package promotion
 - human-confirmed clean supported Windows WinUI launch and basic open/mount/explore/verify/analyze regression
 - normal-user UAC validation
 - real cross-process Explorer drag-out validation
