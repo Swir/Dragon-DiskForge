@@ -136,7 +136,7 @@ See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current required engineering scope: **2/7 (~29%)**.
+Current required engineering scope: **3/7 (~43%)**.
 
 ### Completed
 - performance and large-image regression benchmarks ✅
@@ -148,15 +148,27 @@ Current required engineering scope: **2/7 (~29%)**.
   - type/HRESULT/fingerprint/method-only frame evidence
   - no raw exception messages, source-file paths or image contents
   - up to three sanitized crash summaries in the existing diagnostic ZIP
+- security review of parsing, packaging and privileged boundaries ✅
+  - desktop process explicitly remains `asInvoker` with `uiAccess=false`
+  - dedicated Windows security-boundary CI gate
+  - HKCU-only shell boundary with no `UserChoice`/HKLM takeover
+  - public CLI isolation from the physical writer/destructive opt-in
+  - clean package excludes debug/test payloads and binds all shipped entry points by SHA-256
+  - destructive CI opt-in stays hard-locked off
+  - physical-media refusal/confirmation invariants and shell command quoting/injection cases are regression-tested
+  - parser/guest-reader bounded-input coverage is documented without claiming formal verification
 
-PR #51 implementation head passed full Windows run #360 and Disposable Media Guard #32 before these two items were marked complete.
+PR #51 implementation head passed full Windows run #360 and Disposable Media Guard #32 before the first two items were marked complete.
+
+PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before the security-review item was marked complete.
+
+See `docs/SECURITY-BOUNDARIES.md`.
 
 ### Remaining
 - clean-machine runtime matrix ⬜
 - normal-user UAC validation ⬜
 - real cross-process Explorer drag-out validation ⬜
 - accessibility/keyboard/screen-reader hardening ⬜
-- security review of parsing, packaging and privileged boundaries ⬜
 
 ## 1.0 Production Release — PLANNED
 
@@ -164,6 +176,6 @@ Production release requires all final capability, package, documentation, checks
 
 ## Beta release track
 
-The first planned public beta remains **`0.5.0-beta.1`**. Automated engineering and clean-package candidate gates are green, but clean-machine runtime, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
+The first planned public beta remains **`0.5.0-beta.1`**. Automated engineering, clean-package and security-boundary candidate gates are green, but clean-machine runtime, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
 
 A capability becomes user-visible only after its real backing path and tests exist.
