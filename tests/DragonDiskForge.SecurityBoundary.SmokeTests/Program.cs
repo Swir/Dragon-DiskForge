@@ -14,6 +14,7 @@ internal static class Program
         {
             var repositoryRoot = FindRepositoryRoot();
             VerifyElevationBoundary(repositoryRoot);
+            VerifyNativeMountMutationBoundary(repositoryRoot);
             VerifyShellBoundary(repositoryRoot);
             VerifyCliBoundary(repositoryRoot);
             VerifyPackageBoundary(repositoryRoot);
@@ -48,6 +49,27 @@ internal static class Program
             !manifest.Contains("requireAdministrator", StringComparison.OrdinalIgnoreCase)
             && !manifest.Contains("highestAvailable", StringComparison.OrdinalIgnoreCase),
             "Desktop application manifest must not request ambient elevation.");
+    }
+
+    private static void VerifyNativeMountMutationBoundary(string repositoryRoot)
+    {
+        var source = Read(repositoryRoot, "src", "DragonDiskForge.Windows", "Services", "WindowsDiskImageMountService.cs");
+
+        Require(
+            source.Contains("cancellationToken.ThrowIfCancellationRequested();", StringComparison.Ordinal)
+            && source.Contains("await process.WaitForExitAsync(CancellationToken.None);", StringComparison.Ordinal),
+            "Native mount/dismount must honor cancellation before launch but finish a started Windows storage mutation instead of killing it mid-commit.");
+        Require(
+            source.Contains("ReadToEndAsync(CancellationToken.None)", StringComparison.Ordinal),
+            "Native storage mutation stderr capture must not reintroduce caller cancellation after the Windows command starts.");
+        Require(
+            source.Contains("WaitForCommittedStateAsync(path, true)", StringComparison.Ordinal)
+            && source.Contains("WaitForCommittedStateAsync(path, false)", StringComparison.Ordinal),
+            "Mount and unmount must reconcile the real Windows state after the native mutation commits.");
+        Require(
+            source.Contains("new CancellationTokenSource(TimeSpan.FromSeconds(15))", StringComparison.Ordinal)
+            && source.Contains("Refresh Mounted before retrying", StringComparison.Ordinal),
+            "Post-commit state reconciliation must remain bounded and surface an explicit refresh-safe failure if confirmation times out.");
     }
 
     private static void VerifyShellBoundary(string repositoryRoot)
