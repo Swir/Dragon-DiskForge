@@ -93,9 +93,33 @@ On a clean supported Windows desktop, extract or copy the candidate files and in
   -EvidencePath .\beta-manual-qa.json
 ```
 
-Record the required observations only after physically performing them. Passing observations require explicit `-HumanConfirmed`. When all checks are complete, verify the evidence against the **same** ZIP/checksum pair.
+The current manual-QA evidence format is **schema v2**. It records the clean-desktop Windows build, process architecture, interactive/elevation state and UAC availability at initialization. Every observation is then rebound to the exact package before it can be saved.
 
-The evidence is bound to the package SHA-256 and packaged entry-point identities. If the ZIP changes, the evidence is invalid and the interactive QA must be repeated against the new package.
+Record a required observation only after physically performing it, and always supply the same ZIP/checksum pair again:
+
+```powershell
+.\tools\beta-manual-qa.ps1 -Mode record `
+  -PackagePath .\DragonDiskForge-win-x64.zip `
+  -ChecksumFile .\DragonDiskForge-win-x64.zip.sha256 `
+  -EvidencePath .\beta-manual-qa.json `
+  -Check uac.iso-no-prompt `
+  -Result pass `
+  -HumanConfirmed `
+  -Note "ISO mounted and detached with no elevation prompt."
+```
+
+A record operation fails closed if the ZIP, package checksum, desktop entry point, packaged QA tool, Windows build or process architecture no longer matches the evidence baseline. Passing observations additionally require an interactive unelevated session with UAC enabled when Windows exposes that setting. This prevents a stale evidence file from being filled in while a different candidate is actually under test.
+
+Use `-Mode list` to see the remaining checks. When all observations are complete, verify the evidence against the **same** ZIP/checksum pair:
+
+```powershell
+.\tools\beta-manual-qa.ps1 -Mode verify `
+  -PackagePath .\DragonDiskForge-win-x64.zip `
+  -ChecksumFile .\DragonDiskForge-win-x64.zip.sha256 `
+  -EvidencePath .\beta-manual-qa.json
+```
+
+The evidence is bound to the package SHA-256, packaged entry-point identities and each individual recorded observation. Schema-v1 evidence must be reinitialized and repeated; it is intentionally not auto-upgraded because doing so would fabricate package binding that was not captured at observation time.
 
 ## Publication rule
 
