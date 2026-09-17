@@ -79,12 +79,70 @@ try
     await File.WriteAllTextAsync(nestedFile, "safe");
     await File.WriteAllTextAsync(outside, "outside");
 
-    Check(validator.Validate(root, file, isDirectory: false) == Path.GetFullPath(file),
+    var validatedFile = validator.Validate(root, file, isDirectory: false);
+    Check(validatedFile == Path.GetFullPath(file),
         "drag-out accepts an existing file inside the mounted root");
     Check(validator.Validate(root, folder, isDirectory: true) == Path.GetFullPath(folder),
         "drag-out accepts an existing folder inside the mounted root");
     Check(validator.Validate(root, nestedFile, isDirectory: false) == Path.GetFullPath(nestedFile),
         "drag-out accepts a normal nested file with non-reparse ancestors");
+
+    Check(validator.ValidateResolvedStorageItem(
+            root,
+            validatedFile,
+            file,
+            expectedIsDirectory: false,
+            resolvedIsDirectory: false) == Path.GetFullPath(file),
+        "post-resolution drag-out revalidation accepts the same file and shape");
+
+    try
+    {
+        validator.ValidateResolvedStorageItem(
+            root,
+            validatedFile,
+            nestedFile,
+            expectedIsDirectory: false,
+            resolvedIsDirectory: false);
+        Check(false, "post-resolution drag-out rejects a different resolved path");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "post-resolution drag-out rejects a different resolved path");
+    }
+
+    try
+    {
+        validator.ValidateResolvedStorageItem(
+            root,
+            folder,
+            folder,
+            expectedIsDirectory: true,
+            resolvedIsDirectory: false);
+        Check(false, "post-resolution drag-out rejects a changed file/directory shape");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "post-resolution drag-out rejects a changed file/directory shape");
+    }
+
+    var staleAfterResolution = Path.Combine(root, "stale-after-resolution.bin");
+    await File.WriteAllTextAsync(staleAfterResolution, "stale");
+    var validatedStalePath = validator.Validate(root, staleAfterResolution, isDirectory: false);
+    File.Delete(staleAfterResolution);
+    try
+    {
+        validator.ValidateResolvedStorageItem(
+            root,
+            validatedStalePath,
+            staleAfterResolution,
+            expectedIsDirectory: false,
+            resolvedIsDirectory: false);
+        Check(false, "post-resolution drag-out blocks a source removed after initial validation");
+    }
+    catch (FileNotFoundException)
+    {
+        Check(true, "post-resolution drag-out blocks a source removed after initial validation");
+    }
 
     try
     {
@@ -104,6 +162,26 @@ try
     catch (InvalidOperationException)
     {
         Check(true, "drag-out blocks a listed reparse point before transfer");
+    }
+
+    var swapFolder = Path.Combine(root, "swap-folder");
+    Directory.CreateDirectory(swapFolder);
+    var validatedSwapFolder = validator.Validate(root, swapFolder, isDirectory: true);
+    Directory.Delete(swapFolder);
+    await CreateDirectoryLinkAsync(swapFolder, outsideRoot);
+    try
+    {
+        validator.ValidateResolvedStorageItem(
+            root,
+            validatedSwapFolder,
+            swapFolder,
+            expectedIsDirectory: true,
+            resolvedIsDirectory: true);
+        Check(false, "post-resolution drag-out blocks a source replaced by a reparse point");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "post-resolution drag-out blocks a source replaced by a reparse point");
     }
 
     var escapeLink = Path.Combine(root, "escape-link");
@@ -241,13 +319,16 @@ try
 }
 finally
 {
-    var escapeLink = Path.Combine(root, "escape-link");
-    try
+    foreach (var linkName in new[] { "escape-link", "swap-folder" })
     {
-        if (Directory.Exists(escapeLink))
-            Directory.Delete(escapeLink);
+        var linkPath = Path.Combine(root, linkName);
+        try
+        {
+            if (Directory.Exists(linkPath))
+                Directory.Delete(linkPath);
+        }
+        catch { }
     }
-    catch { }
 
     try { Directory.Delete(root, recursive: true); } catch { }
     try { Directory.Delete(outsideRoot, recursive: true); } catch { }
