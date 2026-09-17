@@ -1,0 +1,26 @@
+<!-- SWIR-PROGRESS-SVG-PRO:v1 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="96" viewBox="0 0 900 96" role="img" aria-labelledby="miniTitle miniDesc">
+  <title id="miniTitle">Dragon DiskForge milestone 0.9 progress</title>
+  <desc id="miniDesc">Milestone 0.9 Quality, Security plus Beta Hardening is 5 of 7 verified deliverables, 71.4 percent, in progress.</desc>
+  <!-- source: docs/ROADMAP.md; scope: 0.9 Quality, Security + Beta Hardening; calculation: verified_completed / total_in_scope -->
+  <defs>
+    <linearGradient id="miniGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0088FF"/>
+      <stop offset="100%" stop-color="#62E5FF"/>
+    </linearGradient>
+    <filter id="miniGlow" x="-10%" y="-150%" width="120%" height="400%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="miniTrackClip"><rect x="170" y="50" width="700" height="12" rx="6"/></clipPath>
+  </defs>
+  <rect x="0" y="0" width="900" height="96" rx="16" fill="#02050A"/>
+  <rect x="1" y="1" width="898" height="94" rx="15" fill="#07111C" stroke="#12314A"/>
+  <text x="20" y="28" fill="#F4FAFF" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">0.9 Quality, Security + Beta Hardening</text>
+  <text x="870" y="28" text-anchor="end" fill="#62E5FF" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">71.4%</text>
+  <text x="20" y="61" fill="#F4FAFF" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">5/7</text>
+  <rect x="170" y="50" width="700" height="12" rx="6" fill="#02050A" stroke="#24475E"/>
+  <rect x="170" y="50" width="500.000" height="12" rx="6" fill="url(#miniGradient)" clip-path="url(#miniTrackClip)" filter="url(#miniGlow)"/>
+  <text x="20" y="84" fill="#62E5FF" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700">IN PROGRESS</text>
+  <text x="170" y="84" fill="#8DA8B8" font-family="Segoe UI, Arial, sans-serif" font-size="12">5/7 verified deliverables &#8226; beta readiness tracked separately</text>
+</svg>

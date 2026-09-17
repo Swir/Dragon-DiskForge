@@ -1,0 +1,25 @@
+<!-- SWIR-PROGRESS-SVG-PRO:v1 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="180" viewBox="0 0 1200 180" role="img" aria-labelledby="templateTitle templateDesc">
+  <title id="templateTitle">SWIR progress card template</title>
+  <desc id="templateDesc">Reusable template only. This file does not contain project progress data.</desc>
+  <!-- TEMPLATE / NOT PROJECT DATA. Use the deterministic generator to create live project assets from an authoritative source. -->
+  <defs>
+    <linearGradient id="templateGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0088FF"/>
+      <stop offset="100%" stop-color="#62E5FF"/>
+    </linearGradient>
+    <pattern id="templateGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#12314A" stroke-width="0.7" opacity="0.22"/>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="1200" height="180" rx="22" fill="#02050A"/>
+  <rect x="1" y="1" width="1198" height="178" rx="21" fill="url(#templateGrid)" stroke="#12314A"/>
+  <text x="50" y="35" fill="#62E5FF" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700">TEMPLATE / NOT PROJECT DATA</text>
+  <text x="50" y="66" fill="#F4FAFF" font-family="Segoe UI, Arial, sans-serif" font-size="25" font-weight="700">PROJECT NAME</text>
+  <text x="50" y="92" fill="#8DA8B8" font-family="Segoe UI, Arial, sans-serif" font-size="15">Measured scope: MEASURED SCOPE</text>
+  <text x="1150" y="66" text-anchor="end" fill="#62E5FF" font-family="Segoe UI, Arial, sans-serif" font-size="31" font-weight="700">N/A</text>
+  <rect x="50" y="108" width="130" height="26" rx="13" fill="#07111C" stroke="#0088FF"/>
+  <text x="115" y="126" text-anchor="middle" fill="#62E5FF" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700">PLANNING</text>
+  <text x="198" y="126" fill="#F4FAFF" font-family="Segoe UI, Arial, sans-serif" font-size="14">Counter: N/A</text>
+  <rect x="50" y="148" width="1100" height="14" rx="7" fill="#07111C" stroke="#24475E"/>
+</svg>
