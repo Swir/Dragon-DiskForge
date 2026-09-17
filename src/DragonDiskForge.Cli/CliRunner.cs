@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DragonDiskForge.Core.Models;
 using DragonDiskForge.Core.Providers;
 using DragonDiskForge.Core.Services;
 
@@ -43,6 +44,11 @@ public static class CliRunner
                 "analyze" => await RunAnalyzeAsync(args, stdout, cancellationToken),
                 "verify" => await RunVerifyAsync(args, stdout, cancellationToken),
                 "formats" => await RunFormatsAsync(args, stdout, cancellationToken),
+                "state-show" => await RunStateShowAsync(args, stdout, cancellationToken),
+                "state-export" => await RunStateExportAsync(args, stdout, cancellationToken),
+                "state-import" => await RunStateImportAsync(args, stdout, cancellationToken),
+                "restore-last-image" => await RunRestoreLastImageAsync(args, stdout, cancellationToken),
+                "diagnostics" => await RunDiagnosticsAsync(args, stdout, cancellationToken),
                 _ => throw new CliUsageException($"Unknown command '{args[0]}'.")
             };
         }
@@ -79,7 +85,7 @@ public static class CliRunner
         TextWriter stdout,
         CancellationToken cancellationToken)
     {
-        var path = RequirePath(args, "analyze");
+        var path = RequireOperand(args, "analyze", "an image path");
         var options = ParseOptions(args, 2, "--format");
         var format = ResolveFormat(options);
 
@@ -98,7 +104,7 @@ public static class CliRunner
         TextWriter stdout,
         CancellationToken cancellationToken)
     {
-        var path = RequirePath(args, "verify");
+        var path = RequireOperand(args, "verify", "an image path");
         var options = ParseOptions(args, 2, "--format", "--sha256", "--sha512");
         var format = ResolveFormat(options);
         var expectedSha256 = NormalizeExpectedDigest(options.GetValueOrDefault("--sha256"), 64, "SHA-256");
@@ -163,10 +169,117 @@ public static class CliRunner
         return ExitSuccess;
     }
 
-    private static string RequirePath(string[] args, string command)
+    private static async Task<int> RunStateShowAsync(
+        string[] args,
+        TextWriter stdout,
+        CancellationToken cancellationToken)
     {
-        if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]) || args[1].StartsWith("--", StringComparison.Ordinal))
-            throw new CliUsageException($"Command '{command}' requires an image path.");
+        var options = ParseOptions(args, 1, "--state", "--format");
+        var format = ResolveFormat(options);
+        var state = await CreatePortabilityService(options).LoadAsync(cancellationToken);
+
+        if (format == OutputFormat.Json)
+        {
+            await stdout.WriteLineAsync(JsonSerializer.Serialize(state, JsonOptions));
+        }
+        else
+        {
+            await stdout.WriteLineAsync(
+                $"Schema: {state.SchemaVersion}{Environment.NewLine}" +
+                $"Restore last image: {state.Settings.RestoreLastImage}{Environment.NewLine}" +
+                $"Last image: {state.Session.LastImagePath ?? "(none)"}{Environment.NewLine}" +
+                $"Last saved UTC: {state.Session.LastSavedUtc?.ToString("O") ?? "(none)"}");
+        }
+
+        return ExitSuccess;
+    }
+
+    private static async Task<int> RunStateExportAsync(
+        string[] args,
+        TextWriter stdout,
+        CancellationToken cancellationToken)
+    {
+        var destination = RequireOperand(args, "state-export", "a destination path");
+        var options = ParseOptions(args, 2, "--state");
+        await CreatePortabilityService(options).ExportAsync(destination, cancellationToken: cancellationToken);
+        await stdout.WriteLineAsync($"State exported: {Path.GetFullPath(destination)}");
+        return ExitSuccess;
+    }
+
+    private static async Task<int> RunStateImportAsync(
+        string[] args,
+        TextWriter stdout,
+        CancellationToken cancellationToken)
+    {
+        var source = RequireOperand(args, "state-import", "a source path");
+        var options = ParseOptions(args, 2, "--state");
+        var imported = await CreatePortabilityService(options).ImportAsync(source, cancellationToken);
+        await stdout.WriteLineAsync(
+            $"State imported: schema {imported.SchemaVersion}; restore-last-image={imported.Settings.RestoreLastImage}");
+        return ExitSuccess;
+    }
+
+    private static async Task<int> RunRestoreLastImageAsync(
+        string[] args,
+        TextWriter stdout,
+        CancellationToken cancellationToken)
+    {
+        var value = RequireOperand(args, "restore-last-image", "'on' or 'off'");
+        var enabled = value.ToLowerInvariant() switch
+        {
+            "on" or "true" => true,
+            "off" or "false" => false,
+            _ => throw new CliUsageException("restore-last-image must be 'on' or 'off'.")
+        };
+        var options = ParseOptions(args, 2, "--state");
+        var state = await CreatePortabilityService(options)
+            .SetSettingsAsync(new DragonApplicationSettings(enabled), cancellationToken);
+        await stdout.WriteLineAsync($"Restore last image: {state.Settings.RestoreLastImage}");
+        return ExitSuccess;
+    }
+
+    private static async Task<int> RunDiagnosticsAsync(
+        string[] args,
+        TextWriter stdout,
+        CancellationToken cancellationToken)
+    {
+        var destination = RequireOperand(args, "diagnostics", "a destination ZIP path");
+        var options = ParseOptions(args, 2, "--state");
+        await CreatePortabilityService(options)
+            .CreateDiagnosticBundleAsync(destination, cancellationToken: cancellationToken);
+        await stdout.WriteLineAsync($"Diagnostic bundle exported: {Path.GetFullPath(destination)}");
+        return ExitSuccess;
+    }
+
+    private static ApplicationPortabilityService CreatePortabilityService(
+        IReadOnlyDictionary<string, string> options)
+    {
+        var statePath = options.TryGetValue("--state", out var overridePath)
+            ? overridePath
+            : GetDefaultStatePath();
+        return new ApplicationPortabilityService(statePath);
+    }
+
+    private static string GetDefaultStatePath()
+    {
+        var root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "DragonDiskForge");
+        return Path.Combine(root, "app-state.json");
+    }
+
+    private static string RequireOperand(
+        string[] args,
+        string command,
+        string description)
+    {
+        if (args.Length < 2
+            || string.IsNullOrWhiteSpace(args[1])
+            || args[1].StartsWith("--", StringComparison.Ordinal))
+        {
+            throw new CliUsageException($"Command '{command}' requires {description}.");
+        }
+
         return args[1];
     }
 
@@ -266,23 +379,35 @@ public static class CliRunner
     private sealed class CliUsageException(string message) : Exception(message);
 
     private const string HelpText = """
-Dragon DiskForge CLI — read-only automation surface
+Dragon DiskForge CLI — safe automation surface
 
 Usage:
   dragon-diskforge analyze <image> [--format text|json]
   dragon-diskforge verify <image> [--sha256 <hex>] [--sha512 <hex>] [--format text|json]
   dragon-diskforge formats [--format text|json]
+  dragon-diskforge state-show [--state <path>] [--format text|json]
+  dragon-diskforge state-export <destination.json> [--state <path>]
+  dragon-diskforge state-import <source.json> [--state <path>]
+  dragon-diskforge restore-last-image <on|off> [--state <path>]
+  dragon-diskforge diagnostics <destination.zip> [--state <path>]
 
 Commands:
-  analyze   Run the same provider-backed image intelligence used by the desktop app.
-  verify    Compute SHA-256 and SHA-512 in one bounded sequential pass. When an expected
-            digest is supplied, exit code 4 indicates a mismatch.
-  formats   List the canonical built-in providers and their truthful capabilities.
+  analyze             Run the same provider-backed image intelligence used by the desktop app.
+  verify              Compute SHA-256 and SHA-512 in one bounded sequential pass. When an expected
+                      digest is supplied, exit code 4 indicates a mismatch.
+  formats             List the canonical built-in providers and their truthful capabilities.
+  state-show          Show versioned application settings/session state.
+  state-export        Export versioned settings/session state without modifying an image.
+  state-import        Validate then atomically import versioned settings/session state.
+  restore-last-image  Enable or disable best-effort desktop last-image restoration.
+  diagnostics         Export a sanitized support ZIP without full image paths or image content.
 
 Automation contract:
   stdout contains only the requested text or one complete JSON document.
   diagnostics and errors are written to stderr.
-  no command modifies the inspected image or physical media.
+  analyze/verify/formats never modify inspected images or physical media.
+  state/settings commands only modify Dragon DiskForge local application state.
+  no command writes to physical media.
 
 Exit codes: 0 success, 1 unexpected failure, 2 usage error, 3 input/operation error,
             4 verification mismatch, 130 cancelled.
