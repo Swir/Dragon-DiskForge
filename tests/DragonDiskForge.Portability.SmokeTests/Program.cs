@@ -58,8 +58,11 @@ try
     Require(File.Exists(diagnosticZip), "Diagnostic export creates a support bundle.");
     using (var archive = ZipFile.OpenRead(diagnosticZip))
     {
-        var names = archive.Entries.Select(x => x.FullName).OrderBy(x => x).ToArray();
-        Require(names.SequenceEqual(new[] { "README.txt", "diagnostics.json", "state-summary.json" }),
+        var names = archive.Entries.Select(x => x.FullName).ToHashSet(StringComparer.Ordinal);
+        Require(names.Count == 3
+            && names.Contains("README.txt")
+            && names.Contains("diagnostics.json")
+            && names.Contains("state-summary.json"),
             "Diagnostic bundle contains only the documented sanitized entries.");
 
         foreach (var entry in archive.Entries.Where(x => x.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
