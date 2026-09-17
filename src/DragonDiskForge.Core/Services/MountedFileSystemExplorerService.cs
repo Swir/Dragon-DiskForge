@@ -11,6 +11,8 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         ReturnSpecialDirectories = false
     };
 
+    private static readonly ExplorerPathSafetyValidator PathSafety = new();
+
     public Task<IReadOnlyList<ExplorerEntry>> ListAsync(
         string rootPath,
         string directoryPath,
@@ -20,8 +22,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
             cancellationToken.ThrowIfCancellationRequested();
             var root = ValidateRoot(rootPath);
             var directory = EnsureInsideRoot(root, directoryPath);
-            if (!Directory.Exists(directory))
-                throw new DirectoryNotFoundException($"Explorer directory was not found: {directory}");
+            directory = PathSafety.Validate(root, directory, isDirectory: true);
 
             var items = new List<ExplorerEntry>();
             foreach (var path in Directory.EnumerateFileSystemEntries(directory, "*", ShallowOptions))
@@ -53,8 +54,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
 
             var root = ValidateRoot(rootPath);
             var start = EnsureInsideRoot(root, startPath);
-            if (!Directory.Exists(start))
-                throw new DirectoryNotFoundException($"Explorer search root was not found: {start}");
+            start = PathSafety.Validate(root, start, isDirectory: true);
 
             var results = new List<ExplorerEntry>();
             var pending = new Stack<string>();
@@ -63,7 +63,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
             while (pending.Count > 0 && results.Count < maxResults)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var directory = pending.Pop();
+                var directory = PathSafety.Validate(root, pending.Pop(), isDirectory: true);
 
                 IEnumerable<string> entries;
                 try
@@ -112,7 +112,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         CancellationToken cancellationToken = default)
     {
         var root = ValidateRoot(rootPath);
-        var source = EnsureInsideRoot(root, sourcePath);
+        var sourceCandidate = EnsureInsideRoot(root, sourcePath);
         var destinationRoot = Path.GetFullPath(destinationDirectory);
 
         if (IsInsideRoot(root, destinationRoot))
@@ -122,27 +122,27 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (File.Exists(source))
+        if (File.Exists(sourceCandidate))
         {
-            RejectReparsePoint(source);
+            var source = PathSafety.Validate(root, sourceCandidate, isDirectory: false);
             var destination = Path.Combine(destinationRoot, Path.GetFileName(source));
             EnsureDestinationFree(destination);
             var length = new FileInfo(source).Length;
-            await CopyFileAsync(source, destination, 0L, Math.Max(1L, length), progress, cancellationToken);
+            await CopyFileAsync(root, source, destination, 0L, Math.Max(1L, length), progress, cancellationToken);
             progress?.Report(1d);
             return;
         }
 
-        if (!Directory.Exists(source))
-            throw new FileNotFoundException("Explorer source was not found.", source);
+        if (!Directory.Exists(sourceCandidate))
+            throw new FileNotFoundException("Explorer source was not found.", sourceCandidate);
 
-        RejectReparsePoint(source);
+        var sourceDirectory = PathSafety.Validate(root, sourceCandidate, isDirectory: true);
         var destinationBase = Path.Combine(
             destinationRoot,
-            Path.GetFileName(source.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+            Path.GetFileName(sourceDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
         EnsureDestinationFree(destinationBase);
 
-        var plan = CollectCopyPlan(source, cancellationToken);
+        var plan = CollectCopyPlan(root, sourceDirectory, cancellationToken);
         var totalBytes = Math.Max(1L, plan.Files.Sum(x => x.Length));
         Directory.CreateDirectory(destinationBase);
 
@@ -156,17 +156,21 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         foreach (var file in plan.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var relative = Path.GetRelativePath(source, file.FullName);
+            var safeFile = PathSafety.Validate(root, file.FullName, isDirectory: false);
+            var relative = Path.GetRelativePath(sourceDirectory, safeFile);
             var destination = Path.Combine(destinationBase, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            await CopyFileAsync(file.FullName, destination, copiedBefore, totalBytes, progress, cancellationToken);
+            await CopyFileAsync(root, safeFile, destination, copiedBefore, totalBytes, progress, cancellationToken);
             copiedBefore += file.Length;
         }
 
         progress?.Report(1d);
     }
 
-    private static CopyPlan CollectCopyPlan(string sourceDirectory, CancellationToken cancellationToken)
+    private static CopyPlan CollectCopyPlan(
+        string root,
+        string sourceDirectory,
+        CancellationToken cancellationToken)
     {
         var files = new List<FileInfo>();
         var directories = new List<string>();
@@ -176,7 +180,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         while (pending.Count > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var directory = pending.Pop();
+            var directory = PathSafety.Validate(root, pending.Pop(), isDirectory: true);
 
             foreach (var path in Directory.EnumerateFileSystemEntries(directory, "*", ShallowOptions))
             {
@@ -187,12 +191,14 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
 
                 if ((attributes & FileAttributes.Directory) != 0)
                 {
-                    directories.Add(Path.GetRelativePath(sourceDirectory, path));
-                    pending.Push(path);
+                    var safeDirectory = PathSafety.Validate(root, path, isDirectory: true);
+                    directories.Add(Path.GetRelativePath(sourceDirectory, safeDirectory));
+                    pending.Push(safeDirectory);
                 }
                 else
                 {
-                    files.Add(new FileInfo(path));
+                    var safeFile = PathSafety.Validate(root, path, isDirectory: false);
+                    files.Add(new FileInfo(safeFile));
                 }
             }
         }
@@ -201,6 +207,7 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
     }
 
     private static async Task CopyFileAsync(
+        string root,
         string source,
         string destination,
         long copiedBefore,
@@ -208,6 +215,8 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
         IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
+        source = PathSafety.Validate(root, source, isDirectory: false);
+
         await using var input = new FileStream(
             source,
             FileMode.Open,
@@ -307,13 +316,6 @@ public sealed class MountedFileSystemExplorerService : IExplorerService
 
         var rootedPrefix = normalizedRoot + Path.DirectorySeparatorChar;
         return normalizedCandidate.StartsWith(rootedPrefix, comparison);
-    }
-
-    private static void RejectReparsePoint(string path)
-    {
-        var attributes = File.GetAttributes(path);
-        if ((attributes & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidOperationException("Dragon Explorer does not follow reparse points during copy-out.");
     }
 
     private static void EnsureDestinationFree(string destination)
