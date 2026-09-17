@@ -25,9 +25,15 @@ public sealed class ExplorerPathSafetyValidator
         if (!IsInsideRoot(root, candidate))
             throw new InvalidOperationException("Explorer source is outside the mounted root.");
 
-        var exists = isDirectory ? Directory.Exists(candidate) : File.Exists(candidate);
-        if (!exists)
+        if (isDirectory)
+        {
+            if (!Directory.Exists(candidate))
+                throw new DirectoryNotFoundException($"The Explorer directory is no longer available: {candidate}");
+        }
+        else if (!File.Exists(candidate))
+        {
             throw new FileNotFoundException("The Explorer source is no longer available.", candidate);
+        }
 
         EnsureNoReparseTraversal(root, candidate);
         return candidate;
