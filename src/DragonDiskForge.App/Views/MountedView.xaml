@@ -33,11 +33,16 @@
                 <Border Style="{StaticResource DragonStatusPillStyle}" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                         <Ellipse Width="8" Height="8" Fill="{ThemeResource DragonSuccessBrush}" />
-                        <TextBlock x:Name="MountedCountText" Text="0 mounted" FontWeight="SemiBold" />
+                        <TextBlock x:Name="MountedCountText" Text="0 mounted" FontWeight="SemiBold"
+                                   AutomationProperties.Name="Mounted image count"
+                                   AutomationProperties.LiveSetting="Polite" />
                     </StackPanel>
                 </Border>
-                <ProgressRing x:Name="RefreshRing" Width="22" Height="22" IsActive="False" />
-                <Button Content="Refresh" Click="Refresh_Click"
+                <ProgressRing x:Name="RefreshRing" Width="22" Height="22" IsActive="False"
+                              AutomationProperties.Name="Refreshing mounted images" />
+                <Button Content="Refresh" Click="Refresh_Click" AccessKey="R"
+                        AutomationProperties.Name="Refresh mounted image inventory"
+                        AutomationProperties.HelpText="Reloads the current Windows mounted-image state."
                         Style="{StaticResource DragonSecondaryButtonStyle}" />
             </StackPanel>
         </Grid>
@@ -46,7 +51,9 @@
                  Grid.Row="1"
                  IsOpen="False"
                  IsClosable="True"
-                 Margin="0,0,0,14" />
+                 Margin="0,0,0,14"
+                 AutomationProperties.Name="Mounted images status"
+                 AutomationProperties.LiveSetting="Polite" />
 
         <Grid Grid.Row="2" Margin="0,0,0,9">
             <Grid.ColumnDefinitions>
@@ -66,7 +73,8 @@
                     BorderThickness="1"
                     CornerRadius="22"
                     Padding="28"
-                    MinHeight="210">
+                    MinHeight="210"
+                    AutomationProperties.Name="Mounted images empty state">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                     <Border Width="64" Height="64" CornerRadius="19"
                             Background="{ThemeResource DragonEmberSoftBrush}">
@@ -88,7 +96,8 @@
                       SelectionMode="None"
                       IsItemClickEnabled="False"
                       Background="Transparent"
-                      HorizontalContentAlignment="Stretch">
+                      HorizontalContentAlignment="Stretch"
+                      AutomationProperties.Name="Mounted image inventory">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -102,7 +111,9 @@
                                 BorderBrush="{ThemeResource DragonBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="18"
-                                Padding="18">
+                                Padding="18"
+                                AutomationProperties.Name="{Binding FileName}"
+                                AutomationProperties.HelpText="{Binding Meta}">
                             <Grid ColumnSpacing="15">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="52" />
@@ -134,15 +145,20 @@
                                             Tag="{Binding}"
                                             IsEnabled="{Binding HasDriveLetter}"
                                             Click="Explore_Click"
+                                            AutomationProperties.Name="Open in Dragon Explorer"
+                                            AutomationProperties.HelpText="Browse this mounted image inside Dragon DiskForge."
                                             Style="{StaticResource DragonSecondaryButtonStyle}" />
                                     <Button Content="Open drive"
                                             Tag="{Binding PrimaryDriveRoot}"
                                             IsEnabled="{Binding HasDriveLetter}"
                                             Click="OpenDrive_Click"
+                                            AutomationProperties.Name="Open mounted drive in Windows Explorer"
                                             Style="{StaticResource DragonSecondaryButtonStyle}" />
                                     <Button Content="Unmount"
                                             Tag="{Binding ImagePath}"
                                             Click="Unmount_Click"
+                                            AutomationProperties.Name="Unmount image"
+                                            AutomationProperties.HelpText="Safely requests Windows to detach this mounted image."
                                             Style="{StaticResource DragonPrimaryButtonStyle}" />
                                 </StackPanel>
                             </Grid>
@@ -161,10 +177,14 @@
                 <TextBlock Text="MOUNTED HISTORY" FontSize="11" FontWeight="Bold"
                            Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
                 <TextBlock x:Name="HistoryCountText" Text="0 events"
-                           Foreground="{ThemeResource DragonMutedBrush}" FontSize="11" />
+                           Foreground="{ThemeResource DragonMutedBrush}" FontSize="11"
+                           AutomationProperties.Name="Mount history event count"
+                           AutomationProperties.LiveSetting="Polite" />
             </StackPanel>
             <Button x:Name="ClearHistoryButton" Grid.Column="1" Content="Clear history"
-                    Click="ClearHistory_Click" IsEnabled="False"
+                    Click="ClearHistory_Click" IsEnabled="False" AccessKey="C"
+                    AutomationProperties.Name="Clear mount history"
+                    AutomationProperties.HelpText="Removes local Dragon DiskForge mount-history metadata only."
                     Style="{StaticResource DragonSecondaryButtonStyle}" />
         </Grid>
 
@@ -174,7 +194,8 @@
                     BorderBrush="{ThemeResource DragonBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="16"
-                    Padding="18">
+                    Padding="18"
+                    AutomationProperties.Name="Mount history empty state">
                 <TextBlock Text="No Dragon DiskForge mount events recorded yet. Successful Mount and Unmount operations will appear here."
                            Foreground="{ThemeResource DragonMutedBrush}"
                            TextWrapping="Wrap" />
@@ -185,7 +206,8 @@
                       SelectionMode="None"
                       Background="Transparent"
                       HorizontalContentAlignment="Stretch"
-                      MaxHeight="420">
+                      MaxHeight="420"
+                      AutomationProperties.Name="Mount history">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -199,7 +221,9 @@
                                 BorderBrush="{ThemeResource DragonBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="14"
-                                Padding="14">
+                                Padding="14"
+                                AutomationProperties.Name="{Binding Title}"
+                                AutomationProperties.HelpText="{Binding Meta}">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="42" />
