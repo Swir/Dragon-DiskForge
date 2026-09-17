@@ -52,6 +52,17 @@ if (systemDisk is not null)
             "Windows writer preflight retains source-backing provenance");
         Check(result.Evidence.Any(x => x.StartsWith("logical-sector-bytes:", StringComparison.Ordinal)),
             "Windows writer preflight retains logical-sector provenance");
+
+        await ExpectOpenRefusalAsync(
+            syntheticPlan,
+            "WRONG-CONFIRMATION",
+            service,
+            "physical writer rejects a wrong token before Windows destructive access");
+        await ExpectOpenRefusalAsync(
+            syntheticPlan,
+            syntheticPlan.ConfirmationToken!,
+            service,
+            "physical writer rejects system/source-on-target preflight before Windows destructive access");
     }
     finally
     {
@@ -68,6 +79,23 @@ else
 {
     Console.Error.WriteLine($"Dragon DiskForge Windows physical-media preflight smoke tests failed: {failures} check(s).");
     Environment.ExitCode = 1;
+}
+
+async Task ExpectOpenRefusalAsync(
+    PhysicalMediaWritePlan plan,
+    string confirmation,
+    WindowsPhysicalMediaWritePreflightService service,
+    string message)
+{
+    try
+    {
+        await using var sink = await WindowsPhysicalMediaWriteSink.OpenAsync(plan, confirmation, service);
+        Check(false, message);
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, message);
+    }
 }
 
 void Check(bool condition, string message)
