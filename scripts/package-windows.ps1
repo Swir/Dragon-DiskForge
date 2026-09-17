@@ -3,6 +3,7 @@ param(
     [string]$SourceDirectory = "src/DragonDiskForge.App/bin/x64/Release",
     [string]$CliProject = "src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj",
     [string]$ShellProject = "src/DragonDiskForge.Shell/DragonDiskForge.Shell.csproj",
+    [string]$BetaManualQaScript = "scripts/beta-manual-qa.ps1",
     [string]$OutputDirectory = "artifacts/windows",
     [string]$ExpectedVersion = ""
 )
@@ -29,6 +30,7 @@ $expected = Get-RepositoryVersion -Override $ExpectedVersion
 $source = (Resolve-Path $SourceDirectory).Path
 $cliProjectPath = (Resolve-Path $CliProject).Path
 $shellProjectPath = (Resolve-Path $ShellProject).Path
+$betaManualQaScriptPath = (Resolve-Path $BetaManualQaScript).Path
 $output = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDirectory))
 $stage = Join-Path $output "DragonDiskForge-win-x64"
 $zip = Join-Path $output "DragonDiskForge-win-x64.zip"
@@ -83,6 +85,11 @@ Copy-Item $shellExecutable $shellEntryPoint -Force
 & $shellEntryPoint --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Packaged shell helper failed its launch smoke test with exit code $LASTEXITCODE." }
 
+$betaManualQaEntryPoint = Join-Path $toolsStageDirectory "beta-manual-qa.ps1"
+Copy-Item $betaManualQaScriptPath $betaManualQaEntryPoint -Force
+& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaManualQaEntryPoint -Mode self-test
+if ($LASTEXITCODE -ne 0) { throw "Packaged beta manual-QA evidence tool failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
+
 $icon = Join-Path $stage "DragonDiskForge.ico"
 if (-not (Test-Path $icon -PathType Leaf)) {
     $repositoryIcon = Join-Path (Get-Location) "src/DragonDiskForge.App/Assets/DragonDiskForge.ico"
@@ -105,9 +112,10 @@ if ([string]::IsNullOrWhiteSpace($productVersion) -or -not $productVersion.Start
 $entryPointSha256 = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $cliEntryPointSha256 = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $shellEntryPointSha256 = (Get-FileHash -Path $shellEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+$betaManualQaEntryPointSha256 = (Get-FileHash -Path $betaManualQaEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $packageFilesBeforeManifest = @(Get-ChildItem -Path $stage -Recurse -File)
 $manifest = [ordered]@{
-    schemaVersion = 4
+    schemaVersion = 5
     product = "Dragon DiskForge"
     version = $expected
     productVersion = $productVersion
@@ -116,10 +124,12 @@ $manifest = [ordered]@{
     entryPoint = "DragonDiskForge.App.exe"
     cliEntryPoint = "cli/dragon-diskforge.exe"
     shellIntegrationEntryPoint = "tools/dragon-diskforge-shell.exe"
+    betaManualQaEntryPoint = "tools/beta-manual-qa.ps1"
     icon = "DragonDiskForge.ico"
     entryPointSha256 = $entryPointSha256
     cliEntryPointSha256 = $cliEntryPointSha256
     shellIntegrationEntryPointSha256 = $shellEntryPointSha256
+    betaManualQaEntryPointSha256 = $betaManualQaEntryPointSha256
     debugSymbolsIncluded = $false
     fileCount = $packageFilesBeforeManifest.Count + 1
 }
