@@ -114,15 +114,15 @@ public sealed class WindowsPhysicalMediaWritePreflightService
         }
 
         IReadOnlyList<int> sourceBackingDisks = Array.Empty<int>();
-        var sourceIsUnc = plan.SourcePath.StartsWith(@"\\", StringComparison.Ordinal)
-            && !plan.SourcePath.StartsWith(@"\\.\", StringComparison.Ordinal)
-            && !plan.SourcePath.StartsWith(@"\\?\", StringComparison.Ordinal);
+        var sourceIsUnc = plan.SourcePath.StartsWith("\\\\", StringComparison.Ordinal)
+            && !plan.SourcePath.StartsWith("\\\\.\\", StringComparison.Ordinal)
+            && !plan.SourcePath.StartsWith("\\\\?\\", StringComparison.Ordinal);
 
         if (File.Exists(plan.SourcePath))
         {
             if (sourceIsUnc)
             {
-                evidence.Add("source-backing:remote-unc");
+                refusals.Add("UNC/network sources are refused because their physical backing cannot be proven distinct from the destination disk.");
             }
             else
             {
@@ -141,7 +141,10 @@ public sealed class WindowsPhysicalMediaWritePreflightService
                         refusals.Add("Source image is stored on the destination physical disk; destructive write is refused.");
                     }
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+                catch (Exception ex) when (ex is IOException
+                    or InvalidDataException
+                    or UnauthorizedAccessException
+                    or System.ComponentModel.Win32Exception)
                 {
                     refusals.Add($"Source image backing-disk resolution failed: {ex.Message}");
                 }
@@ -160,7 +163,10 @@ public sealed class WindowsPhysicalMediaWritePreflightService
                     $"Source image length must be a positive multiple of the destination logical sector size ({logicalSectorSize} bytes).");
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is IOException
+            or InvalidDataException
+            or UnauthorizedAccessException
+            or System.ComponentModel.Win32Exception)
         {
             refusals.Add($"Destination logical sector size could not be proven: {ex.Message}");
         }
