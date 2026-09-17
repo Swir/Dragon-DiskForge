@@ -97,16 +97,10 @@ internal static class WindowsPhysicalMediaInterop
         {
             foreach (var volumeName in EnumerateVolumeNames())
             {
-                IReadOnlyList<int> backingDisks;
-                try
-                {
-                    backingDisks = GetVolumeDiskNumbers(volumeName);
-                }
-                catch (Win32Exception)
-                {
-                    continue;
-                }
-
+                // This is deliberately fail-closed. If any live Windows volume cannot be mapped
+                // to its physical extents, the writer cannot prove that it is unrelated to the
+                // target disk and therefore must not continue to destructive device access.
+                var backingDisks = GetVolumeDiskNumbers(volumeName);
                 if (!backingDisks.Contains(diskNumber))
                     continue;
 
