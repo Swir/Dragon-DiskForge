@@ -73,16 +73,22 @@ jobs:
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode metadata -ExpectedPrefix 0.5.0 -BetaSuffix beta.1 -SourceCommit $env:SOURCE_COMMIT -WorkflowRunId '${{ github.run_id }}'
 
-      - name: Stage standalone beta QA kit verifier
+      - name: Stage standalone beta QA kit verifier and start guide
         shell: pwsh
         run: |
           $output = Join-Path $PWD 'artifacts/windows'
           New-Item -ItemType Directory -Path $output -Force | Out-Null
-          $destination = Join-Path $output 'beta-qa-kit-verify.ps1'
-          Copy-Item -LiteralPath './scripts/beta-qa-kit-verify.ps1' -Destination $destination -Force
-          $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
-          $line = "{0}  {1}{2}" -f $hash, [System.IO.Path]::GetFileName($destination), [Environment]::NewLine
-          [System.IO.File]::WriteAllText("$destination.sha256", $line, (New-Object System.Text.UTF8Encoding($false)))
+          $items = @(
+            @{ Source = './scripts/beta-qa-kit-verify.ps1'; Name = 'beta-qa-kit-verify.ps1' },
+            @{ Source = './docs/BETA-QA-KIT.md'; Name = 'BETA-QA-KIT.md' }
+          )
+          foreach ($item in $items) {
+            $destination = Join-Path $output $item.Name
+            Copy-Item -LiteralPath $item.Source -Destination $destination -Force
+            $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            $line = "{0}  {1}{2}" -f $hash, [System.IO.Path]::GetFileName($destination), [Environment]::NewLine
+            [System.IO.File]::WriteAllText("$destination.sha256", $line, (New-Object System.Text.UTF8Encoding($false)))
+          }
 
       - name: Build hash-bound beta QA kit
         shell: pwsh
@@ -112,6 +118,8 @@ jobs:
             artifacts/windows/beta-qa-kit-verify.ps1.sha256
             artifacts/windows/beta-qa-session.ps1
             artifacts/windows/beta-qa-session.ps1.sha256
+            artifacts/windows/BETA-QA-KIT.md
+            artifacts/windows/BETA-QA-KIT.md.sha256
             artifacts/windows/BETA-MANUAL-VALIDATION.md
             artifacts/windows/BETA-MANUAL-VALIDATION.md.sha256
           if-no-files-found: error
