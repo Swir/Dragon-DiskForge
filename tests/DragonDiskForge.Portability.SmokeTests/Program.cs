@@ -56,24 +56,65 @@ try
     }
     Require((await importedService.LoadAsync()) == imported, "Rejected import leaves the existing local state unchanged.");
 
+    var crashDirectory = Path.Combine(Path.GetDirectoryName(localState)!, "crashes");
+    var crashService = new CrashReportService(crashDirectory);
+    var privateMessage = $"Could not read private image {imagePath}";
+    Require(crashService.TryRecord(CreateCapturedException(privateMessage)),
+        "Crash recorder persists a sanitized report without blocking the application.");
+
+    var crashReports = crashService.LoadRecent();
+    Require(crashReports.Count == 1, "Crash recorder returns the newly persisted report.");
+    Require(crashReports[0].SchemaVersion == CrashReportService.CurrentSchemaVersion,
+        "Crash report uses the current schema version.");
+    Require(crashReports[0].FingerprintSha256.Length == 64,
+        "Crash report carries a stable SHA-256 fingerprint instead of a raw exception message.");
+    Require(crashReports[0].Frames.Count > 0,
+        "Crash report captures method-only stack evidence.");
+
+    var rawCrashText = await File.ReadAllTextAsync(Directory.GetFiles(crashDirectory, "dragon-crash-*.json").Single());
+    Require(!rawCrashText.Contains(privateMessage, StringComparison.Ordinal)
+        && !rawCrashText.Contains(imagePath, StringComparison.OrdinalIgnoreCase),
+        "Persisted crash evidence never stores raw exception messages or private image paths.");
+
+    for (var i = 0; i < CrashReportService.MaxReports + 4; i++)
+        Require(crashService.TryRecord(CreateCapturedException("rotation-" + i)), "Crash recorder accepts bounded history entries.");
+    Require(Directory.GetFiles(crashDirectory, "dragon-crash-*.json").Length <= CrashReportService.MaxReports,
+        "Crash recorder rotates history to its fixed maximum.");
+
+    var malformedCrash = Path.Combine(crashDirectory, "dragon-crash-99999999-999999999-bad.json");
+    await File.WriteAllTextAsync(malformedCrash, "{broken");
+    Require(crashService.LoadRecent(CrashReportService.MaxReports).All(x => x.SchemaVersion == CrashReportService.CurrentSchemaVersion),
+        "Malformed crash files are ignored during support collection.");
+
     await service.CreateDiagnosticBundleAsync(diagnosticZip);
     Require(File.Exists(diagnosticZip), "Diagnostic export creates a support bundle.");
     using (var archive = ZipFile.OpenRead(diagnosticZip))
     {
         var names = archive.Entries.Select(x => x.FullName).ToHashSet(StringComparer.Ordinal);
-        Require(names.Count == 3
+        Require(names.Count == 4
             && names.Contains("README.txt")
             && names.Contains("diagnostics.json")
-            && names.Contains("state-summary.json"),
+            && names.Contains("state-summary.json")
+            && names.Contains("crash-summary.json"),
             "Diagnostic bundle contains only the documented sanitized entries.");
 
-        foreach (var entry in archive.Entries.Where(x => x.FullName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+        foreach (var entry in archive.Entries)
         {
             using var reader = new StreamReader(entry.Open());
             var text = await reader.ReadToEndAsync();
             Require(!text.Contains(Path.GetFullPath(imagePath), StringComparison.OrdinalIgnoreCase),
                 $"{entry.FullName} must not disclose the full saved image path.");
+            Require(!text.Contains(privateMessage, StringComparison.Ordinal),
+                $"{entry.FullName} must not disclose raw exception messages.");
         }
+
+        var crashEntry = archive.GetEntry("crash-summary.json")!;
+        using var crashReader = new StreamReader(crashEntry.Open());
+        var crashJson = await crashReader.ReadToEndAsync();
+        using var crashDocument = JsonDocument.Parse(crashJson);
+        Require(crashDocument.RootElement.ValueKind == JsonValueKind.Array
+            && crashDocument.RootElement.GetArrayLength() <= 3,
+            "Support bundle limits crash history to the three newest sanitized reports.");
     }
 
     var cancelledExport = Path.Combine(root, "portable", "cancelled.json");
@@ -131,6 +172,8 @@ try
     {
         Require(archive.Entries.All(x => !string.IsNullOrWhiteSpace(x.FullName)),
             "CLI diagnostic bundle contains only named entries.");
+        Require(archive.GetEntry("crash-summary.json") is not null,
+            "CLI support bundle uses the same crash-summary contract as the desktop service.");
     }
 
     var cliBadSetting = await RunCliAsync("restore-last-image", "maybe", "--state", cliState);
@@ -148,6 +191,18 @@ try
 finally
 {
     try { Directory.Delete(root, recursive: true); } catch { }
+}
+
+static Exception CreateCapturedException(string message)
+{
+    try
+    {
+        throw new InvalidOperationException(message);
+    }
+    catch (Exception ex)
+    {
+        return ex;
+    }
 }
 
 static async Task<(int ExitCode, string Stdout, string Stderr)> RunCliAsync(params string[] args)
