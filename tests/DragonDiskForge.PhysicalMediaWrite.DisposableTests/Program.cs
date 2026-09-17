@@ -57,6 +57,14 @@ var plan = safety.PreviewImageToDiskWrite(sourcePath, sourceLength, destination)
 if (!plan.IsAllowed || string.IsNullOrWhiteSpace(plan.ConfirmationToken))
     Fail($"Core safety plan refused the target: {string.Join(" ", plan.RefusalReasons)}");
 
+var suppliedConfirmationToken = Require("DDF_DISPOSABLE_CONFIRMATION_TOKEN");
+if (!safety.ConfirmationMatches(plan, suppliedConfirmationToken))
+{
+    Fail(
+        "DDF_DISPOSABLE_CONFIRMATION_TOKEN does not exactly match the current destination-bound token. " +
+        $"Expected: {plan.ConfirmationToken}");
+}
+
 var preflightService = new WindowsPhysicalMediaWritePreflightService(inventory);
 var preflight = await preflightService.ValidateAsync(plan);
 if (preflight.IsRefused)
@@ -70,17 +78,35 @@ Console.WriteLine($"INFO    Source: {sourcePath} ({sourceLength} bytes)");
 Console.WriteLine($"INFO    Logical sector: {preflight.LogicalSectorSizeBytes} bytes");
 Console.WriteLine($"INFO    Confirmation binding: {plan.ConfirmationToken}");
 
+// Keep a read-only handle open without FileShare.Write/Delete while hashing and writing. This
+// closes the same-length source-mutation gap between pre-hash and destructive execution.
+await using var sourceMutationLock = new FileStream(
+    sourcePath,
+    new FileStreamOptions
+    {
+        Mode = FileMode.Open,
+        Access = FileAccess.Read,
+        Share = FileShare.Read,
+        Options = FileOptions.SequentialScan,
+        BufferSize = 4096,
+    });
+if (sourceMutationLock.Length != sourceLength)
+    Fail("Source image length changed while acquiring the source mutation lock.");
+
 var verifier = new ImageVerificationService();
 var sourceSha256 = await verifier.ComputeSha256Async(sourcePath);
 var execution = new PhysicalMediaWriteExecutionService(safety);
 var bufferSize = ChooseAlignedBufferSize(preflight.LogicalSectorSizeBytes);
 PhysicalMediaWriteExecutionResult result;
 
-await using (var sink = await WindowsPhysicalMediaWriteSink.OpenAsync(plan, preflightService))
+await using (var sink = await WindowsPhysicalMediaWriteSink.OpenAsync(
+                 plan,
+                 suppliedConfirmationToken,
+                 preflightService))
 {
     result = await execution.ExecuteAsync(
         plan,
-        plan.ConfirmationToken,
+        suppliedConfirmationToken,
         sink,
         new ConsoleWriteProgress(),
         bufferSizeBytes: bufferSize);
@@ -94,7 +120,7 @@ if (result.Status != PhysicalMediaWriteExecutionStatus.Completed)
 }
 
 if (!string.Equals(result.WrittenSha256Hex, sourceSha256, StringComparison.Ordinal))
-    Fail("Execution SHA-256 evidence does not match the source image hash.");
+    Fail("Execution SHA-256 evidence does not match the locked source image hash.");
 
 var readback = new WindowsPhysicalMediaReadbackVerifier(inventory);
 var readbackSha256 = await readback.ComputePrefixSha256Async(destination, sourceLength);
