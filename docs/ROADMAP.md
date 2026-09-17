@@ -1,176 +1,139 @@
-# Dragon DiskForge — Product Roadmap
+# Dragon DiskForge — Roadmap
 
-This file is the source of truth for product progress. Meaningful feature changes must update tests, `CHANGELOG.md`, status and progress documentation.
+This roadmap tracks implemented, testable product deliverables. A checkbox is completed only when a real backing path exists and the required verification has passed. Documentation, placeholders and CI-only work do not count as feature completion.
 
-## Status legend
-- ✅ complete
-- 🚧 in progress
-- ⬜ planned
+## Overall progress — 76% toward 1.0
 
----
+`███████████████░░░░░ 76%`
 
-## 0.1 Foundation + Dragon Visual Identity — ✅ complete
-WinUI 3/.NET 10 shell, Core separation, image detection, verification foundation, read-only-first architecture, Dragon visual system, responsive/accessibility resources, Windows icon and x64 CI are proven.
+- **0.1 Foundation + Dragon UI — COMPLETE ✅**
+- **0.2 Native Mount + Unmount — COMPLETE ✅**
+- **0.3 Dragon Explorer — COMPLETE ✅**
+- **0.4 Extended Image Providers — COMPLETE ✅**
+- **0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅**
+- **0.6 Create + Convert + Verify — COMPLETE ✅**
+- **0.7 Physical Media Tools — 6/7 (~86%) 🚧**
+- **0.8 Windows Integration + Power Tools — 2/4 (50%) 🚧**
+- **0.9 Quality, Security + Beta Hardening — planned**
+- **1.0 Production Release — planned**
 
-## 0.2 Native Mount + Unmount — ✅ complete
-Native Windows ISO/VHD/VHDX read-only-first Mount/Unmount, state detection, progress/cancellation and disposable Windows integration tests are proven.
+Work may advance out of milestone order when an earlier milestone is blocked by a real hardware/manual validation gate. The remaining 0.7 hardware gate is not weakened by progress in 0.8.
 
-## 0.3 Dragon Explorer — ✅ complete
-- ✅ mounted-volume list/navigation/search/Copy out
-- ✅ bounded Preview modes
-- ✅ Recent Images + Favorites
-- ✅ mounted history + multi-image workspace
-- ✅ safe Copy-only drag-out
-- ✅ managed ISO9660/Joliet direct browsing without mount
+## 0.1 Foundation + Dragon UI — COMPLETE ✅
 
-## 0.4 Extended Image Providers — ✅ complete
-**Required 0.4 engineering scope: 100%.** Provider foundation, eleven additional image families and provider-contract hardening are real and tested.
+- [x] WinUI 3 / .NET 10 application foundation
+- [x] shared Core separation
+- [x] Dragon visual identity and custom application icon
+- [x] responsive/accessibility resources
+- [x] initial image inspection and SHA verification foundation
 
-- ✅ truthful capability reporting and deterministic provider resolution
-- ✅ failure isolation, cancellation and descriptor hardening
-- ✅ IMG/RAW, IMA/floppy, BIN/CUE, MDF/MDS, NRG, CCD/IMG/SUB
-- ✅ VMDK, QCOW/QCOW2, DMG/UDIF, WIM/ESD and FFU metadata
+## 0.2 Native Mount + Unmount — COMPLETE ✅
 
-**0.4 exit criteria: PASSED.** Closing this milestone hardens the internal provider contract; it does not promise a stable public plugin API.
+- [x] Windows ISO/VHD/VHDX native mount path
+- [x] read-only-first mount semantics
+- [x] mount/unmount state detection
+- [x] progress/cancellation
+- [x] Windows integration coverage
 
----
+## 0.3 Dragon Explorer — COMPLETE ✅
 
-## 0.5 Partitions + File Systems + Image Intelligence — ✅ complete
+- [x] mounted-volume navigation/search
+- [x] Preview and safe Copy out
+- [x] Recent Images/Favorites/history
+- [x] multi-image workspace
+- [x] Copy-only Explorer drag-out safety
+- [x] provider-backed direct ISO9660/Joliet browsing
 
-**Required 0.5 automated engineering scope: 100%.** Public beta publication still has independent manual/package gates in `docs/BETA-RELEASE.md`.
+## 0.4 Extended Image Providers — COMPLETE ✅
 
-### Completed 0.5 scope
-- ✅ provider-independent partition intelligence
-- ✅ FAT12/16/32, exFAT, supported NTFS, ext2/3/4, ISO9660/Joliet and UDF VRS recognition on proven mappings
-- ✅ bounded El Torito / BIOS / UEFI and installer evidence
-- ✅ unified identity + health intelligence with provenance
-- ✅ Windows Analyze + text/JSON reporting
-- ✅ deeper exFAT/FAT32/UDF/NTFS metadata evidence
-- ✅ architecture reconciliation without guessed conflict resolution
-- ✅ clean Windows x64 package-candidate pipeline + independent ZIP verification
-- ✅ bounded physical UDF Type 1 root traversal
-- ✅ read-only QCOW2 standard-uncompressed guest-byte reader subset
-- ✅ read-only hosted-sparse VMDK `monolithicSparse` guest-byte reader subset
-- ✅ common guest-relative MBR/EBR/GPT + filesystem intelligence
-- ✅ guest GPT CRC/geometry and EBR containment hardening
+- [x] deterministic provider registry with failure isolation and truthful capabilities
+- [x] IMG/RAW
+- [x] IMA/floppy
+- [x] BIN/CUE
+- [x] MDF/MDS
+- [x] NRG
+- [x] CCD/IMG/SUB
+- [x] VMDK metadata
+- [x] QCOW/QCOW2 metadata
+- [x] DMG/UDIF metadata
+- [x] WIM/ESD metadata
+- [x] FFU metadata
+- [x] provider-contract hardening
 
-**0.5 exit criteria: PASSED for automated engineering scope.** Beta publication remains blocked until the independent release/manual gates in `docs/BETA-RELEASE.md` are satisfied.
+## 0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅
 
----
+- [x] cross-provider MBR/EBR/GPT partition intelligence
+- [x] bounded physical filesystem recognition
+- [x] BIOS/UEFI bootability and installer recognition
+- [x] architecture/label/UUID/GUID/health intelligence
+- [x] Windows Analyze surface with text/JSON reporting
+- [x] deeper exFAT/FAT32/UDF/NTFS evidence
+- [x] bounded UDF root traversal
+- [x] QCOW2 guest-byte reader for the proven uncompressed subset
+- [x] hosted-sparse VMDK guest-byte reader for the proven subset
+- [x] guest-relative partition/filesystem intelligence
+- [x] guest GPT/EBR integrity hardening
 
-## 0.6 Create + Convert + Verify — ✅ complete
+Public beta publication is a separate release decision governed by `docs/BETA-RELEASE.md`.
 
-**Required 0.6 engineering scope: 100%.** All five top-level deliverables are implemented and validated.
+## 0.6 Create + Convert + Verify — COMPLETE ✅
 
-- ✅ image creation and conversion pipeline
-- ✅ split/join and bounded sparse-input/compression handling
-- ✅ SHA-256/SHA-512 verification
-- ✅ temporary output + atomic finalization
-- ✅ cancellation/rollback safety
+- [x] SHA-256 + SHA-512 in one bounded sequential pass
+- [x] safe output transaction boundary
+- [x] blank RAW creation + proven guest-byte → RAW materialization
+- [x] transactional split/join with versioned SHA-256 manifest
+- [x] bounded whole-file gzip transport compression/decompression
 
-### SHA-256/SHA-512 verification — ✅ complete foundation
-- ✅ `ImageVerificationInfo` reports SHA-256, SHA-512 and exact hashed-byte count
-- ✅ both digests are computed in one bounded sequential pass
-- ✅ SHA-256 compatibility API plus dedicated SHA-512 API
-- ✅ monotonic progress/cancellation/missing-file coverage
-- ✅ PR #41 implementation run #292 passed full Windows regression/build/package validation
+Sparse-container writing, QCOW2 compressed clusters, VMDK stream-optimized decoding and DMG `blkx` decompression are not claimed.
 
-### Transactional output boundary — ✅ complete foundation
-- ✅ reusable `SafeOutputService`
-- ✅ same-directory temporary output
-- ✅ `FailIfExists` and `ReplaceExisting` policies
-- ✅ completed temporary output is flushed before publication
-- ✅ writer failure/cancellation preserves existing committed destinations on the proven paths
-- ✅ PR #42 implementation run #296 and final run #298 passed full Windows regression/build/package validation
+## 0.7 Physical Media Tools — IN PROGRESS 🚧
 
-### RAW creation + guest-to-RAW conversion — ✅ complete foundation
-- ✅ explicit-length blank RAW creation
-- ✅ bounded `IGuestByteReader` → RAW materialization
-- ✅ explicit QCOW2 → RAW and hosted-sparse VMDK → RAW over the proven reader subsets
-- ✅ exact captured guest-visible length required at commit
-- ✅ source/destination identity rejection
-- ✅ PR #43 implementation run #300 passed full Windows regression/build/package validation
+Current scope: **6/7 (~86%)**.
 
-### Transactional split/join — ✅ complete foundation
-- ✅ split sets stage every part plus `dragon-split-manifest.json` in a sibling temporary directory
-- ✅ final set is published only after all parts and the manifest are complete and flushed
-- ✅ generated part names and a 10,000-part safety ceiling
-- ✅ SHA-256 integrity recorded for every part
-- ✅ join validates manifest version, geometry, safe filenames, physical lengths and part hashes
-- ✅ join output uses `SafeOutputService`
-- ✅ cancellation/conflict/hash-mismatch paths are tested not to intentionally publish partial replacement output
+- [x] read-only Windows physical-disk inventory
+- [x] capacity/bus/removable/vendor/product/revision/serial/system-disk evidence
+- [x] hard refusal policy for system disks, ambiguous identity and unknown capacity
+- [x] source/destination write-plan preview with same-device/oversize refusal
+- [x] exact destination-bound destructive confirmation contract
+- [x] bounded execution/fail-safe recovery contract with a hard-gated Windows writer candidate
+- [ ] separately validate the Windows physical writer on dedicated disposable media under the documented safety protocol
 
-### Bounded compression and sparse-input handling — ✅ complete foundation
-- ✅ transactional whole-file gzip compression
-- ✅ gzip decompression requires an explicit maximum output byte count
-- ✅ minimum gzip envelope, magic, method and reserved base-header bits are checked before output staging
-- ✅ malformed/truncated gzip and decompression-cap paths fail closed
-- ✅ the already-proven QCOW2/VMDK sparse/unallocated guest mappings can be materialized read-only to flat RAW
-- ✅ no sparse-container writer is claimed
-- ✅ no QCOW2 compressed-cluster, VMDK stream-optimized/compressed extent or DMG `blkx` decoder is claimed
-- ✅ no Create/Convert WinUI action is enabled merely because the Core foundation exists
-- ✅ PR #44 implementation run #304 passed the new split/join + gzip gate plus the complete provider/intelligence/Explorer/native Windows/Release/clean-package path
-
-See `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md` and `docs/SPLIT-COMPRESSION-PIPELINES.md`.
-
-**0.6 exit criteria: PASSED after final documentation-synchronized CI on the PR head.**
-
----
-
-## 0.7 Physical Media Tools — 🚧 in progress
-
-**Current required 0.7 engineering scope: 6/7 = ~86%.** The safety foundation and write-execution contract are implemented and passed full Windows CI. Development remains deliberately non-destructive until the final disposable-media write gate is proven.
-
-- ✅ read-only physical disk inventory with serial-backed stable device identity when available
-- ✅ capacity/bus/removable/system-disk evidence
-- ✅ explicit system-disk and ambiguous-device refusal policy
-- ✅ write-plan preview with source/destination identity checks
-- ✅ destructive-action confirmation contract bound to destination identity
-- ✅ bounded progress/cancellation plus explicit fail-safe recovery semantics after any destination write attempt
-- ⬜ separately validated physical write path only after safety gates are proven
-
-The execution coordinator revalidates the destination identity and exact confirmation token immediately before I/O, rechecks source length after opening the file, writes through a bounded injected sink contract, reports monotonic progress, isolates progress-observer failures, and distinguishes safe pre-write refusal/cancellation from failures or cancellation after destination mutation may have begun. Once any destination write is attempted, an abnormal exit is fail-closed as `DestinationMayBeModified` + `RequiresRecovery`; no generic rollback is claimed.
-
-PR #46 implementation run #319 passed the expanded physical-media safety gate plus the complete existing provider/intelligence/Explorer/native Windows/Release/clean-package regression path. The PR still intentionally contains no Windows physical-device writer and exposes no destructive UI action.
+PR #47 adds the Windows writer candidate, read-only source/target topology preflight, target-volume lock/dismount, sector-aligned bounded transfer, device flush, read-back SHA-256 and a hard-locked disposable-media harness. Run #338 and Disposable Media Guard #10 passed, but they do **not** substitute for a real destructive-media test. No destructive physical-media action is user-visible.
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-**No physical-device write capability is user-visible today.**
+## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
 
-## 0.8 Windows Integration + Power Tools — ⬜ planned
-- ⬜ file associations/context menu
-- ⬜ shared-Core CLI
-- ⬜ PowerShell-friendly output
-- ⬜ session restore/settings import-export/diagnostic export
+Current scope: **2/4 (50%)**.
 
-## 0.9 Quality, Security + Beta Hardening — ⬜ planned
-- ⬜ expanded provider/integration tests
-- ⬜ non-admin UAC/manual drag validation
-- ⬜ large/corrupt/truncated/fuzz-style image tests
-- ⬜ keyboard/screen-reader/High-DPI/theme review
-- ⬜ localization architecture and EN/PL baseline
-- ⬜ crash diagnostics/performance profiling
-- ⬜ beta regression checklist
+- [ ] Windows file associations and context-menu integration
+- [x] shared-Core read-only CLI (`analyze`, `verify`, `formats`)
+- [x] PowerShell-friendly deterministic text/JSON output, stderr diagnostics and stable exit codes
+- [ ] session restore + settings import/export + diagnostic export tooling
 
-## 1.0 Production Release — ⬜ planned
-- ⬜ final UI/UX
-- ⬜ signed installer / portable build where appropriate
-- ⬜ release pipeline and update strategy
-- ⬜ stable provider API/config migration
-- ⬜ full documentation/capability matrix/troubleshooting
-- ⬜ regression suite green
-- ⬜ GitHub Release with binaries/checksums
+The CLI reuses the desktop application's canonical Core provider registry and is shipped as a self-contained x64 executable inside the clean Windows package. It intentionally exposes no destructive command.
 
----
+See `docs/CLI.md`.
 
-## Non-negotiable project rules
-1. Never enable a fake UI capability.
-2. Read-only inspection is the default.
-3. Sensitive operations require explicit validation and confirmation.
-4. UI stays separate from Core.
-5. New formats use providers/capabilities, not one monolithic parser.
-6. README, ROADMAP, STATUS, MILESTONES and CHANGELOG stay synchronized.
-7. Large image fixtures are generated, not committed.
-8. Accessibility outranks decoration.
-9. High-impact operations remain gated until independently validated.
-10. A milestone completes only after its exit criteria pass.
+## 0.9 Quality, Security + Beta Hardening — PLANNED
+
+- [ ] clean-machine runtime matrix
+- [ ] normal-user UAC validation
+- [ ] real cross-process Explorer drag-out validation
+- [ ] accessibility/keyboard/screen-reader hardening
+- [ ] performance and large-image regression benchmarks
+- [ ] security review of parsing, packaging and privileged boundaries
+- [ ] crash/diagnostic export and release support bundle
+
+## 1.0 Production Release — PLANNED
+
+- [ ] all production release gates green
+- [ ] stable Windows package and checksums
+- [ ] final supported-format/capability matrix
+- [ ] complete end-user documentation
+- [ ] signed/tagged GitHub production release
+- [ ] post-release clean installation and runtime verification
+
+## Public beta track
+
+The planned first public beta remains **`0.5.0-beta.1`**. It is not considered ready until every required item in `docs/BETA-RELEASE.md` is actually verified. Green host-side CI alone is insufficient.
