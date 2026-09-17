@@ -1,6 +1,27 @@
-# 🐉 Dragon DiskForge
+<!-- SWIR-README-STANDARD:v2 -->
 
-**Universal Disk Image Manager for Windows**
+<div align="center">
+
+<img width="100%" src="assets/readme/hero.svg" alt="Dragon DiskForge — universal disk image manager for Windows" />
+
+<br>
+
+![.NET](https://img.shields.io/badge/.NET-10-02050A?style=for-the-badge&logo=dotnet&logoColor=62E5FF)
+![WinUI](https://img.shields.io/badge/WinUI-3-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)
+![Windows](https://img.shields.io/badge/Windows-x64%20%2F%20ARM64-02050A?style=for-the-badge&logo=windows11&logoColor=62E5FF)
+![Status](https://img.shields.io/badge/Status-0.5.0--alpha.1-02050A?style=for-the-badge&logoColor=62E5FF)
+
+[![Author](https://img.shields.io/badge/Author-Swir-0088FF?style=flat-square&logo=github)](https://github.com/Swir)
+[![Stars](https://img.shields.io/github/stars/Swir/Dragon-DiskForge?style=flat-square&color=0088FF)](https://github.com/Swir/Dragon-DiskForge/stargazers)
+![Progress](https://img.shields.io/badge/progress-83%25-0088FF?style=flat-square)
+
+**Universal Disk Image Manager for Windows — inspect, mount, explore, verify and analyze images through verified capability paths.**
+
+[**Status**](#current-development-version--050-alpha1) · [**Foundation**](#proven-product-foundation) · [**Build**](#build-on-windows) · [**Safety**](#safety-design) · [**Roadmap**](docs/ROADMAP.md)
+
+</div>
+
+<img width="100%" src="https://raw.githubusercontent.com/Swir/Swir/main/assets/power-divider-v4.svg" alt="SWIR electric divider" />
 
 Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core toolkit for inspecting, mounting, exploring, verifying and analyzing disk images. The project follows a strict truthful-capability rule: unsupported actions remain disabled until a real engine path exists and is verified.
 
@@ -203,3 +224,19 @@ Physical-device mutation remains outside the product surface. The Windows writer
 **No fake features.** A capability becomes enabled in the UI only after its real backing path exists and is testable.
 
 Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md), [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md), [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md), [`docs/CLEAN-MACHINE-RUNTIME.md`](docs/CLEAN-MACHINE-RUNTIME.md), [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) and [`CHANGELOG.md`](CHANGELOG.md).
+
+## 🔎 Search Keywords
+
+`disk image manager windows` • `ISO manager Windows` • `VHD VHDX explorer` • `disk image analyzer` • `partition inspection tool` • `filesystem analysis Windows` • `QCOW2 VMDK reader` • `DMG WIM ESD FFU inspector` • `disk image checksum verifier` • `WinUI 3 disk utility` • `.NET disk image tool` • `Windows image mount tool` • `ISO9660 Joliet browser` • `disk image CLI` • `physical disk diagnostics` • `Dragon DiskForge`
+
+<img width="100%" src="https://raw.githubusercontent.com/Swir/Swir/main/assets/power-divider-v4.svg" alt="SWIR electric divider" />
+
+<div align="center">
+
+### `INSPECT • VERIFY • MOUNT • EVOLVE`
+
+⭐ **If Dragon DiskForge is useful to you, consider leaving a star.**
+
+[**← SWIR profile**](https://github.com/Swir) · [**All projects →**](https://github.com/Swir?tab=repositories)
+
+</div>
