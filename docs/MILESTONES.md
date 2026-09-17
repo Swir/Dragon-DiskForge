@@ -136,7 +136,7 @@ See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current required engineering scope: **3/7 (~43%)**.
+Current required engineering scope: **4/7 (~57%)**.
 
 ### Completed
 - performance and large-image regression benchmarks ✅
@@ -157,15 +157,23 @@ Current required engineering scope: **3/7 (~43%)**.
   - destructive CI opt-in stays hard-locked off
   - physical-media refusal/confirmation invariants and shell command quoting/injection cases are regression-tested
   - parser/guest-reader bounded-input coverage is documented without claiming formal verification
+- package-only clean-machine runtime matrix ✅
+  - clean package is built once and handed to fresh `windows-2022` and `windows-latest` jobs without repository checkout
+  - ZIP sidecar, package manifest, desktop/CLI/shell entry-point SHA-256 and package hygiene are independently rechecked
+  - .NET/Visual Studio/Git toolchain paths are removed before packaged runtime probes
+  - self-contained CLI provider/analyze/dual-hash/state/diagnostics paths are exercised
+  - self-contained per-user shell helper is exercised through register/status/unregister
+  - machine-readable OS/build/package/runtime evidence is published for each matrix image
 
 PR #51 implementation head passed full Windows run #360 and Disposable Media Guard #32 before the first two items were marked complete.
 
 PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before the security-review item was marked complete.
 
-See `docs/SECURITY-BOUNDARIES.md`.
+PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before the clean-machine matrix was marked complete.
+
+See `docs/SECURITY-BOUNDARIES.md` and `docs/CLEAN-MACHINE-RUNTIME.md`.
 
 ### Remaining
-- clean-machine runtime matrix ⬜
 - normal-user UAC validation ⬜
 - real cross-process Explorer drag-out validation ⬜
 - accessibility/keyboard/screen-reader hardening ⬜
@@ -176,6 +184,6 @@ Production release requires all final capability, package, documentation, checks
 
 ## Beta release track
 
-The first planned public beta remains **`0.5.0-beta.1`**. Automated engineering, clean-package and security-boundary candidate gates are green, but clean-machine runtime, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
+The first planned public beta remains **`0.5.0-beta.1`**. The package-only clean-machine runtime matrix, automated engineering, clean-package and security-boundary gates are green, but interactive WinUI clean-desktop launch, normal-user UAC, real cross-process drag-out, accessibility hardening, final beta suffix/package verification and public Release/checksum publication remain open.
 
 A capability becomes user-visible only after its real backing path and tests exist.
