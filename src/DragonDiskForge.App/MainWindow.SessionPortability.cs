@@ -10,13 +10,15 @@ public sealed partial class MainWindow
         new(GetApplicationStatePath());
     private bool _sessionPortabilityEnabled;
     private long _imagePathCallbackToken;
+    private string? _startupImagePath;
 
-    internal void EnableSessionPortability()
+    internal void EnableSessionPortability(string? startupImagePath = null)
     {
         if (_sessionPortabilityEnabled)
             return;
 
         _sessionPortabilityEnabled = true;
+        _startupImagePath = startupImagePath;
         RootLayout.Loaded += RestoreSavedSessionAsync;
         _imagePathCallbackToken = ImagePathText.RegisterPropertyChangedCallback(
             TextBlock.TextProperty,
@@ -39,6 +41,17 @@ public sealed partial class MainWindow
 
         try
         {
+            if (!string.IsNullOrWhiteSpace(_startupImagePath))
+            {
+                var startupPath = _startupImagePath;
+                _startupImagePath = null;
+                if (File.Exists(startupPath))
+                {
+                    await LoadImageAsync(startupPath);
+                    return;
+                }
+            }
+
             var state = await _applicationPortability.LoadAsync();
             if (!state.Settings.RestoreLastImage || string.IsNullOrWhiteSpace(state.Session.LastImagePath))
                 return;
@@ -54,7 +67,7 @@ public sealed partial class MainWindow
         }
         catch
         {
-            // Corrupt/unavailable session state must never prevent the main window from starting.
+            // Corrupt/unavailable session state or launch input must never prevent the main window from starting.
         }
     }
 

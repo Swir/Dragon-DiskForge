@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 
 The public beta suffix is intentionally not promoted until the independent gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work may continue beyond the 0.5 beta scope without weakening that release gate.
 
-## Project progress — 77% toward 1.0
+## Project progress — 78% toward 1.0
 
-`███████████████░░░░░ 77%`
+`████████████████░░░░ 78%`
 
-**Overall completion:** **77%**
+**Overall completion:** **78%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -21,7 +21,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
 - `0.6 Create + Convert + Verify` — **100%** ✅
 - `0.7 Physical Media Tools` — **~86% (6/7)** 🚧
-- `0.8 Windows Integration + Power Tools` — **75% (3/4)** 🚧
+- `0.8 Windows Integration + Power Tools` — **100%** ✅
 - `0.9 Quality, Security + Beta Hardening` — planned
 - `1.0 Production Release` — planned
 
@@ -47,23 +47,22 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - gated Windows `PhysicalDriveN` writer candidate with target-volume locking/dismount, sector-aligned writes, flush and read-back SHA-256 verification; **not user-visible and not hardware-approved**
 - shared-Core automation CLI with deterministic text/JSON output and safe local application-state tooling
 - versioned session/settings persistence with best-effort last-image restore and sanitized diagnostic export
+- reversible per-user Windows Open With/context-menu integration without default-app takeover
 - required **by Swir** + GitHub footer in the Windows UI
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
 
 The safety-first engineering scope remains **6/7 (~86%)**.
 
-Dragon DiskForge now contains a Windows physical writer **candidate** behind hard safety gates. It performs read-only source/destination preflight, rejects unprovable topology and source-on-target cases, locks/dismounts target volumes, uses sector-aligned bounded transfer, flushes the device and can perform read-back SHA-256 verification. A disposable-media harness requires explicit opt-in plus exact destination identity and confirmation binding.
+Dragon DiskForge contains a Windows physical writer **candidate** behind hard safety gates. It performs read-only source/destination preflight, rejects unprovable topology and source-on-target cases, locks/dismounts target volumes, uses sector-aligned bounded transfer, flushes the device and can perform read-back SHA-256 verification. A disposable-media harness requires explicit opt-in plus exact destination identity and confirmation binding.
 
-PR #47 passed the full Windows x64 regression/build/package path in run #338 and the non-destructive disposable-media guard in run #10. Those results prove the code path and locked harness, **not a real destructive hardware validation**.
-
-The final 0.7 deliverable remains open until the writer is exercised successfully on dedicated disposable media under the documented safety protocol. No destructive physical-media action is exposed in the application UI.
+PR #47 passed full Windows run #338 and Disposable Media Guard #10. Those results prove the code path and locked harness, **not real destructive hardware validation**. The final 0.7 deliverable remains open until the writer is exercised successfully on dedicated disposable media. No destructive physical-media action is exposed in the application UI.
 
 See [`docs/PHYSICAL-MEDIA-SAFETY.md`](docs/PHYSICAL-MEDIA-SAFETY.md).
 
-## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
+## 0.8 Windows Integration + Power Tools — COMPLETE ✅
 
-Three of four top-level deliverables are now implemented and validated.
+All four top-level engineering deliverables are implemented and verified.
 
 ### Shared-Core CLI ✅
 
@@ -95,9 +94,21 @@ Image inspection/verification commands remain read-only. The CLI also exposes na
 - sanitized diagnostic ZIP export containing runtime/provider evidence and session/settings summary without full image paths or image contents
 - fail-closed schema/size/path validation plus dedicated smoke tests
 
-PR #49 implementation head passed the full Windows x64 regression/build/package path in run #353 and Disposable Media Guard #25 before this progress update.
+### Windows shell integration ✅
 
-Remaining 0.8 scope: Windows file associations/context-menu integration.
+The clean package now includes `tools/dragon-diskforge-shell.exe`:
+
+```powershell
+.\tools\dragon-diskforge-shell.exe register
+.\tools\dragon-diskforge-shell.exe status
+.\tools\dragon-diskforge-shell.exe unregister
+```
+
+Registration is explicit, per-user and reversible. It derives the extension list from canonical `SupportedFormats`, adds Dragon DiskForge to Open With discovery plus an **Open with Dragon DiskForge** context-menu verb, and does **not** replace Windows `UserChoice`/default-app settings. Shell-launched supported images enter the normal desktop image-open pipeline and take precedence over saved-session restoration.
+
+PR #50 implementation run #356 and Disposable Media Guard #28 passed before this milestone was marked complete. The clean package re-verifies the shell-helper SHA-256. Automated testing proves the registry/package/activation contract; Windows 11 may place classic verbs under **Show more options**, and visual clean-machine Explorer behavior remains later manual QA.
+
+See [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md).
 
 ## 0.6 Create + Convert + Verify — COMPLETE ✅
 
@@ -128,7 +139,7 @@ No empty, symbolic or CI-only beta will be published.
 - x64 + ARM64 project targets
 - shared Core engine separated from WinUI
 - isolated Windows native-storage layer
-- self-contained x64 CLI in the clean Windows package
+- self-contained x64 CLI and shell-integration helper in the clean Windows package
 - generated smoke/integration fixtures rather than committed large images
 
 ## Build on Windows
@@ -139,11 +150,11 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, Release x64 build and independently verified clean ZIP package candidate.
+CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, shell integration, Release x64 build and independently verified clean ZIP package candidate.
 
 ## Safety design
 
-Inspection and image/media automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing. CLI state/settings commands are restricted to Dragon DiskForge local application state and diagnostic export; they do not modify inspected images or physical media.
+Inspection and image/media automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing. CLI state/settings commands are restricted to Dragon DiskForge local application state and diagnostic export; they do not modify inspected images or physical media. Shell integration is opt-in, per-user and reversible and never overwrites the user's default-app choice.
 
 Physical-device mutation remains outside the product surface. The Windows writer candidate is kept behind explicit identity/topology/confirmation checks and a disposable-media validation harness; it does not become a user-visible capability until real dedicated-media validation proves the remaining 0.7 gate.
 
@@ -151,4 +162,4 @@ Physical-device mutation remains outside the product surface. The Windows writer
 
 **No fake features.** A capability becomes enabled in the UI only after its real backing path exists and is testable.
 
-Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md) and [`CHANGELOG.md`](CHANGELOG.md).
+Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md), [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md) and [`CHANGELOG.md`](CHANGELOG.md).
