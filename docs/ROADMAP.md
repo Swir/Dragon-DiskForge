@@ -2,9 +2,9 @@
 
 This roadmap tracks implemented, testable product deliverables. A checkbox is completed only when a real backing path exists and the required verification has passed. Documentation, placeholders and CI-only work do not count as feature completion.
 
-## Overall progress — 80% toward 1.0
+## Overall progress — 81% toward 1.0
 
-`████████████████░░░░ 80%`
+`████████████████░░░░ 81%`
 
 - **0.1 Foundation + Dragon UI — COMPLETE ✅**
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
@@ -14,7 +14,7 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 - **0.6 Create + Convert + Verify — COMPLETE ✅**
 - **0.7 Physical Media Tools — 6/7 (~86%) 🚧**
 - **0.8 Windows Integration + Power Tools — COMPLETE ✅**
-- **0.9 Quality, Security + Beta Hardening — 2/7 (~29%) 🚧**
+- **0.9 Quality, Security + Beta Hardening — 3/7 (~43%) 🚧**
 - **1.0 Production Release — planned**
 
 Work may advance out of milestone order when an earlier milestone is blocked by a real hardware/manual validation gate. The remaining 0.7 hardware gate is not weakened by progress in later milestones.
@@ -119,19 +119,21 @@ See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current scope: **2/7 (~29%)**.
+Current scope: **3/7 (~43%)**.
 
 - [ ] clean-machine runtime matrix
 - [ ] normal-user UAC validation
 - [ ] real cross-process Explorer drag-out validation
 - [ ] accessibility/keyboard/screen-reader hardening
 - [x] performance and large-image regression benchmarks
-- [ ] security review of parsing, packaging and privileged boundaries
+- [x] security review of parsing, packaging and privileged boundaries
 - [x] crash/diagnostic export and release support bundle
 
 PR #51 adds a privacy-preserving crash-report history and integrates up to three sanitized crash summaries into the support ZIP. It also adds a large-image performance regression gate using real Core verification plus bounded recognition over an 8 GiB sparse RAW/IMG fixture. Full Windows run #360 and Disposable Media Guard #32 passed on the implementation head before these two deliverables were marked complete.
 
-Crash evidence is bounded and deliberately excludes raw exception messages, source-file paths and image contents. The performance gate publishes benchmark JSON while using conservative ceilings intended to detect major regressions rather than claim hardware-independent absolute speed.
+PR #52 completes the repeatable security-boundary review: the desktop manifest is explicitly pinned to `asInvoker` with UI access disabled, a dedicated security CI gate checks elevation/shell/CLI/package/destructive-writer boundaries, physical-media refusal and confirmation cases are exercised, and the reviewed architecture is documented in `docs/SECURITY-BOUNDARIES.md`. Exact implementation head `0ff048a...` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this deliverable was marked complete.
+
+Crash evidence is bounded and deliberately excludes raw exception messages, source-file paths and image contents. The performance gate publishes benchmark JSON while using conservative ceilings intended to detect major regressions rather than claim hardware-independent absolute speed. The security gate proves stated code/package invariants, not the remaining real-desktop or dedicated-media manual gates.
 
 ## 1.0 Production Release — PLANNED
 
