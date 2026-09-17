@@ -130,6 +130,10 @@ public sealed class ApplicationPortabilityService
         var extension = state.Session.LastImagePath is null
             ? null
             : Path.GetExtension(state.Session.LastImagePath);
+        var stateDirectory = Path.GetDirectoryName(_storagePath)
+            ?? throw new InvalidOperationException("Application-state storage path has no parent directory.");
+        var crashReports = new CrashReportService(Path.Combine(stateDirectory, "crashes"))
+            .LoadRecent(maxReports: 3);
 
         var diagnostics = new DragonDiagnosticSnapshot(
             SchemaVersion: 1,
@@ -163,6 +167,7 @@ public sealed class ApplicationPortabilityService
                         lastSavedUtc = state.Session.LastSavedUtc
                     },
                     token);
+                await WriteZipEntryAsync(archive, "crash-summary.json", crashReports, token);
 
                 var readme = archive.CreateEntry("README.txt", CompressionLevel.Optimal);
                 await using var writerStream = readme.Open();
@@ -174,7 +179,8 @@ public sealed class ApplicationPortabilityService
                 await writer.WriteAsync(
                     "Dragon DiskForge diagnostic bundle\n" +
                     "This bundle intentionally excludes full image paths and image contents.\n" +
-                    "It contains runtime/provider metadata and a sanitized session/settings summary only.\n");
+                    "It contains runtime/provider metadata, a sanitized session/settings summary, and up to three privacy-preserving crash fingerprints.\n" +
+                    "Crash summaries never store raw exception messages, source-file paths or image data.\n");
                 await writer.FlushAsync(token);
             },
             overwritePolicy,

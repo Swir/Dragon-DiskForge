@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 
 The public beta suffix is intentionally not promoted until the independent gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work may continue beyond the 0.5 beta scope without weakening that release gate.
 
-## Project progress — 78% toward 1.0
+## Project progress — 80% toward 1.0
 
-`████████████████░░░░ 78%`
+`████████████████░░░░ 80%`
 
-**Overall completion:** **78%**
+**Overall completion:** **80%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -22,7 +22,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - `0.6 Create + Convert + Verify` — **100%** ✅
 - `0.7 Physical Media Tools` — **~86% (6/7)** 🚧
 - `0.8 Windows Integration + Power Tools` — **100%** ✅
-- `0.9 Quality, Security + Beta Hardening` — planned
+- `0.9 Quality, Security + Beta Hardening` — **~29% (2/7)** 🚧
 - `1.0 Production Release` — planned
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count, documentation-only edits and placeholders do not increase completion. Work may advance out of milestone order when a remaining milestone is blocked by a real hardware/manual gate.
@@ -48,6 +48,8 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - shared-Core automation CLI with deterministic text/JSON output and safe local application-state tooling
 - versioned session/settings persistence with best-effort last-image restore and sanitized diagnostic export
 - reversible per-user Windows Open With/context-menu integration without default-app takeover
+- bounded privacy-preserving crash history integrated into the support ZIP without raw exception messages, source-file paths or image contents
+- large-image performance regression gate with machine-readable benchmark evidence for verification and bounded RAW/IMG recognition
 - required **by Swir** + GitHub footer in the Windows UI
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
@@ -110,6 +112,22 @@ PR #50 implementation run #356 and Disposable Media Guard #28 passed before this
 
 See [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md).
 
+## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
+
+Current scope: **2/7 (~29%)**.
+
+### Crash + support evidence ✅
+
+Unhandled WinUI failures are captured best-effort into a bounded rotated local crash history. Reports store only exception type, HRESULT, a SHA-256 fingerprint, exception-chain type names and method-only frames. Raw exception messages, source-file paths and image contents are intentionally excluded. The support ZIP now includes at most three sanitized crash summaries and keeps using the existing transactional safe-output boundary.
+
+### Large-image performance regression gate ✅
+
+CI now exercises real one-pass SHA-256/SHA-512 verification over a generated 128 MiB fixture and bounded filesystem recognition over a valid 8 GiB sparse RAW/IMG MBR fixture. The gate records timing, throughput and managed-allocation evidence, enforces conservative regression ceilings and publishes benchmark JSON as a dedicated artifact.
+
+PR #51 implementation head `44a075a...` passed full Windows run #360 and Disposable Media Guard #32 before these roadmap items were marked complete. The first benchmark attempt correctly failed on an invalid blank RAW fixture; the test was fixed in the same iteration to use a real MBR-backed sparse fixture.
+
+Remaining 0.9 work: clean-machine runtime matrix, normal-user UAC, real cross-process Explorer drag-out, accessibility/keyboard/screen-reader hardening and a security review of parsing/package/privileged boundaries.
+
 ## 0.6 Create + Convert + Verify — COMPLETE ✅
 
 The automated 0.6 engineering scope is complete: dual SHA verification, safe output transactions, blank RAW + proven guest-to-RAW export, transactional split/join and bounded whole-file gzip transport compression/decompression. Sparse-container writing and unsupported format-internal compression decoding are not claimed.
@@ -140,7 +158,7 @@ No empty, symbolic or CI-only beta will be published.
 - shared Core engine separated from WinUI
 - isolated Windows native-storage layer
 - self-contained x64 CLI and shell-integration helper in the clean Windows package
-- generated smoke/integration fixtures rather than committed large images
+- generated smoke/integration/performance fixtures rather than committed large images
 
 ## Build on Windows
 
@@ -150,11 +168,13 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, shell integration, Release x64 build and independently verified clean ZIP package candidate.
+CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, sanitized crash/support evidence, large-image performance regressions, shell integration, Release x64 build and independently verified clean ZIP package candidate.
 
 ## Safety design
 
 Inspection and image/media automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing. CLI state/settings commands are restricted to Dragon DiskForge local application state and diagnostic export; they do not modify inspected images or physical media. Shell integration is opt-in, per-user and reversible and never overwrites the user's default-app choice.
+
+Crash evidence is bounded and privacy-preserving: raw exception messages, source-file paths and image contents are never persisted. Performance fixtures are generated locally and deleted after the regression run.
 
 Physical-device mutation remains outside the product surface. The Windows writer candidate is kept behind explicit identity/topology/confirmation checks and a disposable-media validation harness; it does not become a user-visible capability until real dedicated-media validation proves the remaining 0.7 gate.
 

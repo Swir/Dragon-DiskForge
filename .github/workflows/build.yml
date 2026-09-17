@@ -75,6 +75,17 @@ jobs:
       - name: Session/settings/diagnostic portability smoke tests
         run: dotnet run --project tests/DragonDiskForge.Portability.SmokeTests/DragonDiskForge.Portability.SmokeTests.csproj -c Release
 
+      - name: Large-image performance regression gate
+        run: dotnet run --project tests/DragonDiskForge.Performance.SmokeTests/DragonDiskForge.Performance.SmokeTests.csproj -c Release -- --output artifacts/performance/benchmark.json
+
+      - name: Publish performance benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: DragonDiskForge-performance-benchmark
+          path: artifacts/performance/benchmark.json
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Windows shell integration smoke tests
         run: dotnet run --project tests/DragonDiskForge.ShellIntegration.SmokeTests/DragonDiskForge.ShellIntegration.SmokeTests.csproj -c Release
 
