@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   fail-closed-harness:
-    name: Disposable writer harness stays locked in CI
+    name: Disposable writer safety gates stay locked in CI
     runs-on: windows-latest
 
     steps:
@@ -24,7 +24,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Compile and execute without destructive opt-in
+      - name: Read-only Windows writer preflight smoke tests
+        run: dotnet run --project tests/DragonDiskForge.PhysicalMediaWindowsPreflight.SmokeTests/DragonDiskForge.PhysicalMediaWindowsPreflight.SmokeTests.csproj -c Release
+
+      - name: Compile and execute disposable harness without destructive opt-in
         shell: pwsh
         run: |
           if ($env:DDF_DISPOSABLE_WRITE_OPT_IN) {
