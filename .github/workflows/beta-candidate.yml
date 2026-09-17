@@ -65,7 +65,8 @@ jobs:
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode metadata -ExpectedPrefix 0.5.0 -BetaSuffix beta.1 -SourceCommit $env:SOURCE_COMMIT -WorkflowRunId '${{ github.run_id }}'
 
-      - name: Publish non-public beta candidate
+      - name: Publish explicitly selected non-public beta candidate
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[beta-candidate]')
         uses: actions/upload-artifact@v4
         with:
           name: DragonDiskForge-0.5.0-beta.1-win-x64-candidate-${{ github.run_id }}
@@ -75,4 +76,11 @@ jobs:
             artifacts/windows/beta-candidate.json
             artifacts/windows/beta-candidate.json.sha256
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 14
+
+      - name: Explain verification-only runs
+        if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[beta-candidate]')
+        shell: pwsh
+        run: |
+          Write-Host "Candidate build and verification passed."
+          Write-Host "No retained 160+ MiB artifact was uploaded because this was not an explicitly selected [beta-candidate] main commit."
