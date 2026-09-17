@@ -39,37 +39,42 @@ The project follows semantic versioning while it evolves toward 1.0.
 - self-contained `tools/dragon-diskforge-shell.exe` with register/status/unregister commands
 - package-manifest shell-helper entry point + SHA-256 and unpacked launch verification
 - isolated shell integration smoke coverage for registry ownership, idempotency, unrelated-handler preservation and launch-path validation
+- explicit desktop `asInvoker` / `uiAccess=false` execution boundary
+- `DragonDiskForge.SecurityBoundary.SmokeTests` covering elevation, shell, CLI, package, destructive-writer and physical-media fail-closed invariants
+- dedicated **Dragon DiskForge Security Boundary** GitHub Actions workflow
+- `docs/SECURITY-BOUNDARIES.md` documenting reviewed parsing, packaging, shell, diagnostics and privileged-operation boundaries plus manual-gate limitations
 - `docs/PHYSICAL-MEDIA-SAFETY.md`, `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md`, `docs/SPLIT-COMPRESSION-PIPELINES.md`, `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`
 
 ### Changed
-- project progress advances to **80% toward 1.0** after six verified 0.7 deliverables, all four verified 0.8 deliverables and two verified 0.9 hardening deliverables beyond the 68% 0.6 baseline
+- project progress advances to **81% toward 1.0** after six verified 0.7 deliverables, all four verified 0.8 deliverables and three verified 0.9 hardening deliverables beyond the 68% 0.6 baseline
 - **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
-- **0.9 Quality, Security + Beta Hardening** is now **2/7 (~29%)** after verified crash/support hardening and large-image performance regression evidence
+- **0.9 Quality, Security + Beta Hardening** advances to **3/7 (~43%)** after verified crash/support, large-image performance and security-boundary hardening
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema records the shell helper and SHA-256
-- diagnostic bundles now include bounded sanitized crash evidence without weakening their privacy boundary
-- CI now publishes a dedicated large-image performance benchmark artifact
+- diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
+- CI publishes a dedicated large-image performance benchmark artifact and now separately gates reviewed security-boundary invariants
 
 ### Safety
 - inspection/provider/intelligence/image-media CLI paths remain read-only-first
 - unsupported UI actions remain disabled rather than simulated
+- the desktop manifest explicitly requests `asInvoker` and disables UI access; normal startup does not request ambient administrator elevation
 - file-producing Core operations publish through explicit transaction boundaries
 - state imports validate version/size/path data before atomically replacing local application state
 - diagnostic bundles intentionally exclude full saved-image paths and image contents
 - persisted crash evidence intentionally excludes raw exception messages, source-file paths and image contents, is size-bounded and rotates to a fixed maximum
-- shell integration is explicit, per-user and reversible; it does not write Windows `UserChoice` or replace default handlers
+- shell integration is explicit, per-user and reversible; it does not write Windows `UserChoice`, HKLM, or replace default handlers
 - shell unregister removes only Dragon-owned application/verb keys and preserves unrelated handlers
+- shell command registration enforces the Dragon executable identity, quotes `%1`, and rejects quote injection
 - physical-disk planning refuses system disks, ambiguous identity, unknown capacity, physical-device sources, source-on-target and oversized inputs
 - the Windows writer candidate revalidates destination/source evidence, requires locked/dismounted target volumes and fails closed on unprovable topology
 - the disposable-media harness requires explicit destructive opt-in and exact destination-bound evidence; default CI execution cannot write physical media
-- no physical-media writer is exposed in the product UI
+- no physical-media writer is exposed in the product UI or public CLI
 - no completion claim is made for 0.7 until a real dedicated disposable-media validation succeeds
-- the CLI exposes no create, convert or physical-media mutation command
 - performance fixtures are generated locally and removed after the regression run rather than committed as large binary test images
 
 ### Verified
@@ -109,11 +114,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, best-effort desktop restore, CLI state tooling and sanitized diagnostic export
 - PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration, command-line activation and verified shell-helper packaging
 - PR #51 / implementation run #360 + Disposable Media Guard #32 — privacy-preserving crash/support evidence and large-image performance regression gate
+- PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — explicit asInvoker boundary and repeatable parsing/package/privileged security review
 
 ### Planned
 - complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
 - complete 0.7 only after real dedicated disposable-media writer validation
-- continue 0.9 with accessibility/keyboard hardening and parser/package/privileged-boundary security review where repeatable evidence is available
+- continue 0.9 with accessibility/keyboard/screen-reader hardening where repeatable evidence is available
 - keep destructive physical operations out of the product UI until separately validated and deliberately exposed
 
 ## [0.3.0] - 2026-09-15
