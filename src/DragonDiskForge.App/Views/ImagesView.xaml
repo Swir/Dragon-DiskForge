@@ -29,13 +29,17 @@
                            Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                <ProgressRing x:Name="BusyRing" Width="22" Height="22" IsActive="False" />
-                <Button Content="Refresh" Click="Refresh_Click"
+                <ProgressRing x:Name="BusyRing" Width="22" Height="22" IsActive="False"
+                              AutomationProperties.Name="Refreshing image library" />
+                <Button Content="Refresh" Click="Refresh_Click" AccessKey="R"
+                        AutomationProperties.Name="Refresh image library"
                         Style="{StaticResource DragonSecondaryButtonStyle}" />
             </StackPanel>
         </Grid>
 
-        <InfoBar x:Name="StatusBar" Grid.Row="1" IsOpen="False" IsClosable="True" Margin="0,0,0,14" />
+        <InfoBar x:Name="StatusBar" Grid.Row="1" IsOpen="False" IsClosable="True" Margin="0,0,0,14"
+                 AutomationProperties.Name="Image library status"
+                 AutomationProperties.LiveSetting="Polite" />
 
         <Grid Grid.Row="2" Margin="0,0,0,9">
             <Grid.ColumnDefinitions>
@@ -45,16 +49,20 @@
             <TextBlock Text="FAVORITES" FontSize="11" FontWeight="Bold"
                        Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
             <TextBlock x:Name="FavoriteCountText" Grid.Column="1" Text="0 favorites"
-                       Foreground="{ThemeResource DragonMutedBrush}" />
+                       Foreground="{ThemeResource DragonMutedBrush}"
+                       AutomationProperties.Name="Favorite image count"
+                       AutomationProperties.LiveSetting="Polite" />
         </Grid>
 
         <Grid Grid.Row="3" Margin="0,0,0,22">
             <TextBlock x:Name="FavoritesEmpty"
                        Text="No favorites yet. Mark a recent image as favorite to keep it pinned here."
                        Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap"
-                       Margin="4,12" />
+                       Margin="4,12"
+                       AutomationProperties.LiveSetting="Polite" />
             <ListView x:Name="FavoritesList" Visibility="Collapsed" SelectionMode="None"
-                      Background="Transparent" HorizontalContentAlignment="Stretch">
+                      Background="Transparent" HorizontalContentAlignment="Stretch"
+                      AutomationProperties.Name="Favorite disk images">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -66,7 +74,9 @@
                     <DataTemplate>
                         <Border Background="{ThemeResource DragonPanelStrongBrush}"
                                 BorderBrush="{ThemeResource DragonBorderHotBrush}"
-                                BorderThickness="1" CornerRadius="16" Padding="15">
+                                BorderThickness="1" CornerRadius="16" Padding="15"
+                                AutomationProperties.Name="{Binding FileName}"
+                                AutomationProperties.HelpText="{Binding Meta}">
                             <Grid ColumnSpacing="14">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="46" />
@@ -88,11 +98,17 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                                     <Button Content="Open" Tag="{Binding Path}" IsEnabled="{Binding CanOpen}"
-                                            Click="Open_Click" Style="{StaticResource DragonPrimaryButtonStyle}" />
+                                            Click="Open_Click"
+                                            AutomationProperties.Name="Open favorite image"
+                                            Style="{StaticResource DragonPrimaryButtonStyle}" />
                                     <Button Content="Unfavorite" Tag="{Binding Path}"
-                                            Click="ToggleFavorite_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                            Click="ToggleFavorite_Click"
+                                            AutomationProperties.Name="Remove image from favorites"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
                                     <Button Content="Remove" Tag="{Binding Path}"
-                                            Click="Remove_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                            Click="Remove_Click"
+                                            AutomationProperties.Name="Remove image from local history"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -109,16 +125,20 @@
             <TextBlock Text="RECENT IMAGES" FontSize="11" FontWeight="Bold"
                        Foreground="{ThemeResource DragonEmberBrush}" CharacterSpacing="170" />
             <TextBlock x:Name="RecentCountText" Grid.Column="1" Text="0 recent"
-                       Foreground="{ThemeResource DragonMutedBrush}" />
+                       Foreground="{ThemeResource DragonMutedBrush}"
+                       AutomationProperties.Name="Recent image count"
+                       AutomationProperties.LiveSetting="Polite" />
         </Grid>
 
         <Grid Grid.Row="5">
             <TextBlock x:Name="RecentsEmpty"
                        Text="Images you open successfully will appear here automatically."
                        Foreground="{ThemeResource DragonMutedBrush}" TextWrapping="Wrap"
-                       Margin="4,12" />
+                       Margin="4,12"
+                       AutomationProperties.LiveSetting="Polite" />
             <ListView x:Name="RecentsList" Visibility="Collapsed" SelectionMode="None"
-                      Background="Transparent" HorizontalContentAlignment="Stretch">
+                      Background="Transparent" HorizontalContentAlignment="Stretch"
+                      AutomationProperties.Name="Recent disk images">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -130,7 +150,9 @@
                     <DataTemplate>
                         <Border Background="{ThemeResource DragonPanelStrongBrush}"
                                 BorderBrush="{ThemeResource DragonBorderBrush}"
-                                BorderThickness="1" CornerRadius="16" Padding="15">
+                                BorderThickness="1" CornerRadius="16" Padding="15"
+                                AutomationProperties.Name="{Binding FileName}"
+                                AutomationProperties.HelpText="{Binding Meta}">
                             <Grid ColumnSpacing="14">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="46" />
@@ -152,11 +174,17 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                                     <Button Content="Open" Tag="{Binding Path}" IsEnabled="{Binding CanOpen}"
-                                            Click="Open_Click" Style="{StaticResource DragonPrimaryButtonStyle}" />
+                                            Click="Open_Click"
+                                            AutomationProperties.Name="Open recent image"
+                                            Style="{StaticResource DragonPrimaryButtonStyle}" />
                                     <Button Content="{Binding FavoriteActionText}" Tag="{Binding Path}"
-                                            Click="ToggleFavorite_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                            Click="ToggleFavorite_Click"
+                                            AutomationProperties.Name="Change favorite state"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
                                     <Button Content="Remove" Tag="{Binding Path}"
-                                            Click="Remove_Click" Style="{StaticResource DragonSecondaryButtonStyle}" />
+                                            Click="Remove_Click"
+                                            AutomationProperties.Name="Remove image from local history"
+                                            Style="{StaticResource DragonSecondaryButtonStyle}" />
                                 </StackPanel>
                             </Grid>
                         </Border>
