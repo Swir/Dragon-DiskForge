@@ -2,9 +2,9 @@
 
 This roadmap tracks implemented, testable product deliverables. A checkbox is completed only when a real backing path exists and the required verification has passed. Documentation, placeholders and CI-only work do not count as feature completion.
 
-## Overall progress — 77% toward 1.0
+## Overall progress — 78% toward 1.0
 
-`███████████████░░░░░ 77%`
+`████████████████░░░░ 78%`
 
 - **0.1 Foundation + Dragon UI — COMPLETE ✅**
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
@@ -13,11 +13,11 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 - **0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅**
 - **0.6 Create + Convert + Verify — COMPLETE ✅**
 - **0.7 Physical Media Tools — 6/7 (~86%) 🚧**
-- **0.8 Windows Integration + Power Tools — 3/4 (75%) 🚧**
+- **0.8 Windows Integration + Power Tools — COMPLETE ✅**
 - **0.9 Quality, Security + Beta Hardening — planned**
 - **1.0 Production Release — planned**
 
-Work may advance out of milestone order when an earlier milestone is blocked by a real hardware/manual validation gate. The remaining 0.7 hardware gate is not weakened by progress in 0.8.
+Work may advance out of milestone order when an earlier milestone is blocked by a real hardware/manual validation gate. The remaining 0.7 hardware gate is not weakened by progress in later milestones.
 
 ## 0.1 Foundation + Dragon UI — COMPLETE ✅
 
@@ -102,20 +102,20 @@ PR #47 adds the Windows writer candidate, read-only source/target topology prefl
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
+## 0.8 Windows Integration + Power Tools — COMPLETE ✅
 
-Current scope: **3/4 (75%)**.
+Current scope: **4/4 (100%)**.
 
-- [ ] Windows file associations and context-menu integration
+- [x] Windows file associations and context-menu integration
 - [x] shared-Core read-only image/verification CLI (`analyze`, `verify`, `formats`)
 - [x] PowerShell-friendly deterministic text/JSON output, stderr diagnostics and stable exit codes
 - [x] session restore + settings import/export + sanitized diagnostic export tooling
 
-The CLI reuses the desktop application's canonical Core provider registry and is shipped as a self-contained x64 executable inside the clean Windows package. State/settings commands are restricted to local Dragon DiskForge application state; no destructive image or physical-media command is exposed.
+The shell-integration path is per-user and reversible. It registers Dragon DiskForge under `HKCU\Software\Classes`, derives its extension set from canonical `SupportedFormats`, adds an explicit **Open with Dragon DiskForge** verb, and deliberately does not replace Windows `UserChoice` defaults. The clean package includes the self-contained registration helper plus manifest/hash verification. Command-line file activation feeds the same image-open path as normal desktop opens.
 
-PR #49 implementation run #353 and Disposable Media Guard #25 passed before the third 0.8 deliverable was marked complete.
+PR #50 implementation run #356 and Disposable Media Guard #28 passed before this milestone was marked complete. Automated validation proves the registry/package/startup contract; clean-machine visual Explorer behavior remains part of later manual quality/release QA rather than being overstated here.
 
-See `docs/CLI.md`.
+See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — PLANNED
 

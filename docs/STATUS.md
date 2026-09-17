@@ -8,6 +8,7 @@
 - **0.4 Extended Image Providers — COMPLETE ✅**
 - **0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅**
 - **0.6 Create + Convert + Verify — COMPLETE ✅**
+- **0.8 Windows Integration + Power Tools — COMPLETE ✅**
 
 ## Current development version
 
@@ -17,7 +18,7 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**77% toward 1.0.** The previously verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables and three verified top-level 0.8 deliverables. The remaining 0.7 item is hardware-gated, so safe independent 0.8 work is progressing out of order rather than treating hardware CI as a substitute for real media validation.
+**78% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables and all four verified 0.8 deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may advance to 0.9 without treating host-side CI as a substitute for real-media validation.
 
 ## Current roadmap position
 
@@ -48,9 +49,9 @@ Until that happens, the application exposes no physical-media write action and 0
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-### 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧 — 3/4 (75%)
+### 0.8 Windows Integration + Power Tools — COMPLETE ✅ — 4/4 (100%)
 
-The remaining 0.7 item requires physical disposable-media evidence, so independent safe 0.8 slices continue without weakening the 0.7 gate.
+The final safe 0.8 slice is now implemented and independently verified while 0.7 remains correctly blocked on real hardware evidence.
 
 #### Shared-Core CLI ✅
 
@@ -67,12 +68,11 @@ The remaining 0.7 item requires physical disposable-media evidence, so independe
 - errors and diagnostics use stderr
 - stable exit codes: success, unexpected failure, usage, input/operation error, checksum mismatch and cancellation
 - expected SHA-256/SHA-512 values are strictly validated and compared case-insensitively
-- CLI smoke tests cover JSON cleanliness, unknown-image truthfulness, dual-hash matches/mismatch, provider uniqueness and error contracts
 - clean package includes self-contained `cli/dragon-diskforge.exe`
 - package manifest includes CLI entry point + SHA-256
 - package verification checks the CLI hash, launches the unpacked CLI and validates its provider output
 
-PR #48 implementation head passed Disposable Media Guard #15 and full Windows build run #343, including the CLI smoke tests, Release x64 build, self-contained CLI packaging and clean-package runtime verification.
+PR #48 implementation head passed Disposable Media Guard #15 and full Windows build run #343.
 
 #### Session/settings/diagnostic portability ✅
 
@@ -80,18 +80,29 @@ PR #48 implementation head passed Disposable Media Guard #15 and full Windows bu
 - local state is loaded/saved atomically through the safe-output transaction boundary
 - desktop startup can best-effort restore the last image when enabled; missing/corrupt state cannot prevent startup
 - `state-show`, `state-export`, `state-import`, `restore-last-image` and `diagnostics` are available through the CLI
-- optional `--state` paths isolate automation/tests from the normal `%LocalAppData%` state file
-- state import validates schema/size/path data and fails closed before replacing existing local state
-- diagnostic ZIP contains runtime/provider metadata and sanitized settings/session summary, never full saved-image paths or image content
-- smoke tests cover defaults, persistence, rollback on rejected import, cancellation, diagnostic privacy and the CLI state contract
+- diagnostic ZIP excludes full saved-image paths and image content
 
-PR #49 implementation head passed full Windows build run #353 and Disposable Media Guard #25, including the new portability smoke gate, native Windows integrations, Release x64 build and clean-package verification.
+PR #49 implementation head passed full Windows build run #353 and Disposable Media Guard #25.
 
-#### Remaining 0.8 scope ⬜
+#### Windows shell integration ✅
 
-- Windows file associations/context-menu integration
+- canonical supported extensions are derived directly from Core `SupportedFormats`
+- per-user registration uses `HKCU\Software\Classes`; no administrator requirement is introduced
+- Dragon DiskForge is registered for Open With discovery plus an explicit **Open with Dragon DiskForge** context-menu verb
+- Windows `UserChoice`/default-app selection is not replaced
+- unregister is idempotent and removes only Dragon-owned application/verb keys
+- startup image arguments are validated against supported existing image paths and take precedence over saved-session restore
+- clean package contains self-contained `tools/dragon-diskforge-shell.exe`
+- package manifest records/verifies the shell-helper SHA-256
+- isolated registry/startup smoke tests cover registration, unrelated-verb preservation and safe activation
 
-See `docs/CLI.md`.
+PR #50 implementation run #356 and Disposable Media Guard #28 passed before the milestone was marked complete. This proves the implementation/package contract, not a human visual check of every Explorer menu variant.
+
+See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
+
+### Next safe engineering target — 0.9 Quality, Security + Beta Hardening
+
+0.9 can now advance in areas that do not require the still-open 0.7 destructive hardware gate: accessibility/keyboard hardening, measurable performance regression tooling, parser/package/privilege-boundary security review automation and release-support hardening. Clean-machine/UAC/cross-process Explorer checks remain explicit manual gates where automation cannot prove the user-visible behavior.
 
 ## Proven validation checkpoints
 
@@ -114,7 +125,7 @@ See `docs/CLI.md`.
 - PR #29 / run #235 — filesystem recognition
 - PR #30 / run #242 — boot/installer intelligence
 - PR #31 / run #245 — unified identity/health
-- PR #32 / run #260 — Analyze/reporting
+- PR #32 / run #260 — Windows Analyze/reporting
 - PR #33 / run #262 — deeper filesystem evidence
 - PR #34 / run #266 — NTFS/architecture hardening + package foundation
 - PR #35 / run #270 — version metadata + independent package verification
@@ -138,6 +149,7 @@ See `docs/CLI.md`.
 ### 0.8
 - PR #48 / implementation run #343 + Disposable Media Guard #15 — shared-Core CLI, deterministic automation output and verified self-contained clean-package CLI
 - PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, desktop restore and sanitized diagnostic tooling
+- PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration, launch activation and verified shell-helper packaging
 
 ## Beta readiness
 
@@ -151,11 +163,11 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 - complete basic clean-machine launch/open/mount/explore/verify/analyze regression
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-The CLI and state/diagnostic tooling strengthen the package but do not replace any of those manual beta gates.
+0.8 completion strengthens the Windows package but does not replace any of those manual beta gates.
 
 ## Current safety state
 
-Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Unsupported capabilities stay disabled. Metadata parsers, guest readers and intelligence services validate offsets/ranges and reject unsupported or contradictory states instead of guessing.
+Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Shell integration is explicit, per-user, reversible and does not replace Windows default-app choices. Unsupported capabilities stay disabled.
 
 The Windows physical writer candidate is not connected to a user-visible action. Its executable path remains behind destination identity/topology/confirmation checks and a hard-locked disposable-media harness. No completion claim is made until real dedicated-media validation proves the final 0.7 item.
 

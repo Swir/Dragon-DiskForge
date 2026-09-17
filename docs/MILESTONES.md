@@ -90,12 +90,21 @@ Current required engineering scope: **6/7 (~86%)**.
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
+## 0.8 Windows Integration + Power Tools — COMPLETE ✅
 
-Current required engineering scope: **3/4 (75%)**. Safe work advances here while 0.7 waits on hardware evidence.
+Required engineering scope: **4/4 (100%)**. Safe work completed here while 0.7 waits on hardware evidence.
 
-### 1. Windows file associations + context menu ⬜
-Not yet implemented.
+### 1. Windows file associations + context menu ✅
+- extension set comes from canonical Core `SupportedFormats`
+- explicit per-user registration under `HKCU\Software\Classes`
+- Open With application registration plus **Open with Dragon DiskForge** verb
+- no `UserChoice`/default-handler replacement
+- idempotent register/unregister; unrelated shell verbs are preserved
+- supported command-line image path opens through the desktop's normal image pipeline and wins over saved-session restore
+- clean x64 package contains self-contained `tools/dragon-diskforge-shell.exe`
+- package manifest stores and re-verifies the shell helper SHA-256
+- isolated Windows registry/activation smoke gate
+- PR #50 / full Windows run #356 + Disposable Media Guard #28 passed
 
 ### 2. Shared-Core CLI ✅
 - `DragonDiskForge.Cli` project
@@ -108,7 +117,6 @@ Not yet implemented.
 - stderr-only errors/diagnostics
 - stable automation exit codes
 - expected SHA-256/SHA-512 matching with a dedicated mismatch exit code
-- CLI smoke tests in the full Windows CI
 - self-contained x64 `cli/dragon-diskforge.exe` in the clean package
 - manifest SHA-256 for the CLI and runtime launch/provider verification after ZIP extraction
 - PR #48 implementation run #343 + Disposable Media Guard #15 passed
@@ -122,9 +130,9 @@ Not yet implemented.
 - fail-closed schema/size/path validation, cancellation and rollback coverage
 - PR #49 implementation run #353 + Disposable Media Guard #25 passed
 
-The remaining 0.8 deliverable is Windows file associations/context-menu integration.
+Automated shell integration proves the registry, launch and clean-package contracts. Visual Explorer placement varies by Windows build (for example classic verbs may appear under **Show more options**) and remains appropriate for clean-machine/manual 0.9 QA.
 
-See `docs/CLI.md`.
+See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — PLANNED
 

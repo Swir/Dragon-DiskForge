@@ -25,25 +25,28 @@ The project follows semantic versioning while it evolves toward 1.0.
 - deterministic CLI text/JSON stdout, stderr diagnostics and stable automation exit codes
 - self-contained x64 `cli/dragon-diskforge.exe` in the clean Windows package
 - package-manifest CLI entry point + SHA-256 and unpacked runtime/provider verification
-- dedicated CLI smoke tests for JSON cleanliness, truthful unknown-format analysis, dual-digest matching/mismatch, provider uniqueness and error contracts
 - versioned Core application-state schema for session/settings portability
 - best-effort desktop last-image persistence/restore with missing/corrupt-state startup isolation
 - atomic state import/export plus CLI `state-show`, `state-export`, `state-import` and `restore-last-image` commands
 - sanitized diagnostic ZIP export plus CLI `diagnostics`, excluding full image paths and image contents
 - dedicated portability smoke coverage for schema validation, rollback, cancellation, diagnostic privacy and CLI contracts
-- `docs/PHYSICAL-MEDIA-SAFETY.md`, `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md`, `docs/SPLIT-COMPRESSION-PIPELINES.md` and `docs/CLI.md`
+- safe per-user Windows Open With/context-menu registration derived from canonical supported formats without default-app takeover
+- command-line image activation that routes supported existing images through the normal desktop open pipeline ahead of saved-session restore
+- self-contained `tools/dragon-diskforge-shell.exe` with register/status/unregister commands
+- package-manifest shell-helper entry point + SHA-256 and unpacked launch verification
+- isolated shell integration smoke coverage for registry ownership, idempotency, unrelated-handler preservation and launch-path validation
+- `docs/PHYSICAL-MEDIA-SAFETY.md`, `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md`, `docs/SPLIT-COMPRESSION-PIPELINES.md`, `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`
 
 ### Changed
-- project progress advances to **77% toward 1.0** after six verified 0.7 deliverables plus three independently verified 0.8 deliverables beyond the 68% 0.6 baseline
+- project progress advances to **78% toward 1.0** after six verified 0.7 deliverables plus all four verified 0.8 deliverables beyond the 68% 0.6 baseline
 - **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
-- **0.8 Windows Integration + Power Tools** advances to **3/4 (75%)** after verified session/settings/diagnostic portability
+- **0.8 Windows Integration + Power Tools** is now **100% complete (4/4)** after verified per-user shell integration and launch activation
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
-- desktop direct-browse registration consumes the same canonical Core provider factory as the CLI
-- clean Windows packaging builds and verifies a self-contained CLI alongside the desktop application
-- CLI automation now distinguishes read-only image/media operations from narrowly scoped local Dragon DiskForge application-state mutations
+- clean Windows packaging now builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
+- package manifest schema advances to record the shell helper and SHA-256
 
 ### Safety
 - inspection/provider/intelligence/image-media CLI paths remain read-only-first
@@ -51,6 +54,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - file-producing Core operations publish through explicit transaction boundaries
 - state imports validate version/size/path data before atomically replacing local application state
 - diagnostic bundles intentionally exclude full saved-image paths and image contents
+- shell integration is explicit, per-user and reversible; it does not write Windows `UserChoice` or replace default handlers
+- shell unregister removes only Dragon-owned application/verb keys and preserves unrelated handlers
 - physical-disk planning refuses system disks, ambiguous identity, unknown capacity, physical-device sources, source-on-target and oversized inputs
 - the Windows writer candidate revalidates destination/source evidence, requires locked/dismounted target volumes and fails closed on unprovable topology
 - the disposable-media harness requires explicit destructive opt-in and exact destination-bound evidence; default CI execution cannot write physical media
@@ -93,11 +98,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #47 / full Windows run #338 + Disposable Media Guard #10 — hard-gated Windows writer candidate and non-destructive validation harness
 - PR #48 / implementation run #343 + Disposable Media Guard #15 — shared-Core CLI, deterministic automation contract, self-contained CLI packaging and clean-package runtime verification
 - PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, best-effort desktop restore, CLI state tooling and sanitized diagnostic export
+- PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration, command-line activation and verified shell-helper packaging
 
 ### Planned
 - complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
 - complete 0.7 only after real dedicated disposable-media writer validation
-- complete the remaining 0.8 Windows file associations/context-menu integration
+- begin 0.9 quality/security/beta-hardening work that can be verified without substituting CI for the remaining manual gates
 - keep destructive physical operations out of the product UI until separately validated and deliberately exposed
 
 ## [0.3.0] - 2026-09-15
