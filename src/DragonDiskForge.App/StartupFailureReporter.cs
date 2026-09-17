@@ -3,7 +3,7 @@ using System.Text;
 
 namespace DragonDiskForge.App;
 
-internal static partial class StartupFailureReporter
+internal static class StartupFailureReporter
 {
     private const uint MbOk = 0x00000000;
     private const uint MbIconError = 0x00000010;
@@ -72,6 +72,6 @@ internal static partial class StartupFailureReporter
         }
     }
 
-    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
-    private static partial int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+    [DllImport("user32.dll", EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode)]
+    private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
 }
