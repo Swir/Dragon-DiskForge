@@ -47,7 +47,7 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] canonical Dragon icon is included in the clean package root
 - [x] run #270 clean artifact was independently downloaded and verified
 - [x] candidate package contains the fail-closed `tools/beta-manual-qa.ps1` evidence tool and binds its SHA-256 in package manifest schema 5
-- [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1 and independently re-verifies the packaged tool hash
+- [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1, independently re-verifies the packaged tool hash and rejects evidence produced by a different running QA script
 - [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
@@ -70,14 +70,14 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
 - [x] versioned clean ZIP candidate build/checksum/verification gate green
-- [x] package-bound interactive QA evidence tooling exists and fails closed on pending, elevated, tampered or mismatched evidence
+- [x] package-bound interactive QA evidence tooling exists and fails closed on pending, elevated, tampered, mismatched-package or mismatched-running-tool evidence
 - [ ] normal-user UAC checklist completed on a desktop machine
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
 
-The remaining interactive checks must be recorded against the exact final `0.5.0-beta.1` ZIP. Manual-QA schema v2 requires the ZIP/checksum pair again for **every** recorded observation, re-verifies the package, executable and packaged QA-tool identities before saving, and binds the observation to that package SHA-256. It also records the Windows build, process architecture, interactive/elevation state, session id and UAC availability, and fails closed if a later passing observation no longer matches the clean-desktop baseline.
+The remaining interactive checks must be recorded against the exact final `0.5.0-beta.1` ZIP. Manual-QA schema v3 requires the ZIP/checksum pair again for **every** recorded observation, re-verifies the package, executable and packaged QA-tool identities before saving, and refuses to initialize, record or verify unless the SHA-256 of the script that is currently executing exactly matches `tools/beta-manual-qa.ps1` from that candidate. Evidence initialization and every observation store that running-tool SHA alongside the package SHA-256. The contract also records the Windows build, process architecture, interactive/elevation state, session id and UAC availability, and fails closed if a later passing observation no longer matches the clean-desktop baseline.
 
-Passing records still require explicit human confirmation because hosted CI cannot honestly perform or observe the UAC approval/cancellation flows and real cross-process Explorer drag gestures. Schema-v1 evidence is intentionally not migrated to v2: those observations must be repeated so the stronger per-observation package binding is genuine rather than inferred after the fact.
+Passing records still require explicit human confirmation because hosted CI cannot honestly perform or observe the UAC approval/cancellation flows and real cross-process Explorer drag gestures. Schema-v1 and schema-v2 evidence are intentionally not migrated to v3: those observations must be repeated using the exact packaged v3 tool so the stronger running-tool binding is genuine rather than inferred after the fact.
 
 ### GitHub Release
 - [ ] `0.5.0-beta.1` tag
@@ -90,7 +90,7 @@ Passing records still require explicit human confirmation because hosted CI cann
 
 ## Current beta readiness
 
-**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package now also carries a fail-closed, exact-package-bound manual QA evidence tool so the remaining desktop checks can be recorded reproducibly. Remaining blockers are independent release gates: final `0.5.0-beta.1` suffix/package promotion, clean-machine launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
+**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package now also carries a fail-closed, exact-package-bound manual QA evidence tool, and schema v3 binds evidence to the exact packaged copy that performs each record/verify operation. Remaining blockers are independent release gates: final `0.5.0-beta.1` suffix/package promotion, clean-machine launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
 
 ## Rule
 

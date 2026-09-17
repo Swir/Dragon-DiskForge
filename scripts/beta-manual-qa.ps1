@@ -16,8 +16,9 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Script:SchemaVersion = 2
+$Script:SchemaVersion = 3
 $Script:GateName = "Dragon DiskForge interactive beta QA"
+$Script:ScriptPath = $PSCommandPath
 
 function Get-RequiredChecks {
     return @(
@@ -204,6 +205,48 @@ function Assert-EvidenceSidecar {
     return $actualHash
 }
 
+function Get-RunningToolSha256 {
+    if ([string]::IsNullOrWhiteSpace([string]$Script:ScriptPath)) {
+        return $null
+    }
+    if (-not (Test-Path -LiteralPath $Script:ScriptPath -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        return (Get-FileHash -LiteralPath $Script:ScriptPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+    catch {
+        return $null
+    }
+}
+
+function Assert-RunningToolMatchesPackage {
+    param(
+        [Parameter(Mandatory = $true)]$PackageIdentity,
+        [string]$CurrentToolSha256 = ""
+    )
+
+    $actual = $CurrentToolSha256
+    if ([string]::IsNullOrWhiteSpace($actual)) {
+        $actual = Get-RunningToolSha256
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$actual)) {
+        throw "Cannot determine the SHA-256 of the beta manual-QA script that is currently running."
+    }
+
+    $actual = $actual.ToLowerInvariant()
+    $expected = ([string]$PackageIdentity.betaManualQaEntryPointSha256).ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($expected) -or $expected -notmatch '^[0-9a-f]{64}$') {
+        throw "The candidate package does not expose a valid beta manual-QA tool identity."
+    }
+    if ($actual -ne $expected) {
+        throw "The running beta manual-QA script SHA-256 does not match the exact tool packaged in this release candidate. Run the tools/beta-manual-qa.ps1 copy extracted from the verified candidate ZIP."
+    }
+
+    return $actual
+}
+
 function Get-PackageIdentity {
     param(
         [Parameter(Mandatory = $true)][string]$ZipPath,
@@ -313,7 +356,8 @@ function Assert-PackageMatchesEvidence {
 function New-EvidenceObject {
     param(
         [Parameter(Mandatory = $true)]$PackageIdentity,
-        [Parameter(Mandatory = $true)]$EnvironmentInfo
+        [Parameter(Mandatory = $true)]$EnvironmentInfo,
+        [Parameter(Mandatory = $true)][string]$RunningToolSha256
     )
 
     Assert-InteractiveUnelevated -EnvironmentInfo $EnvironmentInfo -Context "Manual beta QA evidence initialization"
@@ -329,6 +373,7 @@ function New-EvidenceObject {
             packageVersion = $null
             packageSha256 = $null
             packageEntryPointSha256 = $null
+            runningQaToolSha256 = $null
             observedUtc = $null
             observedOsBuild = $null
             observedProcessArchitecture = $null
@@ -348,6 +393,7 @@ function New-EvidenceObject {
         createdUtc = $utc
         updatedUtc = $utc
         package = $PackageIdentity
+        createdQaToolSha256 = $RunningToolSha256
         createdEnvironment = $EnvironmentInfo
         checks = $checks
     }
@@ -372,6 +418,9 @@ function Assert-EvidenceObject {
 
     Assert-PackageMatchesEvidence -Evidence $Evidence -PackageIdentity $PackageIdentity -Version $Version
 
+    if ([string]$Evidence.createdQaToolSha256 -ne [string]$PackageIdentity.betaManualQaEntryPointSha256) {
+        throw "Evidence initialization was not performed by the exact beta manual-QA tool packaged in this candidate."
+    }
     if (-not [bool]$Evidence.createdEnvironment.userInteractive) {
         throw "Evidence was not initialized from an interactive desktop session."
     }
@@ -418,6 +467,9 @@ function Assert-EvidenceObject {
         }
         if ([string]$record.packageEntryPointSha256 -ne [string]$PackageIdentity.entryPointSha256) {
             throw "Manual QA check '$($definition.id)' was recorded against a different desktop entry point."
+        }
+        if ([string]$record.runningQaToolSha256 -ne [string]$PackageIdentity.betaManualQaEntryPointSha256) {
+            throw "Manual QA check '$($definition.id)' was not recorded by the exact beta manual-QA tool packaged in this candidate."
         }
         if (-not [bool]$record.observedInteractive) {
             throw "Manual QA check '$($definition.id)' was not recorded from an interactive desktop session."
@@ -473,13 +525,16 @@ function Invoke-SelfTest {
         uacEnabled = $true
         powerShellVersion = $PSVersionTable.PSVersion.ToString()
     }
-    $evidence = New-EvidenceObject -PackageIdentity $fakePackage -EnvironmentInfo $fakeEnvironment
+
+    $runningToolHash = Assert-RunningToolMatchesPackage -PackageIdentity $fakePackage -CurrentToolSha256 $fakePackage.betaManualQaEntryPointSha256
+    $evidence = New-EvidenceObject -PackageIdentity $fakePackage -EnvironmentInfo $fakeEnvironment -RunningToolSha256 $runningToolHash
     foreach ($record in @($evidence.checks)) {
         $record.status = "pass"
         $record.humanConfirmed = $true
         $record.packageVersion = $fakePackage.version
         $record.packageSha256 = $fakePackage.sha256
         $record.packageEntryPointSha256 = $fakePackage.entryPointSha256
+        $record.runningQaToolSha256 = $runningToolHash
         $record.observedUtc = [DateTimeOffset]::UtcNow.ToString("O")
         $record.observedOsBuild = $fakeEnvironment.osBuild
         $record.observedProcessArchitecture = $fakeEnvironment.processArchitecture
@@ -490,6 +545,22 @@ function Invoke-SelfTest {
     }
 
     Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1"
+
+    $toolMismatchRejected = $false
+    try { Assert-RunningToolMatchesPackage -PackageIdentity $fakePackage -CurrentToolSha256 ("d" * 64) } catch { $toolMismatchRejected = $true }
+    if (-not $toolMismatchRejected) { throw "Self-test failed: a running manual-QA tool hash mismatch did not fail closed." }
+
+    $evidence.createdQaToolSha256 = ("d" * 64)
+    $failedCreationToolBinding = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedCreationToolBinding = $true }
+    if (-not $failedCreationToolBinding) { throw "Self-test failed: evidence creation-tool mismatch did not fail closed." }
+    $evidence.createdQaToolSha256 = $runningToolHash
+
+    $evidence.checks[0].runningQaToolSha256 = ("d" * 64)
+    $failedObservationToolBinding = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedObservationToolBinding = $true }
+    if (-not $failedObservationToolBinding) { throw "Self-test failed: per-observation running-tool mismatch did not fail closed." }
+    $evidence.checks[0].runningQaToolSha256 = $runningToolHash
 
     $evidence.checks[0].status = "pending"
     $failedClosed = $false
@@ -557,7 +628,7 @@ function Invoke-SelfTest {
         }
     }
 
-    Write-Host "Dragon DiskForge beta manual-QA evidence schema v2 self-test passed."
+    Write-Host "Dragon DiskForge beta manual-QA evidence schema v3 self-test passed."
 }
 
 switch ($Mode) {
@@ -577,16 +648,18 @@ switch ($Mode) {
         if ([string]$identity.version -ne $ExpectedVersion) {
             throw "Manual beta QA must be initialized against version '$ExpectedVersion'; supplied package is '$($identity.version)'."
         }
+        $runningToolHash = Assert-RunningToolMatchesPackage -PackageIdentity $identity
         $environment = Get-SessionEnvironment
-        $evidence = New-EvidenceObject -PackageIdentity $identity -EnvironmentInfo $environment
+        $evidence = New-EvidenceObject -PackageIdentity $identity -EnvironmentInfo $environment -RunningToolSha256 $runningToolHash
         $saved = Save-Evidence -Evidence $evidence -Path $EvidencePath
-        Write-Host "Initialized interactive beta QA evidence schema v2."
+        Write-Host "Initialized interactive beta QA evidence schema v3."
         Write-Host "Package version: $($identity.version)"
         Write-Host "Package SHA-256: $($identity.sha256)"
+        Write-Host "Running QA tool SHA-256: $runningToolHash"
         Write-Host "Windows build: $($environment.osBuild)"
         Write-Host "UAC enabled: $($environment.uacEnabled)"
         Write-Host "Evidence: $($saved.path)"
-        Write-Host "Every subsequent record operation must supply the same -PackagePath so each observation is rebound to the exact candidate."
+        Write-Host "Every subsequent record operation must supply the same -PackagePath so each observation is rebound to the exact candidate and packaged QA tool."
         exit 0
     }
 
@@ -613,6 +686,7 @@ switch ($Mode) {
         Assert-EvidenceSidecar -Path $EvidencePath | Out-Null
         $evidence = Load-Evidence -Path $EvidencePath
         $identity = Get-PackageIdentity -ZipPath $PackagePath -SidecarPath $ChecksumFile
+        $runningToolHash = Assert-RunningToolMatchesPackage -PackageIdentity $identity
         if ([int]$evidence.schemaVersion -ne $Script:SchemaVersion) {
             throw "Evidence schema '$($evidence.schemaVersion)' is not schema v$Script:SchemaVersion. Reinitialize evidence before recording new observations."
         }
@@ -638,6 +712,7 @@ switch ($Mode) {
         $record.packageVersion = [string]$identity.version
         $record.packageSha256 = [string]$identity.sha256
         $record.packageEntryPointSha256 = [string]$identity.entryPointSha256
+        $record.runningQaToolSha256 = $runningToolHash
         $record.observedUtc = [DateTimeOffset]::UtcNow.ToString("O")
         $record.observedOsBuild = [string]$environment.osBuild
         $record.observedProcessArchitecture = [string]$environment.processArchitecture
@@ -649,7 +724,7 @@ switch ($Mode) {
         $evidence.updatedUtc = [DateTimeOffset]::UtcNow.ToString("O")
 
         $saved = Save-Evidence -Evidence $evidence -Path $EvidencePath
-        Write-Host "Recorded '$Check' as '$Result' against package $($identity.sha256)."
+        Write-Host "Recorded '$Check' as '$Result' against package $($identity.sha256) with packaged QA tool $runningToolHash."
         Write-Host "Evidence SHA-256: $($saved.sha256)"
         exit 0
     }
@@ -678,12 +753,14 @@ switch ($Mode) {
         $evidenceHash = Assert-EvidenceSidecar -Path $EvidencePath
         $evidence = Load-Evidence -Path $EvidencePath
         $identity = Get-PackageIdentity -ZipPath $PackagePath -SidecarPath $ChecksumFile
+        $runningToolHash = Assert-RunningToolMatchesPackage -PackageIdentity $identity
         Assert-EvidenceObject -Evidence $evidence -PackageIdentity $identity -Version $ExpectedVersion
 
-        Write-Host "Interactive beta QA evidence is COMPLETE for the exact package."
+        Write-Host "Interactive beta QA evidence is COMPLETE for the exact package and packaged QA tool."
         Write-Host "Evidence schema: $($evidence.schemaVersion)"
         Write-Host "Version: $($identity.version)"
         Write-Host "Package SHA-256: $($identity.sha256)"
+        Write-Host "Running QA tool SHA-256: $runningToolHash"
         Write-Host "Evidence SHA-256: $evidenceHash"
         exit 0
     }
