@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$SourceDirectory = "src/DragonDiskForge.App/bin/x64/Release",
+    [string]$CliProject = "src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj",
     [string]$OutputDirectory = "artifacts/windows",
     [string]$ExpectedVersion = ""
 )
@@ -37,6 +38,7 @@ function Get-RepositoryVersion {
 
 $expected = Get-RepositoryVersion -Override $ExpectedVersion
 $source = (Resolve-Path $SourceDirectory).Path
+$cliProjectPath = (Resolve-Path $CliProject).Path
 $output = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDirectory))
 $stage = Join-Path $output "DragonDiskForge-win-x64"
 $zip = Join-Path $output "DragonDiskForge-win-x64.zip"
@@ -52,6 +54,18 @@ if ($executables.Count -ne 1) {
 
 $appDirectory = $executables[0].Directory.FullName
 Write-Host "Application output directory: $appDirectory"
+
+Write-Host "Publishing self-contained Dragon DiskForge CLI."
+& dotnet publish $cliProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
+if ($LASTEXITCODE -ne 0) {
+    throw "Self-contained CLI publish failed with exit code $LASTEXITCODE."
+}
+$cliProjectDirectory = Split-Path $cliProjectPath -Parent
+$cliPublishDirectory = Join-Path $cliProjectDirectory "bin/Release/net10.0/win-x64/publish"
+$cliExecutable = Join-Path $cliPublishDirectory "dragon-diskforge.exe"
+if (-not (Test-Path $cliExecutable -PathType Leaf)) {
+    throw "Published CLI executable was not found: $cliExecutable"
+}
 
 if (Test-Path $output) {
     Remove-Item $output -Recurse -Force
@@ -76,6 +90,16 @@ foreach ($file in $files) {
 $entryPoint = Join-Path $stage "DragonDiskForge.App.exe"
 if (-not (Test-Path $entryPoint -PathType Leaf)) {
     throw "Packaged application is missing DragonDiskForge.App.exe at the package root."
+}
+
+$cliStageDirectory = Join-Path $stage "cli"
+New-Item -ItemType Directory -Path $cliStageDirectory -Force | Out-Null
+$cliEntryPoint = Join-Path $cliStageDirectory "dragon-diskforge.exe"
+Copy-Item $cliExecutable $cliEntryPoint -Force
+
+& $cliEntryPoint --help | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Packaged CLI failed its launch smoke test with exit code $LASTEXITCODE."
 }
 
 $icon = Join-Path $stage "DragonDiskForge.ico"
@@ -111,17 +135,20 @@ if ([string]::IsNullOrWhiteSpace($productVersion) -or -not $productVersion.Start
 }
 
 $entryPointSha256 = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+$cliEntryPointSha256 = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $packageFilesBeforeManifest = @(Get-ChildItem -Path $stage -Recurse -File)
 $manifest = [ordered]@{
-    schemaVersion = 2
+    schemaVersion = 3
     product = "Dragon DiskForge"
     version = $expected
     productVersion = $productVersion
     fileVersion = $fileVersion
     architecture = "x64"
     entryPoint = "DragonDiskForge.App.exe"
+    cliEntryPoint = "cli/dragon-diskforge.exe"
     icon = "DragonDiskForge.ico"
     entryPointSha256 = $entryPointSha256
+    cliEntryPointSha256 = $cliEntryPointSha256
     debugSymbolsIncluded = $false
     fileCount = $packageFilesBeforeManifest.Count + 1
 }
