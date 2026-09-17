@@ -81,7 +81,7 @@ Required engineering scope: **100% complete**.
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
 
-Current required engineering scope: **5/7 (~71%)**.
+Current required engineering scope: **6/7 (~86%)**.
 
 ### 1. Read-only physical-disk inventory ✅
 - canonical Windows `\\.\PhysicalDriveN` enumeration
@@ -113,15 +113,26 @@ Current required engineering scope: **5/7 (~71%)**.
 - token matching is exact and case-sensitive
 - another disk's token cannot confirm the plan
 
+### 6. Bounded execution + fail-safe recovery contract ✅
+- `IPhysicalMediaWriteSink` keeps platform/device opening outside the Core coordinator
+- planned and current destination identity plus confirmation are revalidated before write I/O
+- source length is revalidated after opening
+- sequential writes use a bounded buffer and monotonic progress
+- progress-observer exceptions cannot interrupt destructive I/O
+- successful accepted bytes have SHA-256 evidence without claiming device read-back verification
+- pre-write refusal/cancellation is distinct from any failure after a destination write attempt
+- once a write is attempted, abnormal termination fails closed as possibly modified and requiring recovery/rewrite
+- no generic physical-media rollback is claimed
+- PR #46 implementation run #319 passed the expanded physical-media gate and the full Windows regression/build/package path
+
 ### Remaining 0.7 work ⬜
-- bounded progress/cancellation plus rollback-or-fail-safe semantics for a physical write operation
 - separately validated physical write path only after the safety contract is proven under dedicated disposable-media conditions
 
-PR #45 implementation run #310 passed the dedicated physical-media safety smoke gate, real read-only physical inventory and system-disk refusal on Windows, all existing provider/intelligence/Explorer/native mount checks, the full Release x64 build and clean-package verification.
+PR #45 implementation run #310 passed the query-only inventory and planning foundation. PR #46 implementation run #319 passed the bounded execution/fail-safe contract without adding a Windows writer.
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-**No physical-device write implementation or user-visible destructive action exists in this slice.**
+**No physical-device writer or user-visible destructive action exists yet.**
 
 ## Beta release track
 
