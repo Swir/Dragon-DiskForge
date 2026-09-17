@@ -110,14 +110,14 @@ Write-Host "Publishing self-contained Dragon DiskForge CLI."
 & dotnet publish $cliProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw "Self-contained CLI publish failed with exit code $LASTEXITCODE." }
 $cliProjectDirectory = Split-Path $cliProjectPath -Parent
-$cliExecutable = Join-Path $cliProjectDirectory "bin/Release/net10.0/win-x64/publish/dragon-disk-forge.exe"
+$cliExecutable = Join-Path $cliProjectDirectory "bin/Release/net10.0/win-x64/publish/dragon-diskforge.exe"
 if (-not (Test-Path $cliExecutable -PathType Leaf)) { throw "Published CLI executable was not found: $cliExecutable" }
 
 Write-Host "Publishing self-contained Dragon DiskForge shell helper."
 & dotnet publish $shellProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw "Self-contained shell-helper publish failed with exit code $LASTEXITCODE." }
 $shellProjectDirectory = Split-Path $shellProjectPath -Parent
-$shellExecutable = Join-Path $shellProjectDirectory "bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/dragon-disk-forge-shell.exe"
+$shellExecutable = Join-Path $shellProjectDirectory "bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/dragon-diskforge-shell.exe"
 if (-not (Test-Path $shellExecutable -PathType Leaf)) { throw "Published shell helper was not found: $shellExecutable" }
 
 if (Test-Path $output) { Remove-Item $output -Recurse -Force }
@@ -156,14 +156,14 @@ foreach ($runtimeFileName in @("hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "
 
 $cliStageDirectory = Join-Path $stage "cli"
 New-Item -ItemType Directory -Path $cliStageDirectory -Force | Out-Null
-$cliEntryPoint = Join-Path $cliStageDirectory "dragon-disk-forge.exe"
+$cliEntryPoint = Join-Path $cliStageDirectory "dragon-diskforge.exe"
 Copy-Item $cliExecutable $cliEntryPoint -Force
 & $cliEntryPoint --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Packaged CLI failed its launch smoke test with exit code $LASTEXITCODE." }
 
 $toolsStageDirectory = Join-Path $stage "tools"
 New-Item -ItemType Directory -Path $toolsStageDirectory -Force | Out-Null
-$shellEntryPoint = Join-Path $toolsStageDirectory "dragon-disk-forge-shell.exe"
+$shellEntryPoint = Join-Path $toolsStageDirectory "dragon-diskforge-shell.exe"
 Copy-Item $shellExecutable $shellEntryPoint -Force
 & $shellEntryPoint --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Packaged shell helper failed its launch smoke test with exit code $LASTEXITCODE." }
@@ -205,8 +205,8 @@ $manifest = [ordered]@{
     fileVersion = $fileVersion
     architecture = "x64"
     entryPoint = "DragonDiskForge.App.exe"
-    cliEntryPoint = "cli/dragon-disk-forge.exe"
-    shellIntegrationEntryPoint = "tools/dragon-disk-forge-shell.exe"
+    cliEntryPoint = "cli/dragon-diskforge.exe"
+    shellIntegrationEntryPoint = "tools/dragon-diskforge-shell.exe"
     betaManualQaEntryPoint = "tools/beta-manual-qa.ps1"
     icon = "DragonDiskForge.ico"
     entryPointSha256 = $entryPointSha256
