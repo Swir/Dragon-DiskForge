@@ -14,20 +14,28 @@ The beta candidate pipeline solves that boundary explicitly:
 4. build the normal clean package using the same packaging script as engineering CI,
 5. independently verify package version, hashes, icon, package hygiene, CLI, shell helper and packaged manual-QA tool,
 6. bind candidate metadata to the exact source commit and ZIP SHA-256,
-7. upload the ZIP, checksum and metadata as a GitHub Actions artifact,
+7. retain the ZIP, checksum and metadata only when a `main` commit is deliberately marked `[beta-candidate]`,
 8. do **not** create a tag or public GitHub Release.
 
 The committed `Directory.Build.props` is not changed by the workflow. The version rewrite occurs only inside the ephemeral Actions workspace.
 
 ## Workflow
 
-`.github/workflows/beta-candidate.yml` runs on pull requests and on `main` pushes. It produces an artifact named like:
+`.github/workflows/beta-candidate.yml` runs on pull requests and on `main` pushes. Every run builds and verifies the exact `0.5.0-beta.1` package contract, but routine runs are verification-only and intentionally do not retain another 160+ MiB artifact.
+
+A package is retained only for a deliberately selected `main` commit whose commit message contains:
+
+```text
+[beta-candidate]
+```
+
+This explicit marker prevents normal development and hourly hardening work from filling GitHub Actions artifact storage with redundant release candidates. Selected candidates are retained for 14 days and use a name like:
 
 ```text
 DragonDiskForge-0.5.0-beta.1-win-x64-candidate-<run-id>
 ```
 
-The artifact contains:
+The retained artifact contains:
 
 ```text
 DragonDiskForge-win-x64.zip
@@ -38,7 +46,7 @@ beta-candidate.json.sha256
 
 `beta-candidate.json` records the exact source commit, workflow run id, beta version, architecture, package SHA-256, package-manifest schema, desktop entry-point SHA-256 and packaged manual-QA-tool SHA-256. `publicRelease` is explicitly `false`.
 
-A green beta-candidate workflow proves that the source commit can produce a correctly versioned and independently verified `0.5.0-beta.1` package. It does **not** prove the remaining interactive Windows checks and does **not** authorize publication.
+A green beta-candidate workflow proves that the source commit can produce a correctly versioned and independently verified `0.5.0-beta.1` package. It does **not** prove the remaining interactive Windows checks and does **not** authorize publication. A retained artifact is only a selected engineering candidate; it is still not a release.
 
 ## Candidate contract script
 
@@ -74,7 +82,7 @@ Metadata mode re-runs the clean-package verifier before writing candidate metada
 
 ## Manual QA must use one exact candidate
 
-Choose one successful candidate artifact and keep all four files together. Do not rename only one file without updating its checksum sidecar contract.
+Choose one successful **retained** candidate artifact and keep all four files together. Do not rename only one file without updating its checksum sidecar contract.
 
 On a clean supported Windows desktop, extract or copy the candidate files and initialize the packaged evidence tool from a normal unelevated interactive PowerShell session:
 
