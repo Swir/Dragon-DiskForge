@@ -43,7 +43,7 @@ async Task CreateDirectoryLinkAsync(string linkPath, string targetPath)
     process.StartInfo.ArgumentList.Add(targetPath);
 
     if (!process.Start())
-        throw new InvalidOperationException("Could not start cmd.exe to create the drag-out junction fixture.");
+        throw new InvalidOperationException("Could not start cmd.exe to create the Explorer junction fixture.");
 
     var stdoutTask = process.StandardOutput.ReadToEndAsync();
     var stderrTask = process.StandardError.ReadToEndAsync();
@@ -54,15 +54,18 @@ async Task CreateDirectoryLinkAsync(string linkPath, string targetPath)
     if (process.ExitCode != 0 || !Directory.Exists(linkPath))
     {
         throw new InvalidOperationException(
-            $"Could not create drag-out junction fixture (exit {process.ExitCode}). stdout={stdout} stderr={stderr}");
+            $"Could not create Explorer junction fixture (exit {process.ExitCode}). stdout={stdout} stderr={stderr}");
     }
 }
 
 var validator = new ExplorerDragOutValidator();
+var explorer = new MountedFileSystemExplorerService();
 var root = Path.Combine(Path.GetTempPath(), $"dragon-drag-out-{Guid.NewGuid():N}");
 var outsideRoot = Path.Combine(Path.GetTempPath(), $"dragon-drag-outside-{Guid.NewGuid():N}");
+var exportRoot = Path.Combine(Path.GetTempPath(), $"dragon-drag-export-{Guid.NewGuid():N}");
 Directory.CreateDirectory(root);
 Directory.CreateDirectory(outsideRoot);
+Directory.CreateDirectory(exportRoot);
 
 try
 {
@@ -129,6 +132,39 @@ try
         Check(true, "drag-out blocks a lexically in-root path that traverses a reparse ancestor");
     }
 
+    try
+    {
+        await explorer.ListAsync(root, escapeLink);
+        Check(false, "Explorer browse blocks a directory reached through a reparse ancestor");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "Explorer browse blocks a directory reached through a reparse ancestor");
+    }
+
+    try
+    {
+        await explorer.SearchAsync(root, escapeLink, "outside");
+        Check(false, "Explorer search blocks a start path reached through a reparse ancestor");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "Explorer search blocks a start path reached through a reparse ancestor");
+    }
+
+    try
+    {
+        await explorer.CopyOutAsync(root, escapedThroughAncestor, exportRoot);
+        Check(false, "Explorer copy-out blocks a lexically in-root file reached through a reparse ancestor");
+    }
+    catch (InvalidOperationException)
+    {
+        Check(true, "Explorer copy-out blocks a lexically in-root file reached through a reparse ancestor");
+    }
+
+    Check(!File.Exists(Path.Combine(exportRoot, "outside.txt")),
+        "blocked reparse-ancestor copy-out creates no destination file");
+
     var missing = Path.Combine(root, "missing.bin");
     try
     {
@@ -152,13 +188,14 @@ finally
 
     try { Directory.Delete(root, recursive: true); } catch { }
     try { Directory.Delete(outsideRoot, recursive: true); } catch { }
+    try { Directory.Delete(exportRoot, recursive: true); } catch { }
 }
 
 if (failures.Count > 0)
 {
-    Console.Error.WriteLine($"\n{failures.Count} drag-out smoke test(s) failed.");
+    Console.Error.WriteLine($"\n{failures.Count} Explorer safety smoke test(s) failed.");
     Environment.ExitCode = 1;
     return;
 }
 
-Console.WriteLine("\nDragon DiskForge drag-out smoke tests passed.");
+Console.WriteLine("\nDragon DiskForge Explorer safety smoke tests passed.");

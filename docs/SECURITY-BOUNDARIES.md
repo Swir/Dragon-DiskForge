@@ -12,6 +12,7 @@ Dragon DiskForge follows these rules:
 - destructive physical-media execution is isolated behind destination identity, topology, capacity and explicit-confirmation gates;
 - the public CLI does not expose the destructive physical-media writer;
 - Windows shell integration is per-user and reversible and does not replace Windows `UserChoice` defaults;
+- mounted Explorer paths below the trusted root reject reparse/junction ancestry before browse, preview/open, copy-out or drag-out;
 - release packages exclude debug/test payloads and bind shipped entry points by SHA-256;
 - crash/support evidence is bounded and deliberately excludes raw exception messages, source-file paths and image content;
 - parsers and guest readers use bounded reads and are covered by malformed/truncated/out-of-bounds regression cases appropriate to each implemented format.
@@ -55,7 +56,17 @@ Shell integration is rooted in `HKCU\Software\Classes`. It registers Dragon Disk
 
 Application paths are normalized and quote characters are refused before command registration. The registered command quotes both the executable and `%1` image argument. The security gate exercises these command-construction rejection paths in addition to the existing isolated registry smoke tests.
 
-### 5. Parser and image-content boundary
+### 5. Mounted Explorer path boundary
+
+Mounted-volume data remains read-only from Dragon Explorer's perspective, but lexical containment alone is insufficient when a directory below the mounted root can become a junction or another reparse point after enumeration.
+
+`ExplorerPathSafetyValidator` is the canonical mounted-path boundary used by drag-out and by normal mounted browsing/search, preview/open and copy-out paths. It requires an existing candidate with the expected file/directory shape, lexical containment below the mounted root, and a non-reparse chain for every component below that trusted root. Copy-out revalidates planned file paths again immediately before opening them. Search revalidates directories before traversal.
+
+Windows smoke coverage creates an actual directory junction below the mounted root and proves that a lexically in-root path resolving to outside data is rejected for drag-out, directory browse, search start and copy-out without creating the destination file. The WinUI Release build proves the preview/open call sites compile against the same validator.
+
+This reduces reparse-ancestor and stale-path escape risk but is not described as a formal race-free filesystem sandbox. The mounted root itself remains the trusted anchor because Windows can represent the mounted volume through its own mount mechanism. Real Explorer/Desktop cross-process drag remains a separate manual beta gate.
+
+### 6. Parser and image-content boundary
 
 Format parsers and guest readers must treat disk-image bytes as untrusted input. Existing format-specific smoke tests cover malformed, truncated, out-of-range and cancellation cases where applicable. Important bounded components include partition intelligence, filesystem recognition/depth, UDF traversal, QCOW2/VMDK guest readers and guest partition/filesystem intelligence.
 
@@ -63,7 +74,7 @@ Security-review completion depends on those regression suites remaining green to
 
 This project does not claim that the current parsers constitute a formally verified sandbox. New parsers must preserve explicit bounds and capability isolation and add negative-path tests before support claims are expanded.
 
-### 6. Output and package boundary
+### 7. Output and package boundary
 
 Application-created output uses the safe-output transaction boundary so interrupted writes do not silently replace a good destination with partial data.
 
@@ -79,7 +90,7 @@ The clean Windows package pipeline:
 
 The final public beta still requires its own independently downloadable package, final beta version suffix, checksum and clean-machine validation.
 
-### 7. Crash/support evidence boundary
+### 8. Crash/support evidence boundary
 
 Crash collection is best-effort and bounded. Persisted evidence is limited to structured metadata such as exception type, HRESULT, fingerprint, exception-chain type names and method-only stack frames. Raw exception messages, source-file paths and image content are intentionally excluded. Diagnostic ZIP creation reuses the safe-output transaction boundary and caps included crash summaries.
 
@@ -95,6 +106,8 @@ Crash collection is best-effort and bounded. Persisted evidence is limited to st
 - system-disk, unstable-identity, unknown-capacity, undersized-media and physical-source write plans fail closed;
 - destination-bound confirmation remains exact and case-sensitive;
 - shell command quoting rejects executable substitution and quote injection.
+
+The full Windows workflow separately exercises the mounted Explorer path boundary with a real junction fixture because that check depends on Windows filesystem behavior.
 
 ## Manual gates that remain manual
 

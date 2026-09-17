@@ -20,6 +20,7 @@ public sealed partial class ExplorerView : UserControl
 
     private readonly IExplorerService _explorer = new MountedFileSystemExplorerService();
     private readonly IFilePreviewService _previewer = new FilePreviewService();
+    private readonly ExplorerPathSafetyValidator _pathSafetyValidator = new();
     private readonly ObservableCollection<ExplorerEntryViewModel> _items = new();
     private readonly nint _windowHandle;
     private CancellationTokenSource? _loadCts;
@@ -264,7 +265,33 @@ public sealed partial class ExplorerView : UserControl
             return;
         }
 
-        var selectedPath = selected.FullPath;
+        if (_rootPath is null)
+        {
+            ResetPreview(showPane: false);
+            return;
+        }
+
+        string selectedPath;
+        try
+        {
+            selectedPath = _pathSafetyValidator.Validate(
+                _rootPath,
+                selected.FullPath,
+                isDirectory: false,
+                selected.IsReparsePoint);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException
+                                   or FileNotFoundException
+                                   or IOException
+                                   or UnauthorizedAccessException)
+        {
+            PreviewMetadataPanel.Visibility = Visibility.Visible;
+            PreviewMetadataIcon.Glyph = "\uE783";
+            PreviewDescriptionText.Text = $"Preview blocked: {ShortMessage(ex.Message)}";
+            PreviewModifiedText.Text = selected.Meta;
+            return;
+        }
+
         var cts = new CancellationTokenSource();
         _previewCts = cts;
         PreviewBusyRing.IsActive = true;
@@ -388,33 +415,37 @@ public sealed partial class ExplorerView : UserControl
             return;
         }
 
-        if (item.IsDirectory)
+        if (_rootPath is null)
         {
-            await LoadDirectoryAsync(item.FullPath);
+            ShowStatus("The mounted Explorer root is no longer available. Refresh Mounted and try again.", InfoBarSeverity.Warning);
             return;
         }
 
-        if (!File.Exists(item.FullPath))
-        {
-            ShowStatus("The selected file is no longer available. Refresh the mounted image.", InfoBarSeverity.Warning);
-            return;
-        }
-
+        string safePath;
         try
         {
-            if ((File.GetAttributes(item.FullPath) & FileAttributes.ReparsePoint) != 0)
-            {
-                ShowStatus("Dragon Explorer will not open a file that became a reparse point after listing.", InfoBarSeverity.Warning);
-                return;
-            }
+            safePath = _pathSafetyValidator.Validate(
+                _rootPath,
+                item.FullPath,
+                item.IsDirectory,
+                item.IsReparsePoint);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is InvalidOperationException
+                                   or FileNotFoundException
+                                   or IOException
+                                   or UnauthorizedAccessException)
         {
-            ShowStatus($"Could not validate file safety: {ShortMessage(ex.Message)}", InfoBarSeverity.Error);
+            ShowStatus($"Open blocked: {ShortMessage(ex.Message)}", InfoBarSeverity.Warning);
             return;
         }
 
-        if (ExecutableExtensions.Contains(Path.GetExtension(item.FullPath)))
+        if (item.IsDirectory)
+        {
+            await LoadDirectoryAsync(safePath);
+            return;
+        }
+
+        if (ExecutableExtensions.Contains(Path.GetExtension(safePath)))
         {
             var dialog = new ContentDialog
             {
@@ -438,7 +469,7 @@ public sealed partial class ExplorerView : UserControl
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = item.FullPath,
+                FileName = safePath,
                 UseShellExecute = true
             });
         }
