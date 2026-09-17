@@ -166,7 +166,11 @@ public sealed class ApplicationPortabilityService
 
                 var readme = archive.CreateEntry("README.txt", CompressionLevel.Optimal);
                 await using var writerStream = readme.Open();
-                await using var writer = new StreamWriter(writerStream, new UTF8Encoding(false), leaveOpen: false);
+                await using var writer = new StreamWriter(
+                    writerStream,
+                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                    bufferSize: 1024,
+                    leaveOpen: false);
                 await writer.WriteAsync(
                     "Dragon DiskForge diagnostic bundle\n" +
                     "This bundle intentionally excludes full image paths and image contents.\n" +
