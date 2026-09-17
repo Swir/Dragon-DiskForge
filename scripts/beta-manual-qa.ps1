@@ -40,7 +40,7 @@ function Get-RequiredChecks {
 
 function Test-IsElevated {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
-        return $false
+        return $null
     }
 
     try {
@@ -49,7 +49,7 @@ function Test-IsElevated {
         return $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     }
     catch {
-        return $false
+        return $null
     }
 }
 
@@ -107,10 +107,19 @@ function Assert-InteractiveUnelevated {
     if (-not [bool]$EnvironmentInfo.userInteractive) {
         throw "$Context requires an interactive Windows desktop session."
     }
+    if ([int]$EnvironmentInfo.sessionId -le 0) {
+        throw "$Context requires a non-service interactive Windows session (session id must be greater than zero)."
+    }
+    if ($null -eq $EnvironmentInfo.processElevated) {
+        throw "$Context cannot determine whether the current process is elevated; refusing to record release evidence."
+    }
     if ([bool]$EnvironmentInfo.processElevated) {
         throw "$Context must run from a normal unelevated session so UAC and Explorer boundaries remain observable."
     }
-    if ($null -ne $EnvironmentInfo.uacEnabled -and -not [bool]$EnvironmentInfo.uacEnabled) {
+    if ($null -eq $EnvironmentInfo.uacEnabled) {
+        throw "$Context cannot determine whether Windows UAC (EnableLUA) is enabled; refusing to record release evidence."
+    }
+    if (-not [bool]$EnvironmentInfo.uacEnabled) {
         throw "$Context cannot prove the UAC gate while Windows UAC (EnableLUA) is disabled."
     }
 }
@@ -366,10 +375,19 @@ function Assert-EvidenceObject {
     if (-not [bool]$Evidence.createdEnvironment.userInteractive) {
         throw "Evidence was not initialized from an interactive desktop session."
     }
+    if ([int]$Evidence.createdEnvironment.sessionId -le 0) {
+        throw "Evidence was initialized from a service/non-interactive Windows session."
+    }
+    if ($null -eq $Evidence.createdEnvironment.processElevated) {
+        throw "Evidence cannot prove whether its initialization process was elevated."
+    }
     if ([bool]$Evidence.createdEnvironment.processElevated) {
         throw "Evidence was initialized from an elevated session and cannot prove the normal-user UAC gate."
     }
-    if ($null -ne $Evidence.createdEnvironment.uacEnabled -and -not [bool]$Evidence.createdEnvironment.uacEnabled) {
+    if ($null -eq $Evidence.createdEnvironment.uacEnabled) {
+        throw "Evidence cannot prove that UAC was enabled when it was initialized."
+    }
+    if (-not [bool]$Evidence.createdEnvironment.uacEnabled) {
         throw "Evidence was initialized while UAC was disabled and cannot prove the normal-user UAC gate."
     }
 
@@ -404,10 +422,19 @@ function Assert-EvidenceObject {
         if (-not [bool]$record.observedInteractive) {
             throw "Manual QA check '$($definition.id)' was not recorded from an interactive desktop session."
         }
+        if ([int]$record.observedSessionId -le 0) {
+            throw "Manual QA check '$($definition.id)' was recorded from a service/non-interactive Windows session."
+        }
+        if ($null -eq $record.observedProcessElevated) {
+            throw "Manual QA check '$($definition.id)' cannot prove whether its observation process was elevated."
+        }
         if ([bool]$record.observedProcessElevated) {
             throw "Manual QA check '$($definition.id)' was recorded from an elevated session."
         }
-        if ($null -ne $record.observedUacEnabled -and -not [bool]$record.observedUacEnabled) {
+        if ($null -eq $record.observedUacEnabled) {
+            throw "Manual QA check '$($definition.id)' cannot prove that UAC was enabled during the observation."
+        }
+        if (-not [bool]$record.observedUacEnabled) {
             throw "Manual QA check '$($definition.id)' was recorded while UAC was disabled."
         }
         if ([string]$record.observedOsBuild -ne [string]$Evidence.createdEnvironment.osBuild) {
@@ -487,6 +514,30 @@ function Invoke-SelfTest {
     try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedElevated = $true }
     if (-not $failedElevated) { throw "Self-test failed: elevated-session evidence did not fail closed." }
     $evidence.checks[3].observedProcessElevated = $false
+
+    $evidence.checks[4].observedUacEnabled = $null
+    $failedUnknownObservedUac = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedUnknownObservedUac = $true }
+    if (-not $failedUnknownObservedUac) { throw "Self-test failed: unknown observed UAC state did not fail closed." }
+    $evidence.checks[4].observedUacEnabled = $true
+
+    $fakeEnvironment.uacEnabled = $null
+    $failedUnknownUac = $false
+    try { Assert-InteractiveUnelevated -EnvironmentInfo $fakeEnvironment -Context "Self-test unknown UAC" } catch { $failedUnknownUac = $true }
+    if (-not $failedUnknownUac) { throw "Self-test failed: unknown UAC state did not fail closed." }
+    $fakeEnvironment.uacEnabled = $true
+
+    $fakeEnvironment.processElevated = $null
+    $failedUnknownElevation = $false
+    try { Assert-InteractiveUnelevated -EnvironmentInfo $fakeEnvironment -Context "Self-test unknown elevation" } catch { $failedUnknownElevation = $true }
+    if (-not $failedUnknownElevation) { throw "Self-test failed: unknown elevation state did not fail closed." }
+    $fakeEnvironment.processElevated = $false
+
+    $fakeEnvironment.sessionId = 0
+    $failedSessionZero = $false
+    try { Assert-InteractiveUnelevated -EnvironmentInfo $fakeEnvironment -Context "Self-test session zero" } catch { $failedSessionZero = $true }
+    if (-not $failedSessionZero) { throw "Self-test failed: session zero did not fail closed." }
+    $fakeEnvironment.sessionId = 1
 
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("DragonDiskForge-beta-qa-selftest-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
