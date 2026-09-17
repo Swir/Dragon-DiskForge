@@ -1,6 +1,6 @@
 # Physical Media Safety Boundary
 
-Dragon DiskForge 0.7 remains **non-destructive at the product/platform surface**. Query-only inventory, planning and the Core write-execution safety contract are now implemented; no Windows physical-device writer or user-visible destructive action is enabled.
+Dragon DiskForge 0.7 remains **non-destructive at the product/UI surface**. The repository now contains a hard-gated Windows `PhysicalDriveN` writer candidate and a disposable-media validation harness, but the final 0.7 hardware gate is still open. No destructive physical-media action is exposed to normal application users.
 
 ## Current proven scope
 
@@ -10,132 +10,128 @@ Implemented and CI-validated:
 - canonical `\\.\PhysicalDriveN` device paths
 - capacity, bus type and removable-media evidence
 - Windows system-volume to physical-disk extent evidence
-- serial-backed stable identity when Windows exposes a serial number
+- serial-backed stable identity when Windows exposes sufficient identity material
 - fail-closed handling when stable identity or capacity is unavailable
 - source/destination write-plan preview
 - explicit refusal of system disks, ambiguous targets, invalid source lengths, physical-device sources and images larger than the destination
-- destination-bound destructive confirmation token contract
-- injected physical-write sink contract with bounded sequential transfer semantics
+- destination-bound exact confirmation contract
+- Core `IPhysicalMediaWriteSink` + bounded execution/recovery contract
 - destination identity + confirmation revalidation immediately before write I/O
 - source-length revalidation after opening the source file
-- monotonic progress and explicit cancellation/failure result states
-- fail-safe recovery state after any destination write attempt
-- SHA-256 evidence for chunks successfully accepted by the sink
+- monotonic progress and explicit pre-write/post-write-attempt cancellation/failure states
+- SHA-256 evidence for chunks successfully accepted by an injected sink
+- Windows read-only writer preflight that resolves source backing disks and destination sector geometry
+- fail-closed rejection of UNC/unprovable source topology and source-on-target cases
+- target-volume enumeration, lock and dismount before raw write access
+- sector-aligned bounded `PhysicalDriveN` sequential writer candidate
+- explicit device flush
+- independent source-length read-back SHA-256 verification path
+- hard-locked disposable-media validation harness that remains inert without explicit opt-in and exact destination/source/confirmation evidence
 
-Not implemented:
+Still **not proven / not user-visible**:
 
-- opening a physical disk for write access
-- a Windows `PhysicalDriveN` writer
-- sector writes against real physical media
-- partition-table mutation
+- successful destructive execution against real dedicated disposable media
 - a user-visible Write/Burn-to-disk action
-- automatic override of any refusal
 - generic rollback after a partial physical-media write
-- claims that every storage controller exposes a serial number or removable flag perfectly
+- automatic override of any refusal
+- claims that every storage controller exposes reliable serial/removable evidence
 
 ## Read-only inventory
 
-`WindowsPhysicalDiskInventoryService` opens physical disks with `CreateFileW` using `dwDesiredAccess = 0`. It uses Windows storage IOCTL queries only to collect evidence. The inventory path does not request write access.
+`WindowsPhysicalDiskInventoryService` opens physical disks with query-only access and uses Windows storage IOCTLs to collect evidence. Inventory records retain evidence strings so later safety decisions can distinguish proven facts from unknown values.
 
-The service currently queries:
-
-- `IOCTL_DISK_GET_LENGTH_INFO` for capacity
-- `IOCTL_STORAGE_QUERY_PROPERTY` for vendor/product/revision/serial, bus and removable evidence
-- `IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS` on the Windows system volume to identify the backing physical disk or disks
-
-Inventory records carry explicit evidence strings so later safety decisions can distinguish proven facts from unknown values.
+The inventory path queries capacity, storage identity/bus/removable evidence and the Windows system-volume backing physical-disk extents. A destination without sufficient stable identity or capacity evidence cannot cross the destructive gate.
 
 ## Stable identity policy
 
-A destination is considered to have stable identity only when the current implementation has serial-backed identity material. A SHA-256 identifier is derived from the reported identity fields for comparison and confirmation binding.
+A destination is considered to have stable identity only when the current implementation has sufficient serial-backed identity material. A SHA-256 identifier is derived from the reported identity fields for comparison and confirmation binding.
 
-When a serial number is unavailable, Dragon DiskForge may still build a fallback fingerprint for diagnostics, but `HasStableIdentity` remains false. Destructive plans fail closed on that state.
-
-An access-denied or otherwise incomplete inventory record is also ambiguous and cannot cross the destructive-operation safety gate.
+Fallback fingerprints may be useful for diagnostics, but do not promote an ambiguous destination into an eligible destructive target. Access-denied or incomplete inventory records also fail closed.
 
 ## System-disk protection
 
-The Windows system volume is mapped to physical disks through `IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS`. Every matching physical disk is marked `IsSystemDisk = true`.
+The Windows system volume is mapped to physical disks through `IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS`. Every matching physical disk is treated as protected by the safety planner.
 
-`PhysicalMediaSafetyService` refuses a destructive write plan for any system disk. A refused plan receives no confirmation token and cannot be promoted by `ConfirmationMatches`.
-
-This is intentionally stronger than a warning.
+`PhysicalMediaSafetyService` refuses a destructive write plan for any system disk. A refused plan receives no confirmation token and cannot be promoted by confirmation matching. This is intentionally stronger than a warning.
 
 ## Write-plan preview
 
-`PhysicalMediaSafetyService.PreviewImageToDiskWrite` is a planning boundary, not a writer. It rejects a plan when any of the following is true:
+`PhysicalMediaSafetyService.PreviewImageToDiskWrite` models intent before mutation. It rejects a plan when source/destination/capacity/identity evidence is unsafe or incomplete, including physical-device sources, same-device source/destination, system disks, ambiguous identity, unknown capacity and oversized source images.
 
-- source image length is zero or negative
-- the source is itself a `PhysicalDrive` path
-- source and destination resolve to the same physical device
-- destination identity is incomplete
-- destination has no stable hardware identity
-- destination is a system disk
-- destination capacity is unknown or invalid
-- source image is larger than destination capacity
-
-The plan also reports non-fatal warnings, including a smaller source leaving trailing capacity outside the written image, removable-media semantics and an unknown bus type.
+The plan may also report non-fatal evidence/warnings such as trailing destination capacity, removable-media semantics or unknown bus details.
 
 ## Confirmation contract
 
-An otherwise eligible plan still requires explicit confirmation. The current contract produces a token shaped like:
+An otherwise eligible plan still requires exact explicit confirmation shaped like:
 
 `ERASE PHYSICALDRIVE7 AABBCCDDEEFF`
 
-The token binds both the physical disk number and a suffix of the stable identity. Matching is exact and case-sensitive. A token from another destination, a modified token or any token attached to a refused plan is rejected.
+The token binds the physical disk number and stable identity suffix. Matching is exact and case-sensitive. A token from another destination, a modified token or any token attached to a refused plan is rejected.
 
-The token is only one gate. It does not bypass destination revalidation and is not sufficient to expose a physical writer.
+Confirmation is only one gate. It never bypasses destination/source revalidation.
 
-## Write-execution contract
+## Core execution contract
 
-`PhysicalMediaWriteExecutionService` coordinates a write only through an injected `IPhysicalMediaWriteSink`. The Core service does not open a physical device itself.
+`PhysicalMediaWriteExecutionService` coordinates bounded transfer through an injected `IPhysicalMediaWriteSink`. Before the first destination write attempt it requires the allowed plan, exact confirmation, matching current destination identity/path, a successfully revalidated safety plan and the unchanged source length.
 
-Before the first destination write attempt it:
+Cancellation before a write attempt reports a safe pre-write cancellation. Once a destination write is attempted, cancellation or failure is treated as potentially destructive and requires recovery/rewrite. The service does not claim generic rollback that physical media cannot reliably provide.
 
-1. requires an allowed write plan;
-2. requires the exact destination-bound confirmation token;
-3. requires the sink to report the same disk number, canonical device path and stable identity as the planned destination;
-4. re-runs the physical-media safety plan against the sink's current destination evidence;
-5. requires the revalidated confirmation binding to remain unchanged;
-6. opens the source read-only and requires its current length to equal the planned length.
+`BytesWritten` and `WrittenSha256Hex` describe chunks accepted by the sink; they are operation evidence, **not device read-back verification**.
 
-The transfer path uses a bounded 4 KiB–8 MiB buffer range with a 1 MiB default. Progress is monotonic and observational. A throwing progress callback is isolated so UI/reporting code cannot abort destructive I/O after it has begun.
+## Windows writer candidate
 
-Cancellation is checked before source reads, before destination writes and before final flush. A cancellation before any write attempt reports `CancelledBeforeWrite`. A cancellation after any destination write attempt reports `CancelledAfterWriteStarted`, marks `DestinationMayBeModified`, and requires recovery/rewrite.
+PR #47 adds a Windows-specific candidate behind the existing Core contract and an additional read-only preflight boundary.
 
-The same fail-safe rule applies to failures: once `WriteAsync` has been attempted, even a failure before the sink reports a completed chunk is treated as potentially destructive because an underlying device transfer may have been partial. The coordinator does not claim a generic rollback mechanism that physical media cannot reliably provide.
+Before requesting a destructive physical-disk handle, the preflight:
 
-`BytesWritten` and `WrittenSha256Hex` cover only chunks that the sink returned as successfully accepted. They are operation evidence, **not device read-back verification**. A separately validated platform writer must add any required read-back verification policy.
+1. re-enumerates the requested physical destination;
+2. revalidates stable identity, capacity and system-disk state;
+3. resolves logical-sector geometry;
+4. validates current source length and sector alignment;
+5. maps the local source file's volume to its backing physical-disk extents;
+6. rejects source-on-target and any source topology that cannot be proven safely;
+7. enumerates all target volumes so they can be locked/dismounted before mutation.
 
-## Validation
+The writer candidate then requires target-volume locks/dismounts, opens the exact planned `PhysicalDriveN`, rechecks final destination evidence, performs sequential sector-aligned bounded writes, flushes the device and releases locks in `finally` paths.
 
-PR #45 implementation run #310 validates:
+When requested by the validation path, independent read-back hashing reopens the destination read-only and computes SHA-256 over exactly the source-length region. A matching hash is meaningful verification evidence only for an actual completed real-media execution.
 
-- refusal and confirmation behavior with dedicated Core smoke tests
-- missing/ambiguous identity failure paths
-- capacity and physical-source refusal paths
-- real read-only physical-disk enumeration on the elevated Windows runner
-- real detection of the Windows system disk by volume extent
-- refusal of every detected system disk by the write-plan safety service
+## Disposable-media harness
 
-PR #46 implementation run #319 validates the execution contract with generated file data and injected non-device sinks:
+The harness is deliberately hard to invoke accidentally. It requires all relevant explicit inputs, including:
 
-- successful bounded sequential transfer, flush and SHA-256 evidence
-- monotonic progress
-- wrong-confirmation refusal before I/O
-- destination stable-identity swap / TOCTOU refusal before I/O
-- source-length drift refusal before destination I/O
-- cancellation before the first write
-- cancellation after a successful prefix write with explicit recovery requirement
-- injected write failure after modification began
-- flush failure after all chunks were accepted
-- isolation of throwing progress observers
-- the complete existing provider, intelligence, Explorer, native Windows, Release x64 build and clean-package regression path
+- destructive opt-in
+- exact `PhysicalDriveN`
+- exact stable destination identity
+- source image path
+- destination-bound confirmation token
+- extra explicit confirmation when fixed media is involved
+
+Normal CI runs the harness **without destructive opt-in**, proving that it stays locked. CI must never discover or select a physical target automatically.
+
+## Validation evidence
+
+PR #45 / run #310 proves query-only inventory, real Windows system-disk evidence, refusal behavior and destination-bound confirmation.
+
+PR #46 / run #319 proves the platform-independent execution contract with injected non-device sinks, including identity/confirmation revalidation, cancellation/failure states, progress isolation and recovery-required semantics.
+
+PR #47 / full Windows run #338 proves compilation/regression/package compatibility of the Windows writer candidate and its read-only preflight tests. Disposable Media Guard #10 proves that the harness compiles/runs while remaining locked without destructive opt-in.
+
+Those automated runs do **not** prove a successful write to real physical media.
 
 ## Remaining 0.7 gate
 
-Before a physical write path can be considered for exposure, 0.7 still requires one separately validated Windows physical writer exercised under dedicated safety gates and **disposable test-media conditions**.
+The final 0.7 deliverable requires an intentionally supervised run against dedicated disposable test media. That test must record and verify:
 
-That future validation must prove the platform writer's actual device-open/access mode, target identity binding at execution time, aligned/bounded transfer behavior, cancellation/failure handling, flush semantics, and any claimed read-back verification on disposable media. It must not be inferred from the injected Core sink tests.
+- exact destination identity and device number
+- source backing-device evidence
+- logical-sector alignment
+- successful target-volume lock/dismount behavior
+- bounded write completion
+- device flush result
+- independent read-back SHA-256 result
+- recovery expectations for any interrupted or failed attempt
 
-Until that gate is proven, Dragon DiskForge intentionally exposes **no physical-device write capability**.
+Only after that real-media evidence succeeds may 0.7 be considered complete or a user-facing physical write workflow be designed for exposure.
+
+Until then, Dragon DiskForge intentionally exposes **no physical-device write capability in the product UI**.

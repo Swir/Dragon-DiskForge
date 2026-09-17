@@ -1,6 +1,6 @@
 # Dragon DiskForge — Milestone Execution
 
-`docs/ROADMAP.md` defines product direction. Pull requests and CI runs prove execution.
+`docs/ROADMAP.md` defines product direction. Pull requests and CI runs prove execution. A milestone remains open until its real validation gate is satisfied; passing host-side tests does not replace hardware/manual evidence.
 
 ## 0.1 Foundation + Dragon Visual Identity — COMPLETE ✅
 Windows x64 CI, Core smoke tests, Dragon UI, verification foundation, responsive/accessibility resources and the application icon are proven.
@@ -28,7 +28,7 @@ Final checkpoints: PR #26 / run #226 FFU; PR #27 / run #228 provider-contract ha
 
 Required automated engineering scope: **100% complete**.
 
-Completed slices include cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, Windows Analyze/reporting, deeper exFAT/FAT32/UDF/NTFS evidence, architecture reconciliation, clean-package verification, bounded UDF root traversal, QCOW2/VMDK guest readers, common guest partition/filesystem intelligence and final guest GPT/EBR integrity hardening.
+Completed slices include cross-provider partition intelligence, bounded filesystem recognition, boot/installer intelligence, unified identity/health intelligence, Windows Analyze/reporting, deeper exFAT/FAT32/UDF/NTFS evidence, architecture reconciliation, bounded UDF traversal, QCOW2/VMDK guest readers, common guest partition/filesystem intelligence and guest GPT/EBR integrity hardening.
 
 Public beta publication remains a separate release decision gated by `docs/BETA-RELEASE.md`.
 
@@ -36,48 +36,13 @@ Public beta publication remains a separate release decision gated by `docs/BETA-
 
 Required engineering scope: **100% complete**.
 
-### 1. Dual SHA-256/SHA-512 verification ✅
-- combined bounded sequential hashing
-- exact hashed-byte count
-- compatibility SHA-256 API + dedicated SHA-512 API
-- progress/cancellation coverage
-- PR #41 implementation run #292 passed full Windows regression/build/package validation
+- dual SHA-256/SHA-512 bounded verification ✅
+- safe output transaction boundary ✅
+- blank RAW creation + proven guest-to-RAW materialization ✅
+- transactional split/join with versioned SHA-256 manifest ✅
+- bounded whole-file gzip transport compression/decompression ✅
 
-### 2. Safe output transaction boundary ✅
-- `SafeOutputService`
-- same-directory staging
-- `FailIfExists` and `ReplaceExisting`
-- commit-only publication after writer success
-- failure/cancellation cleanup and destination preservation on proven paths
-- PR #42 implementation run #296 and final run #298 passed full Windows validation
-
-### 3. RAW creation + guest-to-RAW conversion ✅
-- explicit-length blank RAW creation
-- bounded generic `IGuestByteReader` → RAW export
-- QCOW2 → RAW and hosted-sparse VMDK → RAW for the proven reader subsets
-- exact output length and source/destination identity checks
-- PR #43 implementation run #300 passed full Windows validation
-
-### 4. Transactional split/join ✅
-- atomic split-set directory publication after all parts + manifest are staged
-- bounded generated part names and 10,000-part ceiling
-- SHA-256 per part
-- versioned integrity manifest
-- join validates version, geometry, filenames, physical lengths and hashes
-- join output uses `SafeOutputService`
-- cancellation/conflict/hash-mismatch coverage
-
-### 5. Bounded sparse-input/compression handling ✅
-- whole-file gzip transport compression/decompression
-- caller-required decompressed-size ceiling
-- base gzip envelope/header validation
-- malformed/truncated/cap/cancellation coverage
-- proven sparse/unallocated QCOW2/VMDK guest mappings remain read-only and can be materialized to flat RAW
-- sparse-container writing and unsupported format-internal compression are explicitly not claimed
-- no Create/Convert WinUI capability is enabled by Core-only work
-- PR #44 implementation run #304 passed the split/join + gzip gate plus full provider/intelligence/Explorer/native Windows/Release/clean-package validation
-
-**0.6 exit:** complete. Final documentation-synchronized PR-head CI passed before merge.
+Sparse-container writing and unsupported format-internal compression decoding are not claimed.
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
 
@@ -85,57 +50,86 @@ Current required engineering scope: **6/7 (~86%)**.
 
 ### 1. Read-only physical-disk inventory ✅
 - canonical Windows `\\.\PhysicalDriveN` enumeration
-- physical disk handles opened query-only (`dwDesiredAccess = 0`)
-- serial-backed stable identity when Windows reports sufficient identity material
-- ambiguous/access-denied identity remains explicitly untrusted
+- query-only inventory handles
+- serial-backed stable identity where Windows exposes sufficient evidence
 
 ### 2. Physical-device evidence ✅
-- capacity evidence
-- bus/removable/vendor/product/revision/serial evidence
-- Windows system volume mapped to its backing physical-disk extents
-- evidence is retained rather than inferred silently
+- capacity, bus/removable/vendor/product/revision/serial evidence
+- Windows system volume mapped to backing physical-disk extents
 
 ### 3. Hard refusal policy ✅
-- system-disk targets are refused, not merely warned
-- destinations without stable identity are refused
-- destinations with unknown capacity are refused
-- refused plans never receive a destructive confirmation token
+- system disks, ambiguous identity and unknown capacity fail closed
+- refused plans receive no destructive confirmation token
 
 ### 4. Write-plan preview ✅
-- Core preview models image-to-disk intent without performing a write
-- physical-device sources and same-device source/destination are refused
-- source images larger than destination capacity are refused
-- smaller images surface trailing-capacity warnings
+- source/destination intent is modeled before mutation
+- physical-device sources, same-device source/destination and oversized images are refused
 
 ### 5. Destination-bound confirmation contract ✅
-- otherwise eligible plans require exact explicit confirmation
-- confirmation binds physical disk number plus stable identity material
-- token matching is exact and case-sensitive
-- another disk's token cannot confirm the plan
+- exact token binds physical disk number and stable identity material
+- another disk's token cannot confirm a plan
 
-### 6. Bounded execution + fail-safe recovery contract ✅
-- `IPhysicalMediaWriteSink` keeps platform/device opening outside the Core coordinator
-- planned and current destination identity plus confirmation are revalidated before write I/O
-- source length is revalidated after opening
-- sequential writes use a bounded buffer and monotonic progress
-- progress-observer exceptions cannot interrupt destructive I/O
-- successful accepted bytes have SHA-256 evidence without claiming device read-back verification
-- pre-write refusal/cancellation is distinct from any failure after a destination write attempt
-- once a write is attempted, abnormal termination fails closed as possibly modified and requiring recovery/rewrite
-- no generic physical-media rollback is claimed
-- PR #46 implementation run #319 passed the expanded physical-media gate and the full Windows regression/build/package path
+### 6. Bounded execution + hard-gated Windows writer candidate ✅
+- Core `PhysicalMediaWriteExecutionService` revalidates identity, confirmation and source state
+- Windows preflight resolves source backing disks and logical-sector geometry read-only
+- unprovable source topology and source-on-target fail closed
+- target volumes must be enumerated, locked and dismounted before write access
+- raw writes are sequential, bounded and sector aligned
+- final device flush is explicit
+- independent read-back SHA-256 is available for the source-length region
+- disposable-media harness requires explicit destructive opt-in, exact destination identity/source/confirmation and an extra fixed-media gate
+- no destructive UI action is exposed
+- PR #47 / full Windows run #338 + Disposable Media Guard #10 passed
 
-### Remaining 0.7 work ⬜
-- separately validated physical write path only after the safety contract is proven under dedicated disposable-media conditions
+### 7. Dedicated disposable-media validation ⬜
+- exercise the real Windows writer on dedicated disposable hardware
+- prove target binding, aligned transfer, flush and claimed read-back behavior on real media
+- record the exact hardware/test evidence before considering user-facing exposure
 
-PR #45 implementation run #310 passed the query-only inventory and planning foundation. PR #46 implementation run #319 passed the bounded execution/fail-safe contract without adding a Windows writer.
+**0.7 remains open.** CI cannot substitute for the final real-media destructive test.
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-**No physical-device writer or user-visible destructive action exists yet.**
+## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
+
+Current required engineering scope: **2/4 (50%)**. Safe read-only work advances here while 0.7 waits on hardware evidence.
+
+### 1. Windows file associations + context menu ⬜
+Not yet implemented.
+
+### 2. Shared-Core CLI ✅
+- new `DragonDiskForge.Cli` project
+- `analyze`, `verify` and `formats` commands
+- same canonical `ProviderRegistryFactory` as the desktop application
+- read-only automation surface; no create/convert/physical mutation commands
+
+### 3. PowerShell-friendly output ✅
+- deterministic text/JSON stdout
+- stderr-only errors/diagnostics
+- stable automation exit codes
+- expected SHA-256/SHA-512 matching with a dedicated mismatch exit code
+- CLI smoke tests in the full Windows CI
+- self-contained x64 `cli/dragon-diskforge.exe` in the clean package
+- manifest SHA-256 for the CLI and runtime launch/provider verification after ZIP extraction
+- PR #48 implementation run #343 + Disposable Media Guard #15 passed
+
+### 4. Session/settings/diagnostic portability ⬜
+- session restore
+- settings import/export
+- diagnostic export/support bundle
+
+See `docs/CLI.md`.
+
+## 0.9 Quality, Security + Beta Hardening — PLANNED
+
+Clean-machine runtime, normal-user UAC, real cross-process drag-out, accessibility, performance and security/release-hardening work remains planned.
+
+## 1.0 Production Release — PLANNED
+
+Production release requires all final capability, package, documentation, checksum, support-matrix and post-release verification gates.
 
 ## Beta release track
 
-The first planned public beta remains **`0.5.0-beta.1`**. Automated engineering and clean-package candidate gates are complete, but clean-machine runtime, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
+The first planned public beta remains **`0.5.0-beta.1`**. Automated engineering and clean-package candidate gates are green, but clean-machine runtime, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
 
 A capability becomes user-visible only after its real backing path and tests exist.
