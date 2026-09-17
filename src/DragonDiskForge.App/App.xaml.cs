@@ -5,32 +5,55 @@ namespace DragonDiskForge.App;
 
 public partial class App : Application
 {
-    private readonly CrashReportService _crashReports = new(GetCrashReportDirectory());
+    private CrashReportService? _crashReports;
     private Window? _window;
 
     public App()
     {
-        InitializeComponent();
+        // Register the handler before XAML initialization so early managed startup
+        // failures are not lost behind a silent WinExe process exit.
         UnhandledException += OnUnhandledException;
+
+        try
+        {
+            InitializeComponent();
+            _crashReports = new CrashReportService(GetCrashReportDirectory());
+        }
+        catch (Exception exception)
+        {
+            StartupFailureReporter.Report("App.InitializeComponent", exception);
+            throw;
+        }
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        var startupImagePath = ImageLaunchArgumentResolver.Resolve(
-            Environment.GetCommandLineArgs().Skip(1));
+        try
+        {
+            var startupImagePath = ImageLaunchArgumentResolver.Resolve(
+                Environment.GetCommandLineArgs().Skip(1));
 
-        var mainWindow = new MainWindow();
-        mainWindow.EnableDirectBrowseUi();
-        mainWindow.ConfigureBrandingFooter();
-        mainWindow.EnableSessionPortability(startupImagePath);
-        _window = mainWindow;
-        _window.Activate();
+            var mainWindow = new MainWindow();
+            mainWindow.EnableDirectBrowseUi();
+            mainWindow.ConfigureBrandingFooter();
+            mainWindow.EnableSessionPortability(startupImagePath);
+            _window = mainWindow;
+            _window.Activate();
+        }
+        catch (Exception exception)
+        {
+            StartupFailureReporter.Report("App.OnLaunched", exception);
+            throw;
+        }
     }
 
     private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        if (e.Exception is not null)
-            _crashReports.TryRecord(e.Exception);
+        if (e.Exception is null)
+            return;
+
+        _crashReports?.TryRecord(e.Exception);
+        StartupFailureReporter.Report("Microsoft.UI.Xaml.UnhandledException", e.Exception);
     }
 
     private static string GetCrashReportDirectory()
