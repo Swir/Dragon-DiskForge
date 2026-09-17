@@ -26,6 +26,37 @@ function Get-RepositoryVersion {
     return "$($prefix.Trim())-$($suffix.Trim())"
 }
 
+function Find-AppLocalVcRuntimeDirectory {
+    $candidates = [System.Collections.Generic.List[string]]::new()
+
+    if (-not [string]::IsNullOrWhiteSpace($env:VCToolsRedistDir)) {
+        $candidates.Add((Join-Path $env:VCToolsRedistDir "x64\Microsoft.VC143.CRT"))
+    }
+
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere -PathType Leaf) {
+        $installationPath = (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Redist.14.Latest -property installationPath | Select-Object -First 1)
+        if (-not [string]::IsNullOrWhiteSpace($installationPath)) {
+            $redistRoot = Join-Path $installationPath "VC\Redist\MSVC"
+            if (Test-Path $redistRoot -PathType Container) {
+                foreach ($versionDirectory in @(Get-ChildItem -Path $redistRoot -Directory | Sort-Object Name -Descending)) {
+                    $candidates.Add((Join-Path $versionDirectory.FullName "x64\Microsoft.VC143.CRT"))
+                }
+            }
+        }
+    }
+
+    foreach ($candidate in $candidates) {
+        if (-not (Test-Path $candidate -PathType Container)) { continue }
+        if ((Test-Path (Join-Path $candidate "vcruntime140.dll") -PathType Leaf) -and
+            (Test-Path (Join-Path $candidate "msvcp140.dll") -PathType Leaf)) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    throw "A redistributable x64 Microsoft.VC143.CRT directory was not found. Install the Visual C++ v14 redistributable build tools or set VCToolsRedistDir before packaging."
+}
+
 $expected = Get-RepositoryVersion -Override $ExpectedVersion
 $source = (Resolve-Path $SourceDirectory).Path
 $cliProjectPath = (Resolve-Path $CliProject).Path
@@ -45,14 +76,14 @@ Write-Host "Publishing self-contained Dragon DiskForge CLI."
 & dotnet publish $cliProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw "Self-contained CLI publish failed with exit code $LASTEXITCODE." }
 $cliProjectDirectory = Split-Path $cliProjectPath -Parent
-$cliExecutable = Join-Path $cliProjectDirectory "bin/Release/net10.0/win-x64/publish/dragon-diskforge.exe"
+$cliExecutable = Join-Path $cliProjectDirectory "bin/Release/net10.0/win-x64/publish/dragon-disk-forge.exe"
 if (-not (Test-Path $cliExecutable -PathType Leaf)) { throw "Published CLI executable was not found: $cliExecutable" }
 
 Write-Host "Publishing self-contained Dragon DiskForge shell helper."
 & dotnet publish $shellProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) { throw "Self-contained shell-helper publish failed with exit code $LASTEXITCODE." }
 $shellProjectDirectory = Split-Path $shellProjectPath -Parent
-$shellExecutable = Join-Path $shellProjectDirectory "bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/dragon-diskforge-shell.exe"
+$shellExecutable = Join-Path $shellProjectDirectory "bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/dragon-disk-forge-shell.exe"
 if (-not (Test-Path $shellExecutable -PathType Leaf)) { throw "Published shell helper was not found: $shellExecutable" }
 
 if (Test-Path $output) { Remove-Item $output -Recurse -Force }
@@ -68,19 +99,38 @@ foreach ($file in $files) {
     Copy-Item $file.FullName $destination -Force
 }
 
+# Windows App SDK self-contained deployment does not make the unpackaged app
+# independent of the native Visual C++ runtime. Ship the supported app-local
+# redistributable CRT next to the executable so the ZIP has no machine-level
+# VC++ prerequisite.
+$vcRuntimeDirectory = Find-AppLocalVcRuntimeDirectory
+$vcRuntimeFiles = @(Get-ChildItem -Path $vcRuntimeDirectory -File -Filter "*.dll")
+if ($vcRuntimeFiles.Count -eq 0) { throw "No redistributable CRT DLLs were found in '$vcRuntimeDirectory'." }
+foreach ($runtimeFile in $vcRuntimeFiles) {
+    Copy-Item $runtimeFile.FullName (Join-Path $stage $runtimeFile.Name) -Force
+}
+Write-Host "Bundled $($vcRuntimeFiles.Count) app-local Visual C++ runtime DLLs from '$vcRuntimeDirectory'."
+
 $entryPoint = Join-Path $stage "DragonDiskForge.App.exe"
 if (-not (Test-Path $entryPoint -PathType Leaf)) { throw "Packaged application is missing DragonDiskForge.App.exe at the package root." }
 
+foreach ($runtimeFileName in @("hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "clrjit.dll", "vcruntime140.dll", "msvcp140.dll")) {
+    $runtimePath = Join-Path $stage $runtimeFileName
+    if (-not (Test-Path $runtimePath -PathType Leaf)) {
+        throw "Public-package staging is not self-contained; missing runtime file '$runtimeFileName'."
+    }
+}
+
 $cliStageDirectory = Join-Path $stage "cli"
 New-Item -ItemType Directory -Path $cliStageDirectory -Force | Out-Null
-$cliEntryPoint = Join-Path $cliStageDirectory "dragon-diskforge.exe"
+$cliEntryPoint = Join-Path $cliStageDirectory "dragon-disk-forge.exe"
 Copy-Item $cliExecutable $cliEntryPoint -Force
 & $cliEntryPoint --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Packaged CLI failed its launch smoke test with exit code $LASTEXITCODE." }
 
 $toolsStageDirectory = Join-Path $stage "tools"
 New-Item -ItemType Directory -Path $toolsStageDirectory -Force | Out-Null
-$shellEntryPoint = Join-Path $toolsStageDirectory "dragon-diskforge-shell.exe"
+$shellEntryPoint = Join-Path $toolsStageDirectory "dragon-disk-forge-shell.exe"
 Copy-Item $shellExecutable $shellEntryPoint -Force
 & $shellEntryPoint --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Packaged shell helper failed its launch smoke test with exit code $LASTEXITCODE." }
@@ -122,18 +172,23 @@ $manifest = [ordered]@{
     fileVersion = $fileVersion
     architecture = "x64"
     entryPoint = "DragonDiskForge.App.exe"
-    cliEntryPoint = "cli/dragon-diskforge.exe"
-    shellIntegrationEntryPoint = "tools/dragon-diskforge-shell.exe"
+    cliEntryPoint = "cli/dragon-disk-forge.exe"
+    shellIntegrationEntryPoint = "tools/dragon-disk-forge-shell.exe"
     betaManualQaEntryPoint = "tools/beta-manual-qa.ps1"
     icon = "DragonDiskForge.ico"
     entryPointSha256 = $entryPointSha256
     cliEntryPointSha256 = $cliEntryPointSha256
     shellIntegrationEntryPointSha256 = $shellEntryPointSha256
     betaManualQaEntryPointSha256 = $betaManualQaEntryPointSha256
+    runtimeDeployment = [ordered]@{
+        dotNet = "self-contained"
+        windowsAppSdk = "self-contained"
+        visualCpp = "app-local"
+    }
     debugSymbolsIncluded = $false
     fileCount = $packageFilesBeforeManifest.Count + 1
 }
-$manifest | ConvertTo-Json | Set-Content -Path (Join-Path $stage "package-manifest.json") -Encoding utf8NoBOM
+$manifest | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $stage "package-manifest.json") -Encoding utf8NoBOM
 
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal
