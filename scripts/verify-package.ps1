@@ -44,12 +44,23 @@ try {
     if ([string]$manifest.architecture -ne "x64") { throw "Unexpected package architecture '$($manifest.architecture)'." }
     if ([bool]$manifest.debugSymbolsIncluded) { throw "Package manifest claims debug symbols are included." }
 
+    if ([string]$manifest.runtimeDeployment.dotNet -ne "self-contained") { throw "Package manifest does not declare a self-contained .NET runtime." }
+    if ([string]$manifest.runtimeDeployment.windowsAppSdk -ne "self-contained") { throw "Package manifest does not declare a self-contained Windows App SDK runtime." }
+    if ([string]$manifest.runtimeDeployment.visualCpp -ne "app-local") { throw "Package manifest does not declare an app-local Visual C++ runtime." }
+
     $entryPoint = Join-Path $tempRoot ([string]$manifest.entryPoint)
     $cliEntryPoint = Join-Path $tempRoot ([string]$manifest.cliEntryPoint)
     $shellEntryPoint = Join-Path $tempRoot ([string]$manifest.shellIntegrationEntryPoint)
     $betaManualQaEntryPoint = Join-Path $tempRoot ([string]$manifest.betaManualQaEntryPoint)
     foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint, $betaManualQaEntryPoint)) {
         if (-not (Test-Path $required -PathType Leaf)) { throw "Manifest entry point is missing: $required" }
+    }
+
+    foreach ($runtimeFileName in @("hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "clrjit.dll", "vcruntime140.dll", "msvcp140.dll")) {
+        $runtimePath = Join-Path $tempRoot $runtimeFileName
+        if (-not (Test-Path $runtimePath -PathType Leaf)) {
+            throw "Verified package is not runtime-complete; missing '$runtimeFileName'."
+        }
     }
 
     if (@(Get-ChildItem -Path $tempRoot -Recurse -File -Filter "*.pdb").Count -ne 0) { throw "Verified package contains debug symbol files." }
@@ -87,7 +98,7 @@ try {
     & $shellEntryPoint --help | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Packaged shell helper failed its launch smoke test with exit code $LASTEXITCODE." }
 
-    Write-Host "Verified clean Windows x64 package."
+    Write-Host "Verified runtime-complete Windows x64 package."
     Write-Host "Version: $expected"
     Write-Host "Files: $((Get-ChildItem -Path $tempRoot -Recurse -File).Count)"
     Write-Host "ZIP SHA-256: $actualHash"
