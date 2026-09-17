@@ -302,7 +302,7 @@ if ($Check) {
     if (-not $readme.Contains('src="assets/readme/progress-card.svg"')) {
         throw 'README.md does not embed assets/readme/progress-card.svg.'
     }
-    $readmeFallback = "**Weighted project progress:** **$overallDisplay%** toward 1.0 · **Completed roadmap stages:** **$completedStages/$totalStages** · **Release readiness:** tracked separately in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md)."
+    $readmeFallback = '**Weighted project progress:** **{0}%** toward 1.0 · **Completed roadmap stages:** **{1}/{2}** · **Release readiness:** tracked separately in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).' -f $overallDisplay, $completedStages, $totalStages
     if (-not $readme.Contains($readmeFallback)) {
         throw 'README.md progress fallback does not match authoritative roadmap data.'
     }
