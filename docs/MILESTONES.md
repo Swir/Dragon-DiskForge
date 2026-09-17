@@ -134,9 +134,29 @@ Automated shell integration proves the registry, launch and clean-package contra
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
-## 0.9 Quality, Security + Beta Hardening — PLANNED
+## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Clean-machine runtime, normal-user UAC, real cross-process drag-out, accessibility, performance and security/release-hardening work remains planned.
+Current required engineering scope: **2/7 (~29%)**.
+
+### Completed
+- performance and large-image regression benchmarks ✅
+  - 128 MiB dual SHA-256/SHA-512 verification throughput/allocation regression gate
+  - bounded recognition against a valid 8 GiB sparse RAW/IMG MBR fixture
+  - benchmark JSON is published as CI evidence
+- crash/diagnostic export and release support bundle ✅
+  - bounded, rotated privacy-preserving crash history
+  - type/HRESULT/fingerprint/method-only frame evidence
+  - no raw exception messages, source-file paths or image contents
+  - up to three sanitized crash summaries in the existing diagnostic ZIP
+
+PR #51 implementation head passed full Windows run #360 and Disposable Media Guard #32 before these two items were marked complete.
+
+### Remaining
+- clean-machine runtime matrix ⬜
+- normal-user UAC validation ⬜
+- real cross-process Explorer drag-out validation ⬜
+- accessibility/keyboard/screen-reader hardening ⬜
+- security review of parsing, packaging and privileged boundaries ⬜
 
 ## 1.0 Production Release — PLANNED
 
