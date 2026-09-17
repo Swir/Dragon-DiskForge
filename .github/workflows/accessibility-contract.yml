@@ -1,0 +1,27 @@
+name: Dragon DiskForge Accessibility Contract
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: dragon-accessibility-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  accessibility-contract:
+    name: Accessibility and keyboard contract
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate accessible XAML contract
+        shell: pwsh
+        run: ./scripts/accessibility-contract.ps1
+
+      - name: Build Windows app
+        run: dotnet build src/DragonDiskForge.App/DragonDiskForge.App.csproj -c Release -p:Platform=x64
