@@ -228,6 +228,23 @@ await WithTempDirectoryAsync(async root =>
     await File.WriteAllBytesAsync(imagePath, new byte[] { 1, 2, 3, 4 });
     Check((await previewer.GetPreviewAsync(imagePath)).Kind == PreviewKind.Image, "Preview service classifies images without executing them");
 
+    var strictImagePreviewer = new FilePreviewService(maxRenderedImageBytes: 3);
+    var oversizedImagePreview = await strictImagePreviewer.GetPreviewAsync(imagePath);
+    Check(oversizedImagePreview.Kind == PreviewKind.BinaryMetadata,
+        "Preview service keeps oversized image input metadata-only instead of rendering it");
+    Check(oversizedImagePreview.Description.Contains("rendering disabled", StringComparison.OrdinalIgnoreCase),
+        "Oversized image preview reports the render safety cap truthfully");
+
+    try
+    {
+        _ = new FilePreviewService(maxRenderedImageBytes: 0);
+        Check(false, "Preview service rejects a non-positive image render budget");
+    }
+    catch (ArgumentOutOfRangeException)
+    {
+        Check(true, "Preview service rejects a non-positive image render budget");
+    }
+
     var pdfPath = Path.Combine(root, "manual.pdf");
     await File.WriteAllTextAsync(pdfPath, "%PDF-1.7");
     Check((await previewer.GetPreviewAsync(pdfPath)).Kind == PreviewKind.PdfMetadata, "Preview service exposes PDF metadata mode");
