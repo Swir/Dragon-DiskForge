@@ -5,6 +5,8 @@ namespace DragonDiskForge.Core.Services;
 
 public sealed class FilePreviewService : IFilePreviewService
 {
+    public const long DefaultMaxRenderedImageBytes = 64L * 1024L * 1024L;
+
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".txt", ".log", ".md", ".json", ".xml", ".csv", ".ini", ".cfg", ".conf",
@@ -22,6 +24,16 @@ public sealed class FilePreviewService : IFilePreviewService
         ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma",
         ".mp4", ".mkv", ".avi", ".mov", ".webm", ".wmv", ".m4v"
     };
+
+    private readonly long _maxRenderedImageBytes;
+
+    public FilePreviewService(long maxRenderedImageBytes = DefaultMaxRenderedImageBytes)
+    {
+        if (maxRenderedImageBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxRenderedImageBytes));
+
+        _maxRenderedImageBytes = maxRenderedImageBytes;
+    }
 
     public async Task<PreviewInfo> GetPreviewAsync(
         string filePath,
@@ -58,6 +70,17 @@ public sealed class FilePreviewService : IFilePreviewService
 
         if (ImageExtensions.Contains(extension))
         {
+            if (info.Length > _maxRenderedImageBytes)
+            {
+                return new PreviewInfo(
+                    path,
+                    info.Name,
+                    PreviewKind.BinaryMetadata,
+                    info.Length,
+                    modified,
+                    $"Image metadata preview • {extension.TrimStart('.').ToUpperInvariant()} • rendering disabled above the {FormatByteLimit(_maxRenderedImageBytes)} safety cap");
+            }
+
             return new PreviewInfo(
                 path,
                 info.Name,
@@ -138,5 +161,16 @@ public sealed class FilePreviewService : IFilePreviewService
         var probe = new char[1];
         var extra = await reader.ReadAsync(probe.AsMemory(), cancellationToken);
         return (builder.ToString(), extra > 0);
+    }
+
+    private static string FormatByteLimit(long bytes)
+    {
+        if (bytes < 1024)
+            return $"{bytes} B";
+        if (bytes < 1024L * 1024L)
+            return $"{bytes / 1024d:0.#} KB";
+        if (bytes < 1024L * 1024L * 1024L)
+            return $"{bytes / (1024d * 1024d):0.#} MB";
+        return $"{bytes / (1024d * 1024d * 1024d):0.##} GB";
     }
 }

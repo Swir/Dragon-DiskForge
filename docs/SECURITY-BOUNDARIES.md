@@ -13,6 +13,7 @@ Dragon DiskForge follows these rules:
 - the public CLI does not expose the destructive physical-media writer;
 - Windows shell integration is per-user and reversible and does not replace Windows `UserChoice` defaults;
 - mounted Explorer paths below the trusted root reject reparse/junction ancestry before browse, preview/open, copy-out or drag-out;
+- desktop text previews are character-bounded and oversized image files fall back to metadata-only instead of entering the image renderer;
 - release packages exclude debug/test payloads and bind shipped entry points by SHA-256;
 - crash/support evidence is bounded and deliberately excludes raw exception messages, source-file paths and image content;
 - parsers and guest readers use bounded reads and are covered by malformed/truncated/out-of-bounds regression cases appropriate to each implemented format.
@@ -64,11 +65,17 @@ Mounted-volume data remains read-only from Dragon Explorer's perspective, but le
 
 Windows smoke coverage creates an actual directory junction below the mounted root and proves that a lexically in-root path resolving to outside data is rejected for drag-out, directory browse, search start and copy-out without creating the destination file. The WinUI Release build proves the preview/open call sites compile against the same validator.
 
-This reduces reparse-ancestor and stale-path escape risk but is not described as a formal race-free filesystem sandbox. The mounted root itself remains the trusted anchor because Windows can represent the mounted volume through its own mount mechanism. Real Explorer/Desktop cross-process drag remains a separate manual beta gate.
+Copy-out also uses an output transaction boundary: single files are committed through `SafeOutputService`, while directory exports are assembled under a unique Dragon-owned staging tree and renamed into their final path only after the whole tree has copied. Cancellation/failure removes temporary output best-effort and does not intentionally publish a partial final file or directory tree.
 
-### 6. Parser and image-content boundary
+This reduces reparse-ancestor, stale-path and partial-output risk but is not described as a formal race-free filesystem sandbox. The mounted root itself remains the trusted anchor because Windows can represent the mounted volume through its own mount mechanism. Real Explorer/Desktop cross-process drag remains a separate manual beta gate.
+
+### 6. Parser, preview and image-content boundary
 
 Format parsers and guest readers must treat disk-image bytes as untrusted input. Existing format-specific smoke tests cover malformed, truncated, out-of-range and cancellation cases where applicable. Important bounded components include partition intelligence, filesystem recognition/depth, UDF traversal, QCOW2/VMDK guest readers and guest partition/filesystem intelligence.
+
+Desktop preview follows the same untrusted-input posture. Text preview reads are character-bounded. Image preview admission has a 64 MiB default file-byte budget; recognized images larger than that budget stay metadata-only instead of being passed to the desktop image renderer. The limit is constructor-configurable for deterministic regression testing and rejects non-positive budgets.
+
+The image byte budget is resource hardening, not an image-decoder sandbox or a formal decompression-bomb guarantee. Accepted-size images still use the Windows image decoder, so this control is documented narrowly and does not expand the project's support claims.
 
 Security-review completion depends on those regression suites remaining green together with the dedicated security-boundary gate and the full Windows build.
 
@@ -107,7 +114,7 @@ Crash collection is best-effort and bounded. Persisted evidence is limited to st
 - destination-bound confirmation remains exact and case-sensitive;
 - shell command quoting rejects executable substitution and quote injection.
 
-The full Windows workflow separately exercises the mounted Explorer path boundary with a real junction fixture because that check depends on Windows filesystem behavior.
+The full Windows workflow separately exercises the mounted Explorer path boundary with a real junction fixture and the Core preview regressions because those checks depend on real filesystem/service behavior.
 
 ## Manual gates that remain manual
 
