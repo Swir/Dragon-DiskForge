@@ -81,6 +81,17 @@ public sealed class FilePreviewService : IFilePreviewService
                     $"Image metadata preview • {extension.TrimStart('.').ToUpperInvariant()} • rendering disabled above the {FormatByteLimit(_maxRenderedImageBytes)} safety cap");
             }
 
+            if (!await HasExpectedImageSignatureAsync(path, extension, cancellationToken))
+            {
+                return new PreviewInfo(
+                    path,
+                    info.Name,
+                    PreviewKind.BinaryMetadata,
+                    info.Length,
+                    modified,
+                    $"Image metadata preview • {extension.TrimStart('.').ToUpperInvariant()} • rendering disabled because the file signature does not match the extension");
+            }
+
             return new PreviewInfo(
                 path,
                 info.Name,
@@ -161,6 +172,52 @@ public sealed class FilePreviewService : IFilePreviewService
         var probe = new char[1];
         var extra = await reader.ReadAsync(probe.AsMemory(), cancellationToken);
         return (builder.ToString(), extra > 0);
+    }
+
+    private static async Task<bool> HasExpectedImageSignatureAsync(
+        string path,
+        string extension,
+        CancellationToken cancellationToken)
+    {
+        var header = new byte[12];
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 4096,
+            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        var totalRead = 0;
+        while (totalRead < header.Length)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var read = await stream.ReadAsync(header.AsMemory(totalRead, header.Length - totalRead), cancellationToken);
+            if (read <= 0)
+                break;
+
+            totalRead += read;
+        }
+
+        return extension.ToLowerInvariant() switch
+        {
+            ".png" => totalRead >= 8 &&
+                      header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47 &&
+                      header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A,
+            ".jpg" or ".jpeg" => totalRead >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF,
+            ".bmp" => totalRead >= 2 && header[0] == (byte)'B' && header[1] == (byte)'M',
+            ".gif" => totalRead >= 6 &&
+                      header[0] == (byte)'G' && header[1] == (byte)'I' && header[2] == (byte)'F' &&
+                      header[3] == (byte)'8' && (header[4] == (byte)'7' || header[4] == (byte)'9') && header[5] == (byte)'a',
+            ".webp" => totalRead >= 12 &&
+                       header[0] == (byte)'R' && header[1] == (byte)'I' && header[2] == (byte)'F' && header[3] == (byte)'F' &&
+                       header[8] == (byte)'W' && header[9] == (byte)'E' && header[10] == (byte)'B' && header[11] == (byte)'P',
+            ".tif" or ".tiff" => totalRead >= 4 &&
+                                 ((header[0] == (byte)'I' && header[1] == (byte)'I' && header[2] == 0x2A && header[3] == 0x00) ||
+                                  (header[0] == (byte)'M' && header[1] == (byte)'M' && header[2] == 0x00 && header[3] == 0x2A)),
+            ".ico" => totalRead >= 4 && header[0] == 0x00 && header[1] == 0x00 && header[2] == 0x01 && header[3] == 0x00,
+            _ => false
+        };
     }
 
     private static string FormatByteLimit(long bytes)
