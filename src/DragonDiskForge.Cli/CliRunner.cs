@@ -109,7 +109,7 @@ public static class CliRunner
         var sha512Matches = expectedSha512 is null || string.Equals(expectedSha512, verification.Sha512, StringComparison.OrdinalIgnoreCase);
         var result = new VerificationOutput(
             Path.GetFullPath(path),
-            verification.BytesHashed,
+            verification.SizeBytes,
             verification.Sha256,
             verification.Sha512,
             expectedSha256,
@@ -269,9 +269,9 @@ public static class CliRunner
 Dragon DiskForge CLI — read-only automation surface
 
 Usage:
-  dragon-disk-forge analyze <image> [--format text|json]
-  dragon-disk-forge verify <image> [--sha256 <hex>] [--sha512 <hex>] [--format text|json]
-  dragon-disk-forge formats [--format text|json]
+  dragon-diskforge analyze <image> [--format text|json]
+  dragon-diskforge verify <image> [--sha256 <hex>] [--sha512 <hex>] [--format text|json]
+  dragon-diskforge formats [--format text|json]
 
 Commands:
   analyze   Run the same provider-backed image intelligence used by the desktop app.
