@@ -2,9 +2,9 @@
 
 This roadmap tracks implemented, testable product deliverables. A checkbox is completed only when a real backing path exists and the required verification has passed. Documentation, placeholders and CI-only work do not count as feature completion.
 
-## Overall progress — 82% toward 1.0
+## Overall progress — 83% toward 1.0
 
-`████████████████░░░░ 82%`
+`█████████████████░░░ 83%`
 
 - **0.1 Foundation + Dragon UI — COMPLETE ✅**
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
@@ -14,7 +14,7 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 - **0.6 Create + Convert + Verify — COMPLETE ✅**
 - **0.7 Physical Media Tools — 6/7 (~86%) 🚧**
 - **0.8 Windows Integration + Power Tools — COMPLETE ✅**
-- **0.9 Quality, Security + Beta Hardening — 4/7 (~57%) 🚧**
+- **0.9 Quality, Security + Beta Hardening — 5/7 (~71%) 🚧**
 - **1.0 Production Release — planned**
 
 Work may advance out of milestone order when an earlier milestone is blocked by a real hardware/manual validation gate. The remaining 0.7 hardware gate is not weakened by progress in later milestones.
@@ -119,12 +119,12 @@ See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current scope: **4/7 (~57%)**.
+Current scope: **5/7 (~71%)**.
 
 - [x] clean-machine runtime matrix
 - [ ] normal-user UAC validation
 - [ ] real cross-process Explorer drag-out validation
-- [ ] accessibility/keyboard/screen-reader hardening
+- [x] accessibility/keyboard/screen-reader hardening
 - [x] performance and large-image regression benchmarks
 - [x] security review of parsing, packaging and privileged boundaries
 - [x] crash/diagnostic export and release support bundle
@@ -135,9 +135,11 @@ PR #52 completes the repeatable security-boundary review: the desktop manifest i
 
 PR #53 adds a package-only clean-machine runtime matrix. The clean package is built once and then exercised on fresh `windows-2022` and `windows-latest` jobs with no repository checkout; ZIP/manifest hashes, package hygiene, self-contained CLI analyze/verify/state/diagnostics and per-user shell register/status/unregister are verified after developer toolchain paths are removed. Exact implementation head `6451939...` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before this deliverable was marked complete.
 
-Crash evidence is bounded and deliberately excludes raw exception messages, source-file paths and image contents. The performance gate publishes benchmark JSON while using conservative ceilings intended to detect major regressions rather than claim hardware-independent absolute speed. The security and clean-machine gates prove stated code/package/runtime invariants, not the remaining interactive UAC/Explorer/accessibility or dedicated-media manual gates.
+PR #54 hardens the beta-facing WinUI navigation/browsing surfaces with explicit UI Automation names/help text, polite live status announcements, named list/tab collections and keyboard access keys. A dedicated accessibility regression contract parses the hardened XAML and fails on missing labels/live regions or duplicate per-view access keys, while its Windows workflow also compiles the WinUI application. Exact implementation head `69490fe...` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before this deliverable was marked complete. This is automated accessibility/keyboard hardening evidence; it does not claim a human Narrator/assistive-technology certification run.
 
-See `docs/CLEAN-MACHINE-RUNTIME.md`.
+Crash evidence is bounded and deliberately excludes raw exception messages, source-file paths and image contents. The performance gate publishes benchmark JSON while using conservative ceilings intended to detect major regressions rather than claim hardware-independent absolute speed. The security, clean-machine and accessibility gates prove stated code/package/runtime invariants, not the remaining interactive UAC/Explorer or dedicated-media manual gates.
+
+See `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACCESSIBILITY.md`.
 
 ## 1.0 Production Release — PLANNED
 
@@ -150,4 +152,4 @@ See `docs/CLEAN-MACHINE-RUNTIME.md`.
 
 ## Public beta track
 
-The planned first public beta remains **`0.5.0-beta.1`**. It is not considered ready until every required item in `docs/BETA-RELEASE.md` is actually verified. The package-only clean-machine matrix is green, but interactive clean-desktop/UAC/Explorer and final release gates remain independent requirements.
+The planned first public beta remains **`0.5.0-beta.1`**. It is not considered ready until every required item in `docs/BETA-RELEASE.md` is actually verified. The package-only clean-machine matrix and automated accessibility hardening are green, but interactive clean-desktop/UAC/Explorer and final release gates remain independent requirements.

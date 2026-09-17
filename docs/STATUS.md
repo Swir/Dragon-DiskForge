@@ -18,7 +18,7 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**82% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and four verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
+**83% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and five verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
 
 ## Current roadmap position
 
@@ -100,7 +100,7 @@ PR #50 implementation run #356 and Disposable Media Guard #28 passed before the 
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
-### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 4/7 (~57%)
+### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 5/7 (~71%)
 
 #### Crash/diagnostic release-support hardening ✅
 
@@ -148,13 +148,23 @@ PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` pass
 
 PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 on both matrix images before this deliverable was marked complete. See `docs/CLEAN-MACHINE-RUNTIME.md`.
 
+#### Accessibility/keyboard/screen-reader hardening ✅
+
+- Direct Browse, Dragon Explorer, multi-image workspace, Images and Mounted surfaces expose explicit UI Automation names/help text for important interactive and dynamic elements
+- status, item-count, path and preview changes use polite live-region metadata where appropriate
+- stable common actions expose per-view keyboard access keys without adding hidden destructive shortcuts
+- list/tab collections and progress indicators are explicitly named for automation clients
+- `scripts/accessibility-contract.ps1` fails closed on missing labels/live regions/named collections/progress indicators and duplicate per-view access keys
+- the dedicated Windows Accessibility Contract workflow runs the XAML contract and then compiles the WinUI x64 Release application
+
+PR #54 exact implementation head `69490fe118614e9fb6bc39433756ccd0c50d5dd9` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before this deliverable was marked complete. This is repeatable automated accessibility/keyboard evidence, not a claim of formal accessibility certification or a human Narrator/NVDA/JAWS validation. See `docs/ACCESSIBILITY.md`.
+
 #### Remaining 0.9 scope ⬜
 
 - normal-user UAC validation
 - real cross-process Explorer drag-out validation
-- accessibility/keyboard/screen-reader hardening
 
-The clean-machine package-only gate is now repeatable automation. Interactive WinUI launch, UAC, cross-process Explorer behavior, accessibility review and dedicated-media validation retain their independent evidence requirements.
+The clean-machine package-only and accessibility gates are repeatable automation. Interactive WinUI launch, UAC, real cross-process Explorer behavior and dedicated-media validation retain their independent evidence requirements.
 
 ## Proven validation checkpoints
 
@@ -207,19 +217,19 @@ The clean-machine package-only gate is now repeatable automation. Interactive Wi
 - PR #51 / implementation run #360 + Disposable Media Guard #32 — sanitized crash/support evidence and large-image performance regression gate
 - PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — repeatable parsing/package/privileged security review and explicit asInvoker boundary
 - PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix across fresh Windows runner images
+- PR #54 / implementation run #381 + Accessibility Contract #1 + Disposable Media Guard #53 + Security Boundary #15 + Clean Machine Runtime #8 — automated accessibility/keyboard/screen-reader semantics hardening
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package and package-only clean-machine runtime gates are green, but these independent release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime and accessibility-hardening gates are green, but these independent release gates remain:
 
 - promote version/package metadata to the final beta suffix only at release time
 - human-confirmed WinUI launch and basic open/mount/explore/verify/analyze regression on a clean supported Windows desktop
 - complete normal-user UAC validation
 - complete real cross-process Explorer drag-out validation
-- complete basic accessibility/keyboard/screen-reader hardening appropriate to the beta surface
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-The automated runtime matrix proves that the clean packaged CLI/shell/state/diagnostic paths run without a repository checkout and without relying on developer toolchain paths. It deliberately does not claim an interactive desktop, UAC, Explorer or accessibility result.
+The automated accessibility contract proves checked XAML semantics plus a successful WinUI build; it deliberately does not claim a human assistive-technology certification session. The package-only runtime matrix proves that the clean packaged CLI/shell/state/diagnostic paths run without a repository checkout and without relying on developer toolchain paths. Neither gate substitutes for remaining interactive desktop/UAC/Explorer validation.
 
 ## Current safety state
 
@@ -229,4 +239,4 @@ Crash evidence is bounded, rotated and privacy-preserving; support export delibe
 
 The Windows physical writer candidate is not connected to a user-visible action. Its executable path remains behind destination identity/topology/confirmation checks and a hard-locked disposable-media harness. No completion claim is made until real dedicated-media validation proves the final 0.7 item.
 
-Interactive WinUI clean-desktop launch, normal-user UAC, real cross-process Explorer drag-out and accessibility validation remain beta QA gates.
+Interactive WinUI clean-desktop launch, normal-user UAC and real cross-process Explorer drag-out remain beta QA gates.
