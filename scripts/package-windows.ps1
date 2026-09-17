@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$SourceDirectory = "src/DragonDiskForge.App/bin/x64/Release",
+    [string]$AppProject = "src/DragonDiskForge.App/DragonDiskForge.App.csproj",
     [string]$CliProject = "src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj",
     [string]$ShellProject = "src/DragonDiskForge.Shell/DragonDiskForge.Shell.csproj",
     [string]$BetaManualQaScript = "scripts/beta-manual-qa.ps1",
@@ -26,20 +26,85 @@ function Get-RepositoryVersion {
     return "$($prefix.Trim())-$($suffix.Trim())"
 }
 
+function Add-VcRuntimeCandidatesFromRoot {
+    param(
+        [System.Collections.Generic.List[string]]$Candidates,
+        [string]$Root
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Root) -or -not (Test-Path $Root -PathType Container)) { return }
+
+    $direct = Join-Path $Root "x64\Microsoft.VC143.CRT"
+    if (Test-Path $direct -PathType Container) { $Candidates.Add($direct) }
+
+    foreach ($versionDirectory in @(Get-ChildItem -Path $Root -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending)) {
+        $candidate = Join-Path $versionDirectory.FullName "x64\Microsoft.VC143.CRT"
+        if (Test-Path $candidate -PathType Container) { $Candidates.Add($candidate) }
+    }
+}
+
+function Find-AppLocalVcRuntimeDirectory {
+    $candidates = [System.Collections.Generic.List[string]]::new()
+
+    if (-not [string]::IsNullOrWhiteSpace($env:VCToolsRedistDir)) {
+        Add-VcRuntimeCandidatesFromRoot -Candidates $candidates -Root $env:VCToolsRedistDir
+    }
+
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere -PathType Leaf) {
+        $installations = @(& $vswhere -products * -property installationPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        foreach ($installationPath in $installations) {
+            Add-VcRuntimeCandidatesFromRoot -Candidates $candidates -Root (Join-Path $installationPath "VC\Redist\MSVC")
+        }
+    }
+
+    $visualStudioRoot = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\2022"
+    if (Test-Path $visualStudioRoot -PathType Container) {
+        foreach ($edition in @(Get-ChildItem -Path $visualStudioRoot -Directory -ErrorAction SilentlyContinue)) {
+            Add-VcRuntimeCandidatesFromRoot -Candidates $candidates -Root (Join-Path $edition.FullName "VC\Redist\MSVC")
+        }
+    }
+
+    foreach ($candidate in @($candidates | Select-Object -Unique)) {
+        if ((Test-Path (Join-Path $candidate "vcruntime140.dll") -PathType Leaf) -and
+            (Test-Path (Join-Path $candidate "msvcp140.dll") -PathType Leaf)) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    throw "A redistributable x64 Microsoft.VC143.CRT directory was not found. Install the Visual C++ v14 redistributable build tools or set VCToolsRedistDir before packaging."
+}
+
 $expected = Get-RepositoryVersion -Override $ExpectedVersion
-$source = (Resolve-Path $SourceDirectory).Path
+$appProjectPath = (Resolve-Path $AppProject).Path
 $cliProjectPath = (Resolve-Path $CliProject).Path
 $shellProjectPath = (Resolve-Path $ShellProject).Path
 $betaManualQaScriptPath = (Resolve-Path $BetaManualQaScript).Path
 $output = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDirectory))
+$publishRoot = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) "artifacts/publish"))
+$appPublishDirectory = Join-Path $publishRoot "DragonDiskForge.App-win-x64"
 $stage = Join-Path $output "DragonDiskForge-win-x64"
 $zip = Join-Path $output "DragonDiskForge-win-x64.zip"
 $checksum = "$zip.sha256"
 
 Write-Host "Preparing clean Windows x64 package for version $expected."
-$executables = @(Get-ChildItem -Path $source -Recurse -File -Filter "DragonDiskForge.App.exe")
-if ($executables.Count -ne 1) { throw "Expected exactly one DragonDiskForge.App.exe below '$source', found $($executables.Count)." }
-$appDirectory = $executables[0].Directory.FullName
+
+if (Test-Path $appPublishDirectory) { Remove-Item $appPublishDirectory -Recurse -Force }
+New-Item -ItemType Directory -Path $appPublishDirectory -Force | Out-Null
+
+Write-Host "Publishing runtime-complete Dragon DiskForge desktop app."
+& msbuild $appProjectPath /restore /t:Publish /m "/p:Configuration=Release" "/p:Platform=x64" "/p:RuntimeIdentifier=win-x64" "/p:SelfContained=true" "/p:WindowsAppSDKSelfContained=true" "/p:DebugType=None" "/p:DebugSymbols=false" "/p:PublishDir=$appPublishDirectory\"
+if ($LASTEXITCODE -ne 0) { throw "Self-contained desktop publish failed with exit code $LASTEXITCODE." }
+
+$appEntryPoint = Join-Path $appPublishDirectory "DragonDiskForge.App.exe"
+if (-not (Test-Path $appEntryPoint -PathType Leaf)) { throw "Published desktop executable was not found: $appEntryPoint" }
+
+foreach ($runtimeFileName in @("hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "clrjit.dll", "Microsoft.WindowsAppRuntime.dll")) {
+    $runtimePath = Join-Path $appPublishDirectory $runtimeFileName
+    if (-not (Test-Path $runtimePath -PathType Leaf)) {
+        throw "Desktop publish is not runtime-complete; missing '$runtimeFileName' from '$appPublishDirectory'."
+    }
+}
 
 Write-Host "Publishing self-contained Dragon DiskForge CLI."
 & dotnet publish $cliProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
@@ -58,18 +123,36 @@ if (-not (Test-Path $shellExecutable -PathType Leaf)) { throw "Published shell h
 if (Test-Path $output) { Remove-Item $output -Recurse -Force }
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
-$files = @(Get-ChildItem -Path $appDirectory -Recurse -File | Where-Object { $_.Extension -ine ".pdb" })
-if ($files.Count -eq 0) { throw "No application files were found for packaging." }
+$files = @(Get-ChildItem -Path $appPublishDirectory -Recurse -File | Where-Object { $_.Extension -ine ".pdb" })
+if ($files.Count -eq 0) { throw "No published desktop application files were found for packaging." }
 foreach ($file in $files) {
-    $relative = [System.IO.Path]::GetRelativePath($appDirectory, $file.FullName)
+    $relative = [System.IO.Path]::GetRelativePath($appPublishDirectory, $file.FullName)
     $destination = Join-Path $stage $relative
     $destinationDirectory = Split-Path $destination -Parent
     New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
     Copy-Item $file.FullName $destination -Force
 }
 
+# Windows App SDK self-contained deployment does not make an unpackaged app
+# independent of the native Visual C++ runtime. Ship Microsoft's redistributable
+# CRT app-local so the ZIP has no machine-level VC++ prerequisite.
+$vcRuntimeDirectory = Find-AppLocalVcRuntimeDirectory
+$vcRuntimeFiles = @(Get-ChildItem -Path $vcRuntimeDirectory -File -Filter "*.dll")
+if ($vcRuntimeFiles.Count -eq 0) { throw "No redistributable CRT DLLs were found in '$vcRuntimeDirectory'." }
+foreach ($runtimeFile in $vcRuntimeFiles) {
+    Copy-Item $runtimeFile.FullName (Join-Path $stage $runtimeFile.Name) -Force
+}
+Write-Host "Bundled $($vcRuntimeFiles.Count) app-local Visual C++ runtime DLLs from '$vcRuntimeDirectory'."
+
 $entryPoint = Join-Path $stage "DragonDiskForge.App.exe"
 if (-not (Test-Path $entryPoint -PathType Leaf)) { throw "Packaged application is missing DragonDiskForge.App.exe at the package root." }
+
+foreach ($runtimeFileName in @("hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "clrjit.dll", "Microsoft.WindowsAppRuntime.dll", "vcruntime140.dll", "msvcp140.dll")) {
+    $runtimePath = Join-Path $stage $runtimeFileName
+    if (-not (Test-Path $runtimePath -PathType Leaf)) {
+        throw "Public-package staging is not runtime-complete; missing runtime file '$runtimeFileName'."
+    }
+}
 
 $cliStageDirectory = Join-Path $stage "cli"
 New-Item -ItemType Directory -Path $cliStageDirectory -Force | Out-Null
@@ -130,10 +213,15 @@ $manifest = [ordered]@{
     cliEntryPointSha256 = $cliEntryPointSha256
     shellIntegrationEntryPointSha256 = $shellEntryPointSha256
     betaManualQaEntryPointSha256 = $betaManualQaEntryPointSha256
+    runtimeDeployment = [ordered]@{
+        dotNet = "self-contained"
+        windowsAppSdk = "self-contained"
+        visualCpp = "app-local"
+    }
     debugSymbolsIncluded = $false
     fileCount = $packageFilesBeforeManifest.Count + 1
 }
-$manifest | ConvertTo-Json | Set-Content -Path (Join-Path $stage "package-manifest.json") -Encoding utf8NoBOM
+$manifest | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $stage "package-manifest.json") -Encoding utf8NoBOM
 
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal

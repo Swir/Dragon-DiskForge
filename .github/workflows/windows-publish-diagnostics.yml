@@ -1,0 +1,143 @@
+name: Windows Publish Diagnostics
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: dragon-publish-diagnostics-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose-win-x64-publish:
+    name: Diagnose Windows x64 self-contained publish
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Create diagnostics directory
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path artifacts/publish-diagnostics -Force | Out-Null
+
+      - name: Capture SDK and package graph
+        shell: pwsh
+        run: |
+          $diagnostics = 'artifacts/publish-diagnostics'
+          dotnet --info 2>&1 | Tee-Object -FilePath "$diagnostics/dotnet-info.txt"
+          dotnet list src/DragonDiskForge.App/DragonDiskForge.App.csproj package --include-transitive 2>&1 |
+            Tee-Object -FilePath "$diagnostics/package-graph.txt"
+          if ($LASTEXITCODE -ne 0) { throw "Package graph capture failed with exit code $LASTEXITCODE." }
+
+          $nugetRoot = Join-Path $env:USERPROFILE '.nuget/packages'
+          $windowsAppPackages = Get-ChildItem -Path $nugetRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'microsoft.windowsapp*' -or $_.Name -like 'microsoft.winui*' } |
+            Sort-Object Name
+
+          $inventory = foreach ($package in $windowsAppPackages) {
+            foreach ($version in @(Get-ChildItem -Path $package.FullName -Directory -ErrorAction SilentlyContinue | Sort-Object Name)) {
+              [pscustomobject]@{
+                Package = $package.Name
+                Version = $version.Name
+                Path = $version.FullName
+              }
+            }
+          }
+          $inventory | Format-Table -AutoSize | Out-String -Width 240 |
+            Set-Content -Path "$diagnostics/windows-app-sdk-packages.txt" -Encoding utf8
+
+          $mrmSupport = @(Get-ChildItem -Path $nugetRoot -Recurse -Filter MRMSupport.dll -File -ErrorAction SilentlyContinue)
+          $mrmDetails = foreach ($file in $mrmSupport) {
+            $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($file.FullName)
+            [pscustomobject]@{
+              Path = $file.FullName
+              Length = $file.Length
+              SHA256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash
+              FileVersion = $version.FileVersion
+              ProductVersion = $version.ProductVersion
+            }
+          }
+          $mrmDetails | Format-List | Out-String -Width 320 |
+            Set-Content -Path "$diagnostics/mrmsupport-inventory.txt" -Encoding utf8
+
+      - name: Restore solution
+        shell: pwsh
+        run: msbuild DragonDiskForge.sln /restore /p:Configuration=Release /p:Platform=x64
+
+      - name: Reproduce publish with binary and diagnostic logs
+        id: publish
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $diagnostics = (Resolve-Path 'artifacts/publish-diagnostics').Path
+          $publish = Join-Path (Get-Location) 'artifacts/publish-diagnostics/publish-output'
+          New-Item -ItemType Directory -Path $publish -Force | Out-Null
+
+          & msbuild src/DragonDiskForge.App/DragonDiskForge.App.csproj `
+            /restore `
+            /t:Publish `
+            /m `
+            /v:diag `
+            "/bl:$diagnostics/windows-x64-publish.binlog" `
+            "/flp:logfile=$diagnostics/windows-x64-publish.log;verbosity=diagnostic" `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:RuntimeIdentifier=win-x64 `
+            /p:SelfContained=true `
+            /p:WindowsAppSDKSelfContained=true `
+            /p:DebugType=None `
+            /p:DebugSymbols=false `
+            "/p:PublishDir=$publish\"
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Self-contained publish reproduced failure with exit code $LASTEXITCODE."
+            exit $LASTEXITCODE
+          }
+
+      - name: Extract PRI failure context
+        if: always()
+        shell: pwsh
+        run: |
+          $log = 'artifacts/publish-diagnostics/windows-x64-publish.log'
+          $output = 'artifacts/publish-diagnostics/pri-failure-context.txt'
+          if (Test-Path $log -PathType Leaf) {
+            $matches = Select-String -Path $log -Pattern 'IGT0001|Invalid dependency payload|_MrtCoreUnpackPriConfigXmlPayload|MRMSupport.dll|PriGen.targets' -Context 12,24
+            if ($matches) {
+              $matches | Out-String -Width 320 | Set-Content -Path $output -Encoding utf8
+            } else {
+              'No known PRI failure signature found in the diagnostic log.' | Set-Content -Path $output -Encoding utf8
+            }
+          } else {
+            'MSBuild diagnostic log was not produced.' | Set-Content -Path $output -Encoding utf8
+          }
+
+      - name: Upload publish diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DragonDiskForge-windows-publish-diagnostics
+          path: |
+            artifacts/publish-diagnostics/dotnet-info.txt
+            artifacts/publish-diagnostics/package-graph.txt
+            artifacts/publish-diagnostics/windows-app-sdk-packages.txt
+            artifacts/publish-diagnostics/mrmsupport-inventory.txt
+            artifacts/publish-diagnostics/windows-x64-publish.binlog
+            artifacts/publish-diagnostics/windows-x64-publish.log
+            artifacts/publish-diagnostics/pri-failure-context.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce publish gate
+        if: steps.publish.outcome != 'success'
+        shell: pwsh
+        run: throw 'Windows x64 self-contained publish failed. Inspect the uploaded diagnostics artifact before changing packaging behavior.'

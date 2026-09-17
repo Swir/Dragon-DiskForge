@@ -1,0 +1,132 @@
+name: Dragon DiskForge Desktop Runtime Contract
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: dragon-desktop-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop-runtime:
+    name: Runtime-complete desktop package • Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore desktop app
+        run: msbuild src/DragonDiskForge.App/DragonDiskForge.App.csproj /restore /p:Configuration=Release /p:Platform=x64
+
+      - name: Build desktop app
+        run: msbuild src/DragonDiskForge.App/DragonDiskForge.App.csproj /m /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=false
+
+      - name: Build runtime-complete package candidate
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+
+      - name: Verify package runtime contract
+        shell: pwsh
+        run: ./scripts/verify-package.ps1
+
+      - name: Check packaged desktop runtime payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $package = (Resolve-Path 'artifacts/windows/DragonDiskForge-win-x64.zip').Path
+          $extract = Join-Path $env:RUNNER_TEMP 'dragon-diskforge-desktop-runtime'
+          if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+          Expand-Archive -Path $package -DestinationPath $extract -Force
+
+          $manifest = Get-Content (Join-Path $extract 'package-manifest.json') -Raw | ConvertFrom-Json
+          $app = Join-Path $extract ([string]$manifest.entryPoint)
+          if (-not (Test-Path $app -PathType Leaf)) { throw "Desktop entry point is missing: $app" }
+
+          $requiredRuntimeFiles = @(
+            'hostfxr.dll',
+            'hostpolicy.dll',
+            'coreclr.dll',
+            'clrjit.dll',
+            'vcruntime140.dll',
+            'msvcp140.dll',
+            'Microsoft.WindowsAppRuntime.dll'
+          )
+          foreach ($runtimeFile in $requiredRuntimeFiles) {
+            $runtimePath = Join-Path $extract $runtimeFile
+            if (-not (Test-Path $runtimePath -PathType Leaf)) {
+              throw "Desktop package is not runtime-complete; missing $runtimeFile."
+            }
+          }
+
+          if ([string]$manifest.runtimeDeployment.dotNet -ne 'self-contained' -or
+              [string]$manifest.runtimeDeployment.windowsAppSdk -ne 'self-contained' -or
+              [string]$manifest.runtimeDeployment.visualCpp -ne 'app-local') {
+            throw 'Desktop package runtime-deployment manifest is incomplete.'
+          }
+
+          Write-Host 'Runtime contract passed: .NET, Windows App SDK, and Visual C++ runtime are carried by the package.'
+
+      - name: Diagnostic GUI launch when runner session is interactive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $sessionId = [System.Diagnostics.Process]::GetCurrentProcess().SessionId
+          $interactive = [Environment]::UserInteractive
+          Write-Host "Runner session: $sessionId; UserInteractive: $interactive"
+
+          # GitHub-hosted Windows runners are not a substitute for the required
+          # real-user WinUI/manual beta gate. Only make process-liveness a hard
+          # assertion when the runner actually provides an interactive session.
+          if ($sessionId -eq 0 -or -not $interactive) {
+            Write-Host 'Skipping GUI liveness assertion because this runner has no interactive desktop. Manual package-bound WinUI QA remains required.'
+            exit 0
+          }
+
+          $package = (Resolve-Path 'artifacts/windows/DragonDiskForge-win-x64.zip').Path
+          $extract = Join-Path $env:RUNNER_TEMP 'dragon-diskforge-desktop-launch'
+          if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+          Expand-Archive -Path $package -DestinationPath $extract -Force
+          $manifest = Get-Content (Join-Path $extract 'package-manifest.json') -Raw | ConvertFrom-Json
+          $app = Join-Path $extract ([string]$manifest.entryPoint)
+
+          $env:DOTNET_ROOT = Join-Path $env:RUNNER_TEMP 'missing-dotnet-root'
+          $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
+          $env:PATH = [string]::Join(';', @($env:PATH -split ';' | Where-Object {
+            $_ -and $_ -notmatch '(?i)\\dotnet($|\\)' -and $_ -notmatch '(?i)Visual Studio'
+          }))
+
+          $process = Start-Process -FilePath $app -WorkingDirectory $extract -PassThru
+          try {
+            Start-Sleep -Seconds 6
+            $process.Refresh()
+            if ($process.HasExited) {
+              $startupLog = Join-Path $env:LOCALAPPDATA 'DragonDiskForge\Logs\startup-failure.log'
+              if (Test-Path $startupLog -PathType Leaf) {
+                Write-Host '--- startup-failure.log ---'
+                Get-Content $startupLog
+              }
+              throw "DragonDiskForge.App.exe exited during the interactive desktop launch probe with code $($process.ExitCode)."
+            }
+            Write-Host 'Interactive desktop launch probe passed; process remained alive for 6 seconds without SDK/runtime discovery.'
+          }
+          finally {
+            if (-not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            }
+          }
