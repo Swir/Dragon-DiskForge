@@ -48,6 +48,14 @@ beta-candidate.json.sha256
 
 A green beta-candidate workflow proves that the source commit can produce a correctly versioned and independently verified `0.5.0-beta.1` package. It does **not** prove the remaining interactive Windows checks and does **not** authorize publication. A retained artifact is only a selected engineering candidate; it is still not a release.
 
+## Selecting one retained candidate
+
+Select a retained candidate only after all engineering changes intended for that candidate have passed the complete exact-head PR gate. The final merge commit on `main` must contain `[beta-candidate]`; the subsequent `main` workflow is then the authoritative build that retains the ZIP, checksum and candidate metadata.
+
+The marker is a retention decision, not a release approval. Do not create empty/no-op commits solely to obtain an artifact, and do not mark ordinary hourly development commits. Pair candidate selection with a real release-process or documentation synchronization change so the selected source state is intentional and auditable.
+
+Before starting manual QA, confirm that the retained artifact's `beta-candidate.json` names the exact selected `main` commit and that its package SHA-256 matches `DragonDiskForge-win-x64.zip.sha256`. If any code, packaging, release tooling or beta-gate behavior changes afterward, select a new retained candidate and repeat package-bound manual evidence rather than carrying observations forward.
+
 ## Candidate contract script
 
 `scripts/beta-candidate.ps1` has three modes.
