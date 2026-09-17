@@ -46,6 +46,8 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] independent CI verification reopens the ZIP and validates checksum/manifest/version/hash/icon/content policy before artifact upload
 - [x] canonical Dragon icon is included in the clean package root
 - [x] run #270 clean artifact was independently downloaded and verified
+- [x] candidate package contains the fail-closed `tools/beta-manual-qa.ps1` evidence tool and binds its SHA-256 in package manifest schema 5
+- [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1 and independently re-verifies the packaged tool hash
 - [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
@@ -68,9 +70,12 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
 - [x] versioned clean ZIP candidate build/checksum/verification gate green
+- [x] package-bound interactive QA evidence tooling exists and fails closed on pending, elevated, tampered or mismatched evidence
 - [ ] normal-user UAC checklist completed on a desktop machine
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
+
+The remaining interactive checks must be recorded against the exact final `0.5.0-beta.1` ZIP. The evidence tool refuses a non-beta package, an elevated/non-interactive initialization, a package/hash mismatch, missing human confirmation or an incomplete check catalog. This makes the final manual evidence auditable without pretending hosted CI can perform the gestures itself.
 
 ### GitHub Release
 - [ ] `0.5.0-beta.1` tag
@@ -83,7 +88,7 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 
 ## Current beta readiness
 
-**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. Remaining blockers are independent release gates: final `0.5.0-beta.1` suffix/package promotion, clean-machine launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
+**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package now also carries a fail-closed, exact-package-bound manual QA evidence tool so the remaining desktop checks can be recorded reproducibly. Remaining blockers are independent release gates: final `0.5.0-beta.1` suffix/package promotion, clean-machine launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
 
 ## Rule
 
