@@ -51,8 +51,8 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [ ] final independently downloadable `0.5.0-beta.1` Windows x64 package
 - [ ] package launches on a clean supported Windows machine
 - [ ] no developer SDK/Visual Studio requirement for normal users
-- [ ] final beta version suffix embedded in application assemblies
-- [ ] application icon and version metadata verified in the final beta package after suffix promotion
+- [x] final beta version suffix embedded in application assemblies
+- [x] application icon and version metadata verified in a `0.5.0-beta.1` candidate after suffix promotion
 - [ ] final public package SHA-256 published with the Release
 
 ### Regression and manual QA
@@ -90,7 +90,7 @@ Passing records still require explicit human confirmation because hosted CI cann
 
 ## Current beta readiness
 
-**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package now also carries a fail-closed, exact-package-bound manual QA evidence tool, and schema v3 binds evidence to the exact packaged copy that performs each record/verify operation. Remaining blockers are independent release gates: final `0.5.0-beta.1` suffix/package promotion, clean-machine launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
+**NOT READY.** The automated 0.5 engineering scope is complete and current CI proves the provider/intelligence regression path, guest GPT/EBR integrity hardening, bounded UDF traversal, clean-package verification, truthful QCOW2/VMDK guest-byte readers and common bounded guest partition/filesystem analysis. The package now also carries a fail-closed, exact-package-bound manual QA evidence tool, schema v3 binds evidence to the exact packaged copy that performs each record/verify operation, and the committed source metadata is promoted to `0.5.0-beta.1` with candidate verification of version/icon metadata. Remaining blockers are independent release gates: a retained independently downloadable final candidate from green `main`, clean-machine interactive launch/regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/Release publication.
 
 ## Rule
 

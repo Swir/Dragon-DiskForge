@@ -8,7 +8,7 @@ The clean Windows package contains `tools/beta-manual-qa.ps1`. It is intentional
 
 The tool binds the evidence to the ZIP SHA-256, package version, desktop entry-point SHA-256 and packaged QA-tool SHA-256. Passing observations require an interactive **unelevated** Windows session plus explicit human confirmation. The evidence JSON is written atomically and receives its own SHA-256 sidecar. `verify` fails if a required check is pending/failing, the package changed, the evidence was tampered with, initialization or observation was elevated/non-interactive, or explicit human confirmation is absent.
 
-Do not initialize final evidence against the current alpha engineering package. After the release-candidate suffix has been promoted to `0.5.0-beta.1` and the exact final ZIP/checksum pair exists, run from a normal unelevated PowerShell session, for example:
+The committed source metadata is now promoted to `0.5.0-beta.1`, but a verification-only PR artifact is not the final manual-QA target. Initialize final evidence only against the retained `0.5.0-beta.1` ZIP/checksum pair produced from the exact green `main` commit selected for beta testing. Run from a normal unelevated PowerShell session, for example:
 
 ```powershell
 .\tools\beta-manual-qa.ps1 -Mode new `
@@ -56,7 +56,7 @@ A hosted package-only runtime matrix already proves the self-contained CLI/shell
 
 Status: **manual QA required before public beta packaging**.
 
-The native mount engine already contains the elevation policy and error handling. GitHub Actions proves ISO/VHD/VHDX mount/unmount, read-only behavior, drive-letter detection, mounted-image inventory, cancellation safety and error translation. The runner itself executes as an administrator, so it cannot faithfully validate the interactive UAC prompt seen by a normal desktop user.
+The native mount engine contains an explicit commit boundary around Windows storage mutations. Caller cancellation is honored before the native mount/unmount process is launched. Once Windows has started `Mount-DiskImage` or `Dismount-DiskImage`, Dragon DiskForge lets that native operation finish and performs bounded live-state reconciliation instead of killing the helper process and assuming rollback. An explicitly cancelled UAC prompt is still treated as a no-change cancellation. GitHub Actions proves ISO/VHD/VHDX mount/unmount, read-only behavior, drive-letter detection, mounted-image inventory, pre-launch cancellation safety and error translation. The runner itself executes as an administrator, so it cannot faithfully validate the interactive UAC prompt seen by a normal desktop user.
 
 ### Test matrix
 
@@ -93,7 +93,7 @@ Run Dragon DiskForge from a normal non-admin Windows account or a standard unele
 
 - ISO never asks for unnecessary elevation.
 - VHD/VHDX elevation is requested only for the native operation that needs it.
-- Cancelling UAC never changes the disk-image state.
+- Cancelling the UAC prompt never changes the disk-image state.
 - Approving UAC completes the requested operation and the UI refreshes to the real Windows state.
 - Error text is understandable and does not expose raw command noise as the primary message.
 

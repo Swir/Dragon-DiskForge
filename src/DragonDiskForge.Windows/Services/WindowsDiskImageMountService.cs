@@ -89,7 +89,7 @@ public sealed class WindowsDiskImageMountService : IMountService
         await RunPowerShellActionAsync(script, requestElevation, cancellationToken);
 
         progress?.Report(0.75d);
-        var mounted = await WaitForStateAsync(path, true, cancellationToken);
+        var mounted = await WaitForCommittedStateAsync(path, true);
         progress?.Report(1d);
         return mounted;
     }
@@ -117,7 +117,7 @@ public sealed class WindowsDiskImageMountService : IMountService
         await RunPowerShellActionAsync(BuildUnmountScript(path), requestElevation, cancellationToken);
 
         progress?.Report(0.75d);
-        var detached = await WaitForStateAsync(path, false, cancellationToken);
+        var detached = await WaitForCommittedStateAsync(path, false);
         progress?.Report(1d);
         return detached;
     }
@@ -150,6 +150,20 @@ public sealed class WindowsDiskImageMountService : IMountService
             mounted
                 ? "Windows accepted the mount request, but the image did not become attached in time."
                 : "Windows accepted the unmount request, but the image still appears attached.");
+    }
+
+    private async Task<MountState> WaitForCommittedStateAsync(string path, bool mounted)
+    {
+        using var reconciliationTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        try
+        {
+            return await WaitForStateAsync(path, mounted, reconciliationTimeout.Token);
+        }
+        catch (OperationCanceledException) when (reconciliationTimeout.IsCancellationRequested)
+        {
+            throw new MountOperationException(
+                "Windows completed the native disk-image command, but Dragon DiskForge could not confirm the resulting state in time. Refresh Mounted before retrying.");
+        }
     }
 
     private static string ValidateImagePath(string imagePath)
@@ -349,23 +363,23 @@ public sealed class WindowsDiskImageMountService : IMountService
             process.StartInfo.StandardErrorEncoding = Encoding.UTF8;
         }
 
+        // Native mount/dismount has an explicit commit boundary: cancellation is honored
+        // before launch. Once Windows starts the storage mutation we let it finish, then
+        // reconcile the real storage state instead of reporting a potentially false cancel.
+        cancellationToken.ThrowIfCancellationRequested();
+
         try
         {
             process.Start();
             Task<string>? errorTask = null;
             if (!requestElevation)
-                errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+                errorTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
 
-            await process.WaitForExitAsync(cancellationToken);
+            await process.WaitForExitAsync(CancellationToken.None);
             var error = errorTask is null ? string.Empty : (await errorTask).Trim();
 
             if (process.ExitCode != 0)
                 throw BuildOperationException(error, process.ExitCode, requestElevation);
-        }
-        catch (OperationCanceledException)
-        {
-            TryKill(process);
-            throw;
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
@@ -416,7 +430,7 @@ public sealed class WindowsDiskImageMountService : IMountService
         }
         catch
         {
-            // Best-effort cancellation; Windows owns the final storage state.
+            // Best-effort cancellation for read-only state capture only.
         }
     }
 

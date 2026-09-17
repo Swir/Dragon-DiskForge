@@ -7,7 +7,7 @@
     <!-- Centralized product version. Keep the assembly/file version numeric while the
          informational/package version carries the pre-release label. -->
     <DragonDiskForgeVersionPrefix>0.5.0</DragonDiskForgeVersionPrefix>
-    <DragonDiskForgeVersionSuffix>alpha.1</DragonDiskForgeVersionSuffix>
+    <DragonDiskForgeVersionSuffix>beta.1</DragonDiskForgeVersionSuffix>
     <Version>$(DragonDiskForgeVersionPrefix)-$(DragonDiskForgeVersionSuffix)</Version>
     <AssemblyVersion>$(DragonDiskForgeVersionPrefix).0</AssemblyVersion>
     <FileVersion>$(DragonDiskForgeVersionPrefix).0</FileVersion>
