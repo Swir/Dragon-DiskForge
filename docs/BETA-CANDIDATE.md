@@ -58,6 +58,12 @@ The marker is a retention decision, not a release approval. Do not create empty/
 
 Before starting manual QA, confirm that the retained artifact's `beta-candidate.json` names the exact selected `main` commit and that its package SHA-256 matches `DragonDiskForge-win-x64.zip.sha256`. If any code, packaging, release tooling or beta-gate behavior changes afterward, select a new retained candidate and repeat package-bound manual evidence rather than carrying observations forward.
 
+### Current reselection checkpoint
+
+The next retained candidate is intentionally selected only after the verified mounted-Explorer reparse/copy-out transaction hardening and bounded image-preview admission/signature hardening through PR #67. The `[beta-candidate]` merge marker on this checkpoint makes the resulting `main` commit—not an earlier candidate—the authoritative source SHA for the next manual-QA session.
+
+This reselection does not complete or waive any manual release gate. Clean-desktop WinUI regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media.
+
 ## Candidate contract script
 
 `scripts/beta-candidate.ps1` has three modes.
