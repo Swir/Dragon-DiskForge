@@ -16,6 +16,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - combined SHA-256 + SHA-512 verification with exact hashed-byte reporting
 - `SafeOutputService`, blank RAW creation, proven guest-to-RAW export, transactional split/join and bounded gzip transport pipelines
 - checksum-verified clean Windows x64 package candidate with deterministic manifest and SHA-256 sidecar
+- package-only clean-machine runtime matrix that hands the verified ZIP to fresh `windows-2022` and `windows-latest` jobs without a repository checkout
+- clean-machine runtime probe that rechecks ZIP/manifest hashes, package hygiene, removes developer-toolchain paths, exercises packaged CLI analyze/verify/state/diagnostics and per-user shell register/status/unregister, and emits machine-readable evidence
 - read-only Windows physical-disk inventory with stable-identity/system-disk evidence where Windows can prove it
 - fail-closed physical-media planning, destination-bound confirmation and platform-independent execution/recovery contract
 - hard-gated Windows `PhysicalDriveN` writer candidate with source/target topology preflight, target-volume lock/dismount, aligned bounded transfer, flush and read-back SHA-256
@@ -43,21 +45,22 @@ The project follows semantic versioning while it evolves toward 1.0.
 - `DragonDiskForge.SecurityBoundary.SmokeTests` covering elevation, shell, CLI, package, destructive-writer and physical-media fail-closed invariants
 - dedicated **Dragon DiskForge Security Boundary** GitHub Actions workflow
 - `docs/SECURITY-BOUNDARIES.md` documenting reviewed parsing, packaging, shell, diagnostics and privileged-operation boundaries plus manual-gate limitations
+- `docs/CLEAN-MACHINE-RUNTIME.md` documenting the package-only runtime matrix and its explicit interactive/manual limitations
 - `docs/PHYSICAL-MEDIA-SAFETY.md`, `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md`, `docs/SPLIT-COMPRESSION-PIPELINES.md`, `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`
 
 ### Changed
-- project progress advances to **81% toward 1.0** after six verified 0.7 deliverables, all four verified 0.8 deliverables and three verified 0.9 hardening deliverables beyond the 68% 0.6 baseline
+- project progress advances to **82% toward 1.0** after six verified 0.7 deliverables, all four verified 0.8 deliverables and four verified 0.9 hardening deliverables beyond the 68% 0.6 baseline
 - **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
-- **0.9 Quality, Security + Beta Hardening** advances to **3/7 (~43%)** after verified crash/support, large-image performance and security-boundary hardening
+- **0.9 Quality, Security + Beta Hardening** advances to **4/7 (~57%)** after verified crash/support, large-image performance, security-boundary and package-only clean-machine runtime hardening
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema records the shell helper and SHA-256
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
-- CI publishes a dedicated large-image performance benchmark artifact and now separately gates reviewed security-boundary invariants
+- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, and now validates the clean package on fresh Windows runner images without source checkout
 
 ### Safety
 - inspection/provider/intelligence/image-media CLI paths remain read-only-first
@@ -76,6 +79,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - no physical-media writer is exposed in the product UI or public CLI
 - no completion claim is made for 0.7 until a real dedicated disposable-media validation succeeds
 - performance fixtures are generated locally and removed after the regression run rather than committed as large binary test images
+- the clean-machine runtime probe does not enable the physical writer and uses only a generated temporary image plus reversible per-user shell registration
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -115,9 +119,10 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration, command-line activation and verified shell-helper packaging
 - PR #51 / implementation run #360 + Disposable Media Guard #32 — privacy-preserving crash/support evidence and large-image performance regression gate
 - PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — explicit asInvoker boundary and repeatable parsing/package/privileged security review
+- PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix on fresh Windows runner images
 
 ### Planned
-- complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
+- complete the independent `0.5.0-beta.1` interactive clean-desktop/UAC/cross-process drag-out/accessibility/final-package release gates
 - complete 0.7 only after real dedicated disposable-media writer validation
 - continue 0.9 with accessibility/keyboard/screen-reader hardening where repeatable evidence is available
 - keep destructive physical operations out of the product UI until separately validated and deliberately exposed

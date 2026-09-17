@@ -18,7 +18,7 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**81% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and three verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
+**82% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and four verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
 
 ## Current roadmap position
 
@@ -100,7 +100,7 @@ PR #50 implementation run #356 and Disposable Media Guard #28 passed before the 
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
-### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 3/7 (~43%)
+### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 4/7 (~57%)
 
 #### Crash/diagnostic release-support hardening ✅
 
@@ -136,14 +136,25 @@ PR #51 implementation head `44a075a471f38a8350587400e72f4a4e781954ac` passed ful
 
 PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this deliverable was marked complete. See `docs/SECURITY-BOUNDARIES.md`.
 
+#### Package-only clean-machine runtime matrix ✅
+
+- a clean Windows x64 ZIP is built and package-verified once, then handed to fresh `windows-2022` and `windows-latest` runtime jobs
+- runtime jobs intentionally have no repository checkout and assert that `.git`/`src` are absent
+- the probe rechecks the ZIP sidecar, manifest schema/architecture, app/CLI/shell SHA-256 bindings and absence of PDB/test payloads
+- .NET/Visual Studio/Git toolchain paths are removed before packaged entry points are launched, reducing the chance of hidden developer-SDK dependence
+- the self-contained CLI is exercised for provider enumeration, `analyze`, SHA-256/SHA-512 `verify`, isolated state/settings and sanitized diagnostics
+- the self-contained shell helper is exercised through per-user register → status → unregister
+- every runtime image emits machine-readable OS/build/package/runtime evidence
+
+PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 on both matrix images before this deliverable was marked complete. See `docs/CLEAN-MACHINE-RUNTIME.md`.
+
 #### Remaining 0.9 scope ⬜
 
-- clean-machine runtime matrix
 - normal-user UAC validation
 - real cross-process Explorer drag-out validation
 - accessibility/keyboard/screen-reader hardening
 
-The first three remain explicit manual/real-environment gates. Accessibility hardening can continue in automation where evidence is real and repeatable.
+The clean-machine package-only gate is now repeatable automation. Interactive WinUI launch, UAC, cross-process Explorer behavior, accessibility review and dedicated-media validation retain their independent evidence requirements.
 
 ## Proven validation checkpoints
 
@@ -170,7 +181,7 @@ The first three remain explicit manual/real-environment gates. Accessibility har
 - PR #33 / run #262 — deeper filesystem evidence
 - PR #34 / run #266 — NTFS/architecture hardening + package foundation
 - PR #35 / run #270 — version metadata + independent package verification
-- PR #36 / run #274 — bounded UDF root traversal
+- PR #36 / run #274 — bounded UDF traversal
 - PR #37 / run #277 — QCOW2 guest reader
 - PR #38 / run #284 — hosted-sparse VMDK guest reader
 - PR #39 / run #287 — guest partition/filesystem intelligence
@@ -195,20 +206,20 @@ The first three remain explicit manual/real-environment gates. Accessibility har
 ### 0.9
 - PR #51 / implementation run #360 + Disposable Media Guard #32 — sanitized crash/support evidence and large-image performance regression gate
 - PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — repeatable parsing/package/privileged security review and explicit asInvoker boundary
+- PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix across fresh Windows runner images
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary and clean-package candidate gates are green, but these independent release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package and package-only clean-machine runtime gates are green, but these independent release gates remain:
 
 - promote version/package metadata to the final beta suffix only at release time
-- launch and exercise the package on a clean supported Windows machine
-- confirm no developer SDK/Visual Studio requirement for a normal user
+- human-confirmed WinUI launch and basic open/mount/explore/verify/analyze regression on a clean supported Windows desktop
 - complete normal-user UAC validation
 - complete real cross-process Explorer drag-out validation
-- complete basic clean-machine launch/open/mount/explore/verify/analyze regression
+- complete basic accessibility/keyboard/screen-reader hardening appropriate to the beta surface
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-The security review strengthens the beta-hardening path but does not replace any manual release gate.
+The automated runtime matrix proves that the clean packaged CLI/shell/state/diagnostic paths run without a repository checkout and without relying on developer toolchain paths. It deliberately does not claim an interactive desktop, UAC, Explorer or accessibility result.
 
 ## Current safety state
 
@@ -218,4 +229,4 @@ Crash evidence is bounded, rotated and privacy-preserving; support export delibe
 
 The Windows physical writer candidate is not connected to a user-visible action. Its executable path remains behind destination identity/topology/confirmation checks and a hard-locked disposable-media harness. No completion claim is made until real dedicated-media validation proves the final 0.7 item.
 
-Interactive UAC, clean-machine runtime and the real cross-process Explorer drag gesture remain manual beta QA gates.
+Interactive WinUI clean-desktop launch, normal-user UAC, real cross-process Explorer drag-out and accessibility validation remain beta QA gates.

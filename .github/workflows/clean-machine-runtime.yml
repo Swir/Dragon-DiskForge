@@ -1,0 +1,99 @@
+name: Dragon DiskForge Clean Machine Runtime
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: dragon-clean-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-candidate:
+    name: Build isolated package candidate
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore
+        run: msbuild DragonDiskForge.sln /restore /p:Configuration=Release /p:Platform=x64
+
+      - name: Build
+        run: msbuild DragonDiskForge.sln /m /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=false
+
+      - name: Build clean Windows x64 package
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+
+      - name: Verify package before handoff
+        shell: pwsh
+        run: ./scripts/verify-package.ps1
+
+      - name: Stage package-only runtime candidate
+        shell: pwsh
+        run: |
+          $target = 'artifacts/clean-runtime-candidate'
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          Copy-Item 'artifacts/windows/DragonDiskForge-win-x64.zip' $target -Force
+          Copy-Item 'artifacts/windows/DragonDiskForge-win-x64.zip.sha256' $target -Force
+          Copy-Item 'scripts/clean-machine-runtime.ps1' $target -Force
+
+      - name: Upload package-only runtime candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: DragonDiskForge-clean-runtime-candidate
+          path: artifacts/clean-runtime-candidate/*
+          if-no-files-found: error
+          retention-days: 14
+
+  package-runtime-matrix:
+    name: Package runtime • ${{ matrix.os }}
+    needs: package-candidate
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2022
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Download package-only candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: DragonDiskForge-clean-runtime-candidate
+          path: candidate
+
+      - name: Assert source checkout is absent
+        shell: pwsh
+        run: |
+          if (Test-Path '.git') { throw 'Runtime matrix must execute without a repository checkout.' }
+          if (Test-Path 'src') { throw 'Runtime matrix unexpectedly contains source files.' }
+
+      - name: Run self-contained package runtime probe
+        shell: pwsh
+        run: |
+          ./candidate/clean-machine-runtime.ps1 `
+            -PackageZip ./candidate/DragonDiskForge-win-x64.zip `
+            -ChecksumFile ./candidate/DragonDiskForge-win-x64.zip.sha256 `
+            -EvidencePath ./evidence/clean-runtime-${{ matrix.os }}.json
+
+      - name: Publish runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: DragonDiskForge-clean-runtime-${{ matrix.os }}
+          path: evidence/clean-runtime-${{ matrix.os }}.json
+          if-no-files-found: error
+          retention-days: 30

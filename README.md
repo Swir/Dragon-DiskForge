@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 
 The public beta suffix is intentionally not promoted until the independent gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work may continue beyond the 0.5 beta scope without weakening that release gate.
 
-## Project progress — 81% toward 1.0
+## Project progress — 82% toward 1.0
 
-`████████████████░░░░ 81%`
+`████████████████░░░░ 82%`
 
-**Overall completion:** **81%**
+**Overall completion:** **82%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -22,7 +22,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - `0.6 Create + Convert + Verify` — **100%** ✅
 - `0.7 Physical Media Tools` — **~86% (6/7)** 🚧
 - `0.8 Windows Integration + Power Tools` — **100%** ✅
-- `0.9 Quality, Security + Beta Hardening` — **~43% (3/7)** 🚧
+- `0.9 Quality, Security + Beta Hardening` — **~57% (4/7)** 🚧
 - `1.0 Production Release` — planned
 
 > Progress changes only after meaningful implementation and validation checkpoints. CI count, documentation-only edits and placeholders do not increase completion. Work may advance out of milestone order when a remaining milestone is blocked by a real hardware/manual gate.
@@ -43,6 +43,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - SHA-256 + SHA-512 verification in one bounded sequential pass
 - transactional RAW creation, guest-to-RAW export, split/join and bounded gzip transport pipelines
 - checksum-verified clean Windows x64 package-candidate pipeline
+- package-only clean-machine runtime matrix on fresh Windows runner images with no repository checkout and developer-toolchain paths removed before packaged entry-point probes
 - read-only Windows physical-disk inventory and fail-closed physical-media planning/execution contracts
 - gated Windows `PhysicalDriveN` writer candidate with target-volume locking/dismount, sector-aligned writes, flush and read-back SHA-256 verification; **not user-visible and not hardware-approved**
 - shared-Core automation CLI with deterministic text/JSON output and safe local application-state tooling
@@ -115,7 +116,7 @@ See [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md).
 
 ## 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧
 
-Current scope: **3/7 (~43%)**.
+Current scope: **4/7 (~57%)**.
 
 ### Crash + support evidence ✅
 
@@ -133,7 +134,13 @@ The Windows desktop manifest explicitly remains `asInvoker` with `uiAccess=false
 
 PR #52 exact implementation head `0ff048a...` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this roadmap item was marked complete. The review and its explicit limitations are documented in [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md).
 
-Remaining 0.9 work: clean-machine runtime matrix, normal-user UAC, real cross-process Explorer drag-out and accessibility/keyboard/screen-reader hardening.
+### Package-only clean-machine runtime matrix ✅
+
+PR #53 adds a fresh-runner package validation path that builds the normal clean ZIP once and then hands only the ZIP, SHA-256 sidecar and runtime probe to `windows-2022` and `windows-latest` jobs with **no repository checkout**. The probe re-verifies package/manifest hashes and hygiene, removes .NET/Visual Studio/Git toolchain paths, exercises self-contained CLI provider/analyze/dual-hash/state/diagnostics paths and performs per-user shell register/status/unregister. Each matrix job publishes machine-readable OS/build/package/runtime evidence.
+
+Exact implementation head `6451939...` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before this roadmap item was marked complete. See [`docs/CLEAN-MACHINE-RUNTIME.md`](docs/CLEAN-MACHINE-RUNTIME.md).
+
+Remaining 0.9 work: normal-user UAC, real cross-process Explorer drag-out and accessibility/keyboard/screen-reader hardening.
 
 ## 0.6 Create + Convert + Verify — COMPLETE ✅
 
@@ -147,13 +154,13 @@ Public beta publication remains a separate release decision gated by [`docs/BETA
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary and clean-package candidate gates are green, but these independent manual/release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary, clean-package and package-only clean-machine runtime gates are green, but these independent interactive/manual/release gates remain:
 
 - final beta suffix/package promotion
-- clean supported Windows launch and basic open/mount/explore/verify/analyze regression
-- confirm a normal user does not need Visual Studio/developer SDKs
+- human-confirmed clean supported Windows WinUI launch and basic open/mount/explore/verify/analyze regression
 - normal-user UAC validation
 - real cross-process Explorer drag-out validation
+- accessibility/keyboard/screen-reader hardening appropriate to the beta surface
 - final public ZIP + SHA-256 + GitHub pre-release publication
 
 No empty, symbolic or CI-only beta will be published.
@@ -175,7 +182,7 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, sanitized crash/support evidence, large-image performance regressions, shell integration, the dedicated security-boundary gate, Release x64 build and independently verified clean ZIP package candidate.
+CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, sanitized crash/support evidence, large-image performance regressions, shell integration, the dedicated security-boundary gate, Release x64 build, independently verified clean ZIP package candidate and package-only clean-machine runtime evidence across fresh Windows runner images.
 
 ## Safety design
 
@@ -189,4 +196,4 @@ Physical-device mutation remains outside the product surface. The Windows writer
 
 **No fake features.** A capability becomes enabled in the UI only after its real backing path exists and is testable.
 
-Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md), [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md), [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md) and [`CHANGELOG.md`](CHANGELOG.md).
+Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution state in [`docs/STATUS.md`](docs/STATUS.md), [`docs/MILESTONES.md`](docs/MILESTONES.md), [`docs/CLI.md`](docs/CLI.md), [`docs/WINDOWS-SHELL-INTEGRATION.md`](docs/WINDOWS-SHELL-INTEGRATION.md), [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md), [`docs/CLEAN-MACHINE-RUNTIME.md`](docs/CLEAN-MACHINE-RUNTIME.md) and [`CHANGELOG.md`](CHANGELOG.md).
