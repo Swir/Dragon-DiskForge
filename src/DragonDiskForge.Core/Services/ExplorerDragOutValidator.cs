@@ -24,11 +24,38 @@ public sealed class ExplorerDragOutValidator
         if (!exists)
             throw new FileNotFoundException("The drag-out source is no longer available.", candidate);
 
-        var attributes = File.GetAttributes(candidate);
-        if ((attributes & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidOperationException("Drag-out is blocked because the source is a reparse point or junction.");
-
+        EnsureNoReparseTraversal(root, candidate);
         return candidate;
+    }
+
+    private static void EnsureNoReparseTraversal(string root, string candidate)
+    {
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        // The mounted root is the trusted anchor. Every component below that root,
+        // including the selected item itself, must remain a normal filesystem entry.
+        // Checking only the leaf is insufficient because an intermediate junction can
+        // make a lexically in-root path resolve to data outside the mounted volume.
+        var current = candidate;
+        while (!string.Equals(current, root, comparison))
+        {
+            var attributes = File.GetAttributes(current);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidOperationException(
+                    "Drag-out is blocked because the source path traverses a reparse point or junction.");
+
+            var parent = Directory.GetParent(current);
+            if (parent is null)
+                throw new InvalidOperationException(
+                    "Drag-out source path could not be proven to remain inside the mounted root.");
+
+            current = Normalize(parent.FullName);
+            if (!IsInsideRoot(root, current))
+                throw new InvalidOperationException(
+                    "Drag-out source path could not be proven to remain inside the mounted root.");
+        }
     }
 
     private static bool IsInsideRoot(string root, string candidate)
