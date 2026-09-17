@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text.Json;
 using DragonDiskForge.Core.Providers;
@@ -46,7 +47,7 @@ try
         $"Dual-hash verification managed allocations stay below {MaximumVerificationAllocatedBytes / 1024 / 1024} MiB.");
 
     var recognitionPath = Path.Combine(root, "recognition-8gib.img");
-    await CreateSparseFileAsync(recognitionPath, SparseRecognitionBytes);
+    await CreateSparseMbrImageAsync(recognitionPath, SparseRecognitionBytes);
     var recognitionService = new FileSystemRecognitionService(ProviderRegistryFactory.CreateDefault());
 
     GC.Collect();
@@ -58,6 +59,8 @@ try
     recognitionStopwatch.Stop();
     var recognitionAllocated = GC.GetTotalAllocatedBytes(precise: true) - recognitionAllocatedBefore;
 
+    Require(recognition.ProviderId == "raw-partitions",
+        "Large sparse recognition fixture resolves through the real RAW/IMG partition provider.");
     Require(recognition.PhysicalImageSizeBytes == SparseRecognitionBytes,
         "Filesystem recognition preserves the exact 8 GiB logical image size.");
     Require(recognitionStopwatch.Elapsed.TotalSeconds <= MaximumRecognitionSeconds,
@@ -134,6 +137,32 @@ static async Task CreateSparseFileAsync(string path, long length)
         4096,
         FileOptions.Asynchronous);
     stream.SetLength(length);
+    await stream.FlushAsync();
+}
+
+static async Task CreateSparseMbrImageAsync(string path, long length)
+{
+    const uint firstLba = 2048;
+    const uint sectorCount = 131072; // 64 MiB bounded probe region inside an 8 GiB logical image.
+
+    await using var stream = new FileStream(
+        path,
+        FileMode.CreateNew,
+        FileAccess.Write,
+        FileShare.None,
+        4096,
+        FileOptions.Asynchronous | FileOptions.RandomAccess);
+    stream.SetLength(length);
+
+    var mbr = new byte[512];
+    const int entryOffset = 446;
+    mbr[entryOffset + 4] = 0x83; // Linux filesystem partition type; contents remain deliberately blank.
+    BinaryPrimitives.WriteUInt32LittleEndian(mbr.AsSpan(entryOffset + 8, 4), firstLba);
+    BinaryPrimitives.WriteUInt32LittleEndian(mbr.AsSpan(entryOffset + 12, 4), sectorCount);
+    mbr[510] = 0x55;
+    mbr[511] = 0xAA;
+
+    await stream.WriteAsync(mbr);
     await stream.FlushAsync();
 }
 
