@@ -59,8 +59,8 @@ try {
     }
 
     $manifest = Get-Content -Path $manifestPath -Raw | ConvertFrom-Json
-    if ([int]$manifest.schemaVersion -lt 2) {
-        throw "Package manifest schema is too old: $($manifest.schemaVersion)."
+    if ([int]$manifest.schemaVersion -lt 3) {
+        throw "Package manifest schema is too old for the CLI-enabled package: $($manifest.schemaVersion)."
     }
     if ([string]$manifest.product -ne "Dragon DiskForge") {
         throw "Unexpected package product '$($manifest.product)'."
@@ -80,9 +80,19 @@ try {
         throw "Manifest entry point is missing: $($manifest.entryPoint)"
     }
 
+    $cliEntryPoint = Join-Path $tempRoot ([string]$manifest.cliEntryPoint)
+    if (-not (Test-Path $cliEntryPoint -PathType Leaf)) {
+        throw "Manifest CLI entry point is missing: $($manifest.cliEntryPoint)"
+    }
+
     $executables = @(Get-ChildItem -Path $tempRoot -Recurse -File -Filter "DragonDiskForge.App.exe")
     if ($executables.Count -ne 1) {
         throw "Expected exactly one packaged DragonDiskForge.App.exe, found $($executables.Count)."
+    }
+
+    $cliExecutables = @(Get-ChildItem -Path $tempRoot -Recurse -File -Filter "dragon-diskforge.exe")
+    if ($cliExecutables.Count -ne 1) {
+        throw "Expected exactly one packaged dragon-diskforge.exe, found $($cliExecutables.Count)."
     }
 
     $debugFiles = @(Get-ChildItem -Path $tempRoot -Recurse -File -Filter "*.pdb")
@@ -107,6 +117,11 @@ try {
         throw "Entry-point SHA-256 does not match the package manifest."
     }
 
+    $cliHash = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($cliHash -ne ([string]$manifest.cliEntryPointSha256).ToLowerInvariant()) {
+        throw "CLI entry-point SHA-256 does not match the package manifest."
+    }
+
     $versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($entryPoint)
     $productVersion = [string]$versionInfo.ProductVersion
     if ([string]::IsNullOrWhiteSpace($productVersion) -or -not $productVersion.StartsWith($expected, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -116,11 +131,22 @@ try {
         throw "Manifest ProductVersion '$($manifest.productVersion)' differs from executable ProductVersion '$productVersion'."
     }
 
+    $providerJson = (& $cliEntryPoint formats --format json) | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        throw "Packaged CLI formats smoke test failed with exit code $LASTEXITCODE."
+    }
+    $providers = @($providerJson | ConvertFrom-Json)
+    if ($providers.Count -lt 12) {
+        throw "Packaged CLI returned only $($providers.Count) built-in providers; expected at least 12."
+    }
+
     Write-Host "Verified clean Windows x64 package."
     Write-Host "Version: $expected"
     Write-Host "Files: $((Get-ChildItem -Path $tempRoot -Recurse -File).Count)"
     Write-Host "ZIP SHA-256: $actualHash"
     Write-Host "EXE SHA-256: $entryHash"
+    Write-Host "CLI SHA-256: $cliHash"
+    Write-Host "CLI providers: $($providers.Count)"
 }
 finally {
     if (Test-Path $tempRoot) {
