@@ -32,19 +32,23 @@ The project follows semantic versioning while it evolves toward 1.0.
 - serial-backed stable physical-device identity where Windows reports sufficient identity material
 - `PhysicalMediaSafetyService` write-plan preview with fail-closed target/source/capacity checks
 - destination-bound exact confirmation contract for otherwise eligible physical-media plans
+- `IPhysicalMediaWriteSink` and `PhysicalMediaWriteExecutionService` for platform-writer-independent bounded execution safety
+- destination identity/confirmation revalidation immediately before physical-write sink I/O
+- explicit pre-write vs post-write-attempt cancellation/failure states and recovery requirement reporting
+- SHA-256 operation evidence for chunks successfully accepted by a physical-write sink without claiming device read-back verification
 - `docs/PHYSICAL-MEDIA-SAFETY.md`
 - `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md` and `docs/SPLIT-COMPRESSION-PIPELINES.md`
-- dedicated smoke tests for dual verification, safe output, RAW pipelines, split/join + gzip and physical-media safety
+- dedicated smoke tests for dual verification, safe output, RAW pipelines, split/join + gzip and physical-media safety/execution semantics
 - real query-only physical-disk inventory/system-disk refusal coverage in the Windows native integration test
 
 ### Changed
-- project progress advances to **73% toward 1.0** after 5 of 7 current 0.7 Physical Media Tools deliverables are implemented and validated
+- project progress advances to **74% toward 1.0** after 6 of 7 current 0.7 Physical Media Tools deliverables are implemented and validated
 - **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
-- **0.7 Physical Media Tools** is now **in progress at 5/7 (~71%)**
+- **0.7 Physical Media Tools** is now **in progress at 6/7 (~86%)**
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
-- the Windows integration gate now verifies query-only physical-disk enumeration and system-disk refusal in addition to native mount behavior
+- the Windows integration gate continues to verify query-only physical-disk enumeration and system-disk refusal in addition to native mount behavior
 - file-producing progress reserves `1.0` for successful publication/commit
 
 ### Safety
@@ -62,7 +66,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - physical-disk inventory requests query-only handles and does not request write access
 - system disks, ambiguous identity, unknown capacity, physical-device sources and oversized source images fail closed in the physical-media write-plan preview
 - refused physical-media plans receive no destructive confirmation token
-- no physical-device writer or user-visible destructive physical-media action is implemented by the 0.7 safety slice
+- write execution revalidates destination identity and exact confirmation before the first write attempt
+- source length is revalidated after opening the source image
+- once a destination write is attempted, cancellation/failure is treated as potentially destructive even when a sink cannot confirm a completed chunk
+- abnormal termination after a write attempt explicitly requires recovery/rewrite; no generic physical-media rollback is claimed
+- throwing progress observers are isolated from the destructive execution path
+- no Windows physical-device writer or user-visible destructive physical-media action is implemented by the 0.7 execution-contract slice
 
 ### Verified
 - PR #16 / run #153 — RAW/IMG
@@ -95,11 +104,11 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #43 / implementation run #300 — RAW creation + guest-to-RAW conversion
 - PR #44 / implementation run #304 — transactional split/join + bounded gzip transport pipelines
 - PR #45 / implementation run #310 — read-only physical-disk inventory, real Windows system-disk evidence, fail-closed write-plan preview and destination-bound confirmation contract; full Windows x64 regression/build/package path green
+- PR #46 / implementation run #319 — bounded physical-write execution contract, destination revalidation, cancellation/failure recovery semantics and full Windows x64 regression/build/package path green
 
 ### Planned
 - complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
-- finish 0.7 with bounded physical-write progress/cancellation/fail-safe semantics
-- add a separately validated physical write path only after those safety gates pass under dedicated disposable-media conditions
+- finish 0.7 with a separately validated Windows physical write path only after the safety contract passes dedicated disposable-media validation
 - keep destructive physical operations disabled until separately designed, implemented and independently validated
 
 ## [0.3.0] - 2026-09-15
