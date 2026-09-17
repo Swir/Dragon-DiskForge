@@ -75,7 +75,9 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
 
-The remaining interactive checks must be recorded against the exact final `0.5.0-beta.1` ZIP. The evidence tool refuses a non-beta package, an elevated/non-interactive initialization, a package/hash mismatch, missing human confirmation or an incomplete check catalog. This makes the final manual evidence auditable without pretending hosted CI can perform the gestures itself.
+The remaining interactive checks must be recorded against the exact final `0.5.0-beta.1` ZIP. Manual-QA schema v2 requires the ZIP/checksum pair again for **every** recorded observation, re-verifies the package, executable and packaged QA-tool identities before saving, and binds the observation to that package SHA-256. It also records the Windows build, process architecture, interactive/elevation state, session id and UAC availability, and fails closed if a later passing observation no longer matches the clean-desktop baseline.
+
+Passing records still require explicit human confirmation because hosted CI cannot honestly perform or observe the UAC approval/cancellation flows and real cross-process Explorer drag gestures. Schema-v1 evidence is intentionally not migrated to v2: those observations must be repeated so the stronger per-observation package binding is genuine rather than inferred after the fact.
 
 ### GitHub Release
 - [ ] `0.5.0-beta.1` tag
