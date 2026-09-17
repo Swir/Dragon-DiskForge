@@ -41,6 +41,31 @@ At the end, verify the entire evidence set against the same release-candidate ZI
 
 The script also exposes `-Mode self-test`; CI executes that contract under both PowerShell 7 and Windows PowerShell 5.1. A green self-test proves the evidence machinery, **not** the human UAC or cross-process drag gestures.
 
+## Exact-candidate QA session preparation helper
+
+The repository also contains `scripts/beta-qa-session.ps1` to prepare the retained candidate for the remaining interactive checks without weakening or auto-completing any release gate. This helper stays **outside** the retained ZIP so using it does not change the package hash selected for manual QA.
+
+From a normal unelevated interactive Windows session with UAC enabled, run:
+
+```powershell
+.\scripts\beta-qa-session.ps1 -Mode prepare `
+  -PackagePath .\DragonDiskForge-win-x64.zip `
+  -ChecksumFile .\DragonDiskForge-win-x64.zip.sha256
+```
+
+The helper fails closed unless it can prove the candidate checksum, product/version/x64 manifest identity, self-contained .NET + Windows App SDK + app-local Visual C++ deployment, desktop entry-point hash, packaged QA-tool hash, required runtime payload, a single desktop executable and PDB-free package hygiene. It then creates an isolated workspace, invokes the **candidate's own** `tools/beta-manual-qa.ps1` to initialize hash-bound evidence, performs a short local process-liveness preflight and opens a dedicated Windows Explorer drop-target folder.
+
+The liveness preflight is deliberately not a human result: session metadata is written with `manualGatePassed=false`, and no required evidence check is automatically changed to `pass`. The user still has to visibly perform each checklist action and record it with `-HumanConfirmed` through the packaged evidence tool.
+
+Use the path printed by `prepare` for the following helper modes:
+
+```powershell
+.\scripts\beta-qa-session.ps1 -Mode status -WorkspacePath .\artifacts\manual-qa\session-<package-sha-prefix>
+.\scripts\beta-qa-session.ps1 -Mode cleanup -WorkspacePath .\artifacts\manual-qa\session-<package-sha-prefix>
+```
+
+`status` delegates to the exact packaged QA tool and lists the package-bound evidence state. `cleanup` stops the recorded Dragon DiskForge process only when the current process path still matches the recorded executable, then removes the isolated workspace. The helper's deterministic `self-test` is exercised in CI under both PowerShell 7 and Windows PowerShell 5.1; that test validates preparation mechanics only and does not replace the interactive release gate.
+
 ## Clean supported Windows desktop regression
 
 Status: **manual QA required before public beta packaging**.
