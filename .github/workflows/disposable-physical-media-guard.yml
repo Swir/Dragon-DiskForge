@@ -1,0 +1,36 @@
+name: Dragon DiskForge Disposable Media Guard
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: dragon-disposable-media-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fail-closed-harness:
+    name: Disposable writer safety gates stay locked in CI
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Read-only Windows writer preflight smoke tests
+        run: dotnet run --project tests/DragonDiskForge.PhysicalMediaWindowsPreflight.SmokeTests/DragonDiskForge.PhysicalMediaWindowsPreflight.SmokeTests.csproj -c Release
+
+      - name: Compile and execute disposable harness without destructive opt-in
+        shell: pwsh
+        run: |
+          if ($env:DDF_DISPOSABLE_WRITE_OPT_IN) {
+            throw 'CI must never provide DDF_DISPOSABLE_WRITE_OPT_IN.'
+          }
+          dotnet run --project tests/DragonDiskForge.PhysicalMediaWrite.DisposableTests/DragonDiskForge.PhysicalMediaWrite.DisposableTests.csproj -c Release
