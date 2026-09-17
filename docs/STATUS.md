@@ -18,7 +18,7 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**78% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables and all four verified 0.8 deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may advance to 0.9 without treating host-side CI as a substitute for real-media validation.
+**80% toward 1.0.** The verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables, all four verified 0.8 deliverables and two verified 0.9 hardening deliverables. The remaining 0.7 item is hardware-gated, so safe independent work may continue in 0.9 without treating host-side CI as a substitute for real-media validation.
 
 ## Current roadmap position
 
@@ -51,7 +51,7 @@ See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
 ### 0.8 Windows Integration + Power Tools — COMPLETE ✅ — 4/4 (100%)
 
-The final safe 0.8 slice is now implemented and independently verified while 0.7 remains correctly blocked on real hardware evidence.
+The final safe 0.8 slice is implemented and independently verified while 0.7 remains correctly blocked on real hardware evidence.
 
 #### Shared-Core CLI ✅
 
@@ -100,9 +100,39 @@ PR #50 implementation run #356 and Disposable Media Guard #28 passed before the 
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
-### Next safe engineering target — 0.9 Quality, Security + Beta Hardening
+### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 2/7 (~29%)
 
-0.9 can now advance in areas that do not require the still-open 0.7 destructive hardware gate: accessibility/keyboard hardening, measurable performance regression tooling, parser/package/privilege-boundary security review automation and release-support hardening. Clean-machine/UAC/cross-process Explorer checks remain explicit manual gates where automation cannot prove the user-visible behavior.
+PR #51 completes two automation-safe quality slices without weakening the manual beta gate.
+
+#### Crash/diagnostic release-support hardening ✅
+
+- WinUI unhandled exceptions are captured best-effort without marking the exception handled
+- persisted crash reports are bounded to ten entries and 64 KiB per report
+- evidence is limited to schema/time, exception type, HRESULT, SHA-256 fingerprint, exception-chain type names and method-only stack frames
+- raw exception messages, source-file paths and image contents are not persisted
+- malformed/oversized crash evidence is ignored during collection
+- the existing diagnostic ZIP includes at most three sanitized crash summaries through the same safe-output transaction boundary
+- portability/privacy tests prove that a private image path and raw exception message do not leak into persisted crash JSON or the support ZIP
+
+#### Performance + large-image regression evidence ✅
+
+- 128 MiB generated fixture exercises the real one-pass SHA-256 + SHA-512 verification service
+- CI records throughput and managed-allocation evidence with conservative regression ceilings
+- 8 GiB sparse RAW/IMG fixture contains a valid MBR and bounded partition so recognition resolves through the real `raw-partitions` provider
+- recognition runtime and managed allocations are bounded
+- benchmark evidence is emitted as JSON and uploaded as a dedicated CI artifact
+
+The first benchmark attempt exposed an invalid blank RAW fixture and correctly failed run #359. The fixture was corrected in the same development iteration to contain a valid MBR partition. Exact implementation head `44a075a471f38a8350587400e72f4a4e781954ac` then passed full Windows build/package run #360 and Disposable Media Guard #32, including the new crash/privacy tests and performance gate.
+
+#### Remaining 0.9 scope ⬜
+
+- clean-machine runtime matrix
+- normal-user UAC validation
+- real cross-process Explorer drag-out validation
+- accessibility/keyboard/screen-reader hardening
+- security review of parsing, packaging and privileged boundaries
+
+The first three remain explicit manual/real-environment gates. Accessibility and security-review work can continue in automation where evidence is real and repeatable.
 
 ## Proven validation checkpoints
 
@@ -151,6 +181,9 @@ See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 - PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, desktop restore and sanitized diagnostic tooling
 - PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration, launch activation and verified shell-helper packaging
 
+### 0.9
+- PR #51 / implementation run #360 + Disposable Media Guard #32 — sanitized crash/support evidence and large-image performance regression gate
+
 ## Beta readiness
 
 The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering and clean-package candidate gates are green, but these independent release gates remain:
@@ -163,11 +196,13 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 - complete basic clean-machine launch/open/mount/explore/verify/analyze regression
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-0.8 completion strengthens the Windows package but does not replace any of those manual beta gates.
+The new crash/support and benchmark evidence strengthen the beta-hardening path but do not replace any manual release gate.
 
 ## Current safety state
 
 Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Shell integration is explicit, per-user, reversible and does not replace Windows default-app choices. Unsupported capabilities stay disabled.
+
+Crash evidence is bounded, rotated and privacy-preserving; support export deliberately excludes raw exception messages, source-file paths and image contents. Performance fixtures are generated locally and removed after testing.
 
 The Windows physical writer candidate is not connected to a user-visible action. Its executable path remains behind destination identity/topology/confirmation checks and a hard-locked disposable-media harness. No completion claim is made until real dedicated-media validation proves the final 0.7 item.
 
