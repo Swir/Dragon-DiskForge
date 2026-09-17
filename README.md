@@ -31,6 +31,10 @@ The public beta suffix is intentionally not promoted until the independent gate 
 
 ## Project progress — 83% toward 1.0
 
+<img width="100%" src="assets/readme/progress-card.svg" alt="Dragon DiskForge project progress: 83.0% toward 1.0; 7 of 10 roadmap stages complete" />
+
+**Weighted project progress:** **83.0%** toward 1.0 · **Completed roadmap stages:** **7/10** · **Release readiness:** tracked separately in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
+
 `█████████████████░░░ 83%`
 
 **Overall completion:** **83%**

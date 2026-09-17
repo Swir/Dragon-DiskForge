@@ -17,6 +17,12 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 - **0.9 Quality, Security + Beta Hardening — 5/7 (~71%) 🚧**
 - **1.0 Production Release — planned**
 
+<img width="100%" src="../assets/readme/progress-mini.svg" alt="Milestone 0.9 progress: 5 of 7 verified deliverables, 71.4%, in progress" />
+
+**Current active milestone:** **0.9 Quality, Security + Beta Hardening — 5/7 verified deliverables (71.4%), IN PROGRESS.**
+
+Release readiness remains a separate gate tracked in [`BETA-RELEASE.md`](BETA-RELEASE.md); the progress graphic does not imply beta readiness.
+
 Work may advance out of milestone order when an earlier milestone is blocked by a real hardware/manual validation gate. The remaining 0.7 hardware gate is not weakened by progress in later milestones.
 
 ## 0.1 Foundation + Dragon UI — COMPLETE ✅

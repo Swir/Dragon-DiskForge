@@ -1,0 +1,35 @@
+name: Dragon DiskForge Progress Assets
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/ROADMAP.md'
+      - 'assets/readme/progress-*.svg'
+      - 'scripts/generate-progress-assets.ps1'
+      - '.github/workflows/progress-assets.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'README.md'
+      - 'docs/ROADMAP.md'
+      - 'assets/readme/progress-*.svg'
+      - 'scripts/generate-progress-assets.ps1'
+      - '.github/workflows/progress-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-progress-assets:
+    name: Verify deterministic progress SVGs
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify progress data, SVG/XML and embeddings
+        shell: pwsh
+        run: ./scripts/generate-progress-assets.ps1 -Check
