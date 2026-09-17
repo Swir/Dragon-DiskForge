@@ -53,7 +53,7 @@ public sealed partial class ExplorerView
                     sourcePath,
                     storageItem.Path,
                     item.IsDirectory,
-                    storageItem.IsOfType(item.IsDirectory ? StorageItemTypes.Folder : StorageItemTypes.File),
+                    storageItem is StorageFolder,
                     item.IsReparsePoint);
             }
             catch (Exception ex) when (ex is InvalidOperationException
