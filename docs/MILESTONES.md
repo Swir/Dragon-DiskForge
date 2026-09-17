@@ -191,6 +191,6 @@ Production release requires all final capability, package, documentation, checks
 
 ## Beta release track
 
-The first planned public beta remains **`0.5.0-beta.1`**. The package-only clean-machine runtime matrix, automated engineering, clean-package, security-boundary and accessibility-hardening gates are green, but interactive WinUI clean-desktop launch, normal-user UAC, real cross-process drag-out, final beta suffix/package verification and public Release/checksum publication remain open.
+The first planned public beta remains **`0.5.0-beta.1`**. Source/package metadata is promoted and Beta Candidate run #64 retained an independently verified non-public Windows x64 candidate from green `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`. The package-only clean-machine runtime matrix, automated engineering, clean-package, security-boundary, accessibility-hardening and candidate-retention gates are green. Interactive WinUI clean-desktop launch/open/mount/explore/verify/analyze, normal-user UAC, real cross-process Explorer drag-out and public Release/checksum publication remain open.
 
 A capability becomes user-visible only after its real backing path and tests exist.

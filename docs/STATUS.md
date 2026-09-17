@@ -12,9 +12,9 @@
 
 ## Current development version
 
-**0.5.0-alpha.1**
+**0.5.0-beta.1**
 
-The public beta suffix is intentionally not promoted until the independent `0.5.0-beta.1` release gate passes. Engineering work beyond the 0.5 beta scope may continue without weakening that gate.
+Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. Beta Candidate run #64 retained an independently verified non-public Windows x64 candidate from green `main`; public release remains gated by clean-desktop interactive regression, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release publication.
 
 ## Overall project progress
 
@@ -218,12 +218,12 @@ The clean-machine package-only and accessibility gates are repeatable automation
 - PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — repeatable parsing/package/privileged security review and explicit asInvoker boundary
 - PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix across fresh Windows runner images
 - PR #54 / implementation run #381 + Accessibility Contract #1 + Disposable Media Guard #53 + Security Boundary #15 + Clean Machine Runtime #8 — automated accessibility/keyboard/screen-reader semantics hardening
+- PR #73 / PR-head Build #456 + fully green main Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening, `0.5.0-beta.1` source promotion and retained exact Windows x64 candidate
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime and accessibility-hardening gates are green, but these independent release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime, accessibility-hardening and retained exact-candidate gates are green. Beta Candidate run #64 retained artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35282836549` from `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`; its nested package SHA-256 is `6d4191f5a3e6751328ff43b5d2beb609e747bfd042b96b28012fa3e292980e2d`. The remaining independent release gates are:
 
-- promote version/package metadata to the final beta suffix only at release time
 - human-confirmed WinUI launch and basic open/mount/explore/verify/analyze regression on a clean supported Windows desktop
 - complete normal-user UAC validation
 - complete real cross-process Explorer drag-out validation
