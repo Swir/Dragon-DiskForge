@@ -16,7 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Script:SchemaVersion = 1
+$Script:SchemaVersion = 2
 $Script:GateName = "Dragon DiskForge interactive beta QA"
 
 function Get-RequiredChecks {
@@ -53,6 +53,20 @@ function Test-IsElevated {
     }
 }
 
+function Get-UacEnabled {
+    if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
+        return $null
+    }
+
+    try {
+        $value = Get-ItemPropertyValue -LiteralPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name EnableLUA -ErrorAction Stop
+        return ([int]$value -ne 0)
+    }
+    catch {
+        return $null
+    }
+}
+
 function Get-SessionEnvironment {
     $build = ""
     if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
@@ -64,13 +78,40 @@ function Get-SessionEnvironment {
         }
     }
 
+    $sessionId = -1
+    try {
+        $sessionId = [System.Diagnostics.Process]::GetCurrentProcess().SessionId
+    }
+    catch {
+        $sessionId = -1
+    }
+
     return [pscustomobject]@{
         osVersion = [Environment]::OSVersion.VersionString
         osBuild = $build
         processArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
         userInteractive = [Environment]::UserInteractive
         processElevated = (Test-IsElevated)
+        sessionId = $sessionId
+        uacEnabled = (Get-UacEnabled)
         powerShellVersion = $PSVersionTable.PSVersion.ToString()
+    }
+}
+
+function Assert-InteractiveUnelevated {
+    param(
+        [Parameter(Mandatory = $true)]$EnvironmentInfo,
+        [Parameter(Mandatory = $true)][string]$Context
+    )
+
+    if (-not [bool]$EnvironmentInfo.userInteractive) {
+        throw "$Context requires an interactive Windows desktop session."
+    }
+    if ([bool]$EnvironmentInfo.processElevated) {
+        throw "$Context must run from a normal unelevated session so UAC and Explorer boundaries remain observable."
+    }
+    if ($null -ne $EnvironmentInfo.uacEnabled -and -not [bool]$EnvironmentInfo.uacEnabled) {
+        throw "$Context cannot prove the UAC gate while Windows UAC (EnableLUA) is disabled."
     }
 }
 
@@ -103,7 +144,7 @@ function Save-Evidence {
 
     $tempPath = "$fullPath.tmp.$([guid]::NewGuid().ToString('N'))"
     try {
-        $json = $Evidence | ConvertTo-Json -Depth 10
+        $json = $Evidence | ConvertTo-Json -Depth 12
         Write-Utf8NoBom -Path $tempPath -Text ($json + [Environment]::NewLine)
         Move-Item -LiteralPath $tempPath -Destination $fullPath -Force
 
@@ -236,18 +277,37 @@ function Get-PackageIdentity {
     }
 }
 
+function Assert-PackageMatchesEvidence {
+    param(
+        [Parameter(Mandatory = $true)]$Evidence,
+        [Parameter(Mandatory = $true)]$PackageIdentity,
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+
+    if ([string]$PackageIdentity.version -ne $Version) {
+        throw "Package version '$($PackageIdentity.version)' does not match required version '$Version'."
+    }
+    if ([string]$Evidence.package.version -ne [string]$PackageIdentity.version) {
+        throw "Evidence package version '$($Evidence.package.version)' differs from the supplied package '$($PackageIdentity.version)'."
+    }
+    if ([string]$Evidence.package.sha256 -ne [string]$PackageIdentity.sha256) {
+        throw "Evidence is bound to a different package SHA-256."
+    }
+    if ([string]$Evidence.package.entryPointSha256 -ne [string]$PackageIdentity.entryPointSha256) {
+        throw "Evidence is bound to a different desktop entry point."
+    }
+    if ([string]$Evidence.package.betaManualQaEntryPointSha256 -ne [string]$PackageIdentity.betaManualQaEntryPointSha256) {
+        throw "Evidence is bound to a different packaged manual-QA tool."
+    }
+}
+
 function New-EvidenceObject {
     param(
         [Parameter(Mandatory = $true)]$PackageIdentity,
         [Parameter(Mandatory = $true)]$EnvironmentInfo
     )
 
-    if (-not [bool]$EnvironmentInfo.userInteractive) {
-        throw "Manual beta QA evidence must be initialized from an interactive Windows desktop session."
-    }
-    if ([bool]$EnvironmentInfo.processElevated) {
-        throw "Manual beta QA evidence must be initialized from a normal unelevated session so UAC behavior is observable."
-    }
+    Assert-InteractiveUnelevated -EnvironmentInfo $EnvironmentInfo -Context "Manual beta QA evidence initialization"
 
     $checks = @()
     foreach ($definition in Get-RequiredChecks) {
@@ -257,9 +317,16 @@ function New-EvidenceObject {
             description = $definition.description
             status = "pending"
             humanConfirmed = $false
+            packageVersion = $null
+            packageSha256 = $null
+            packageEntryPointSha256 = $null
             observedUtc = $null
+            observedOsBuild = $null
+            observedProcessArchitecture = $null
+            observedSessionId = $null
             observedInteractive = $null
             observedProcessElevated = $null
+            observedUacEnabled = $null
             note = ""
         }
     }
@@ -285,7 +352,7 @@ function Assert-EvidenceObject {
     )
 
     if ([int]$Evidence.schemaVersion -ne $Script:SchemaVersion) {
-        throw "Unsupported manual-QA evidence schema '$($Evidence.schemaVersion)'."
+        throw "Unsupported manual-QA evidence schema '$($Evidence.schemaVersion)'. Reinitialize evidence with this package/tool version."
     }
     if ([string]$Evidence.gate -ne $Script:GateName) {
         throw "Unexpected manual-QA gate '$($Evidence.gate)'."
@@ -293,23 +360,17 @@ function Assert-EvidenceObject {
     if ([string]$Evidence.targetVersion -ne "0.5.0-beta.1") {
         throw "Manual-QA evidence targets '$($Evidence.targetVersion)' instead of 0.5.0-beta.1."
     }
-    if ([string]$PackageIdentity.version -ne $Version) {
-        throw "Package version '$($PackageIdentity.version)' does not match required version '$Version'."
-    }
-    if ([string]$Evidence.package.version -ne [string]$PackageIdentity.version) {
-        throw "Evidence package version '$($Evidence.package.version)' differs from the supplied package '$($PackageIdentity.version)'."
-    }
-    if ([string]$Evidence.package.sha256 -ne [string]$PackageIdentity.sha256) {
-        throw "Evidence is bound to a different package SHA-256."
-    }
-    if ([string]$Evidence.package.entryPointSha256 -ne [string]$PackageIdentity.entryPointSha256) {
-        throw "Evidence is bound to a different desktop entry point."
-    }
+
+    Assert-PackageMatchesEvidence -Evidence $Evidence -PackageIdentity $PackageIdentity -Version $Version
+
     if (-not [bool]$Evidence.createdEnvironment.userInteractive) {
         throw "Evidence was not initialized from an interactive desktop session."
     }
     if ([bool]$Evidence.createdEnvironment.processElevated) {
         throw "Evidence was initialized from an elevated session and cannot prove the normal-user UAC gate."
+    }
+    if ($null -ne $Evidence.createdEnvironment.uacEnabled -and -not [bool]$Evidence.createdEnvironment.uacEnabled) {
+        throw "Evidence was initialized while UAC was disabled and cannot prove the normal-user UAC gate."
     }
 
     $required = @(Get-RequiredChecks)
@@ -334,11 +395,26 @@ function Assert-EvidenceObject {
         if (-not [bool]$record.humanConfirmed) {
             throw "Manual QA check '$($definition.id)' was not explicitly human-confirmed."
         }
+        if ([string]$record.packageVersion -ne [string]$PackageIdentity.version -or [string]$record.packageSha256 -ne [string]$PackageIdentity.sha256) {
+            throw "Manual QA check '$($definition.id)' was not recorded against this exact package."
+        }
+        if ([string]$record.packageEntryPointSha256 -ne [string]$PackageIdentity.entryPointSha256) {
+            throw "Manual QA check '$($definition.id)' was recorded against a different desktop entry point."
+        }
         if (-not [bool]$record.observedInteractive) {
             throw "Manual QA check '$($definition.id)' was not recorded from an interactive desktop session."
         }
         if ([bool]$record.observedProcessElevated) {
             throw "Manual QA check '$($definition.id)' was recorded from an elevated session."
+        }
+        if ($null -ne $record.observedUacEnabled -and -not [bool]$record.observedUacEnabled) {
+            throw "Manual QA check '$($definition.id)' was recorded while UAC was disabled."
+        }
+        if ([string]$record.observedOsBuild -ne [string]$Evidence.createdEnvironment.osBuild) {
+            throw "Manual QA check '$($definition.id)' was recorded on Windows build '$($record.observedOsBuild)' instead of the evidence baseline '$($Evidence.createdEnvironment.osBuild)'."
+        }
+        if ([string]$record.observedProcessArchitecture -ne [string]$Evidence.createdEnvironment.processArchitecture) {
+            throw "Manual QA check '$($definition.id)' was recorded with process architecture '$($record.observedProcessArchitecture)' instead of '$($Evidence.createdEnvironment.processArchitecture)'."
         }
     }
 }
@@ -352,10 +428,9 @@ function Invoke-SelfTest {
         throw "Self-test found duplicate manual-QA check IDs."
     }
 
-    $fakeHash = ("a" * 64)
     $fakePackage = [pscustomobject]@{
         fileName = "DragonDiskForge-win-x64.zip"
-        sha256 = $fakeHash
+        sha256 = ("a" * 64)
         version = "0.5.0-beta.1"
         architecture = "x64"
         entryPointSha256 = ("b" * 64)
@@ -363,48 +438,55 @@ function Invoke-SelfTest {
     }
     $fakeEnvironment = [pscustomobject]@{
         osVersion = "Windows self-test"
-        osBuild = "self-test"
+        osBuild = "self-test-build"
         processArchitecture = "X64"
         userInteractive = $true
         processElevated = $false
+        sessionId = 1
+        uacEnabled = $true
         powerShellVersion = $PSVersionTable.PSVersion.ToString()
     }
     $evidence = New-EvidenceObject -PackageIdentity $fakePackage -EnvironmentInfo $fakeEnvironment
     foreach ($record in @($evidence.checks)) {
         $record.status = "pass"
         $record.humanConfirmed = $true
+        $record.packageVersion = $fakePackage.version
+        $record.packageSha256 = $fakePackage.sha256
+        $record.packageEntryPointSha256 = $fakePackage.entryPointSha256
         $record.observedUtc = [DateTimeOffset]::UtcNow.ToString("O")
+        $record.observedOsBuild = $fakeEnvironment.osBuild
+        $record.observedProcessArchitecture = $fakeEnvironment.processArchitecture
+        $record.observedSessionId = $fakeEnvironment.sessionId
         $record.observedInteractive = $true
         $record.observedProcessElevated = $false
+        $record.observedUacEnabled = $true
     }
 
     Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1"
 
     $evidence.checks[0].status = "pending"
     $failedClosed = $false
-    try {
-        Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1"
-    }
-    catch {
-        $failedClosed = $true
-    }
-    if (-not $failedClosed) {
-        throw "Self-test failed: pending evidence did not fail closed."
-    }
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedClosed = $true }
+    if (-not $failedClosed) { throw "Self-test failed: pending evidence did not fail closed." }
     $evidence.checks[0].status = "pass"
 
-    $evidence.checks[2].observedProcessElevated = $true
+    $evidence.checks[1].packageSha256 = ("d" * 64)
+    $failedPackageBinding = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedPackageBinding = $true }
+    if (-not $failedPackageBinding) { throw "Self-test failed: per-observation package mismatch did not fail closed." }
+    $evidence.checks[1].packageSha256 = $fakePackage.sha256
+
+    $evidence.checks[2].observedOsBuild = "different-build"
+    $failedEnvironmentBinding = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedEnvironmentBinding = $true }
+    if (-not $failedEnvironmentBinding) { throw "Self-test failed: per-observation OS build mismatch did not fail closed." }
+    $evidence.checks[2].observedOsBuild = $fakeEnvironment.osBuild
+
+    $evidence.checks[3].observedProcessElevated = $true
     $failedElevated = $false
-    try {
-        Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1"
-    }
-    catch {
-        $failedElevated = $true
-    }
-    if (-not $failedElevated) {
-        throw "Self-test failed: elevated-session evidence did not fail closed."
-    }
-    $evidence.checks[2].observedProcessElevated = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedElevated = $true }
+    if (-not $failedElevated) { throw "Self-test failed: elevated-session evidence did not fail closed." }
+    $evidence.checks[3].observedProcessElevated = $false
 
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("DragonDiskForge-beta-qa-selftest-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
@@ -424,7 +506,7 @@ function Invoke-SelfTest {
         }
     }
 
-    Write-Host "Dragon DiskForge beta manual-QA evidence self-test passed."
+    Write-Host "Dragon DiskForge beta manual-QA evidence schema v2 self-test passed."
 }
 
 switch ($Mode) {
@@ -447,17 +529,22 @@ switch ($Mode) {
         $environment = Get-SessionEnvironment
         $evidence = New-EvidenceObject -PackageIdentity $identity -EnvironmentInfo $environment
         $saved = Save-Evidence -Evidence $evidence -Path $EvidencePath
-        Write-Host "Initialized interactive beta QA evidence."
+        Write-Host "Initialized interactive beta QA evidence schema v2."
         Write-Host "Package version: $($identity.version)"
         Write-Host "Package SHA-256: $($identity.sha256)"
+        Write-Host "Windows build: $($environment.osBuild)"
+        Write-Host "UAC enabled: $($environment.uacEnabled)"
         Write-Host "Evidence: $($saved.path)"
-        Write-Host "Run with -Mode list to see the required check IDs."
+        Write-Host "Every subsequent record operation must supply the same -PackagePath so each observation is rebound to the exact candidate."
         exit 0
     }
 
     "record" {
         if ([string]::IsNullOrWhiteSpace($Check)) {
             throw "-Check is required for -Mode record."
+        }
+        if ([string]::IsNullOrWhiteSpace($PackagePath)) {
+            throw "-PackagePath is required for -Mode record so every observation is revalidated against the exact candidate."
         }
         if ($Result -notin @("pass", "fail")) {
             throw "-Result must be 'pass' or 'fail' for -Mode record."
@@ -474,32 +561,44 @@ switch ($Mode) {
 
         Assert-EvidenceSidecar -Path $EvidencePath | Out-Null
         $evidence = Load-Evidence -Path $EvidencePath
+        $identity = Get-PackageIdentity -ZipPath $PackagePath -SidecarPath $ChecksumFile
+        if ([int]$evidence.schemaVersion -ne $Script:SchemaVersion) {
+            throw "Evidence schema '$($evidence.schemaVersion)' is not schema v$Script:SchemaVersion. Reinitialize evidence before recording new observations."
+        }
+        Assert-PackageMatchesEvidence -Evidence $evidence -PackageIdentity $identity -Version $ExpectedVersion
+
         $matches = @($evidence.checks | Where-Object { [string]$_.id -eq $Check })
         if ($matches.Count -ne 1) {
             throw "Unknown or duplicate manual QA check '$Check'. Run -Mode list to see valid IDs."
         }
 
         $environment = Get-SessionEnvironment
-        if ($Result -eq "pass") {
-            if (-not [bool]$environment.userInteractive) {
-                throw "Passing manual QA evidence must be recorded from an interactive desktop session."
-            }
-            if ([bool]$environment.processElevated) {
-                throw "Passing manual QA evidence must be recorded from a normal unelevated session."
-            }
+        Assert-InteractiveUnelevated -EnvironmentInfo $environment -Context "Manual QA observation recording"
+        if ([string]$environment.osBuild -ne [string]$evidence.createdEnvironment.osBuild) {
+            throw "Current Windows build '$($environment.osBuild)' differs from evidence baseline '$($evidence.createdEnvironment.osBuild)'. Reinitialize evidence on the machine/build being qualified."
+        }
+        if ([string]$environment.processArchitecture -ne [string]$evidence.createdEnvironment.processArchitecture) {
+            throw "Current process architecture '$($environment.processArchitecture)' differs from evidence baseline '$($evidence.createdEnvironment.processArchitecture)'."
         }
 
         $record = $matches[0]
         $record.status = $Result
         $record.humanConfirmed = [bool]$HumanConfirmed
+        $record.packageVersion = [string]$identity.version
+        $record.packageSha256 = [string]$identity.sha256
+        $record.packageEntryPointSha256 = [string]$identity.entryPointSha256
         $record.observedUtc = [DateTimeOffset]::UtcNow.ToString("O")
+        $record.observedOsBuild = [string]$environment.osBuild
+        $record.observedProcessArchitecture = [string]$environment.processArchitecture
+        $record.observedSessionId = [int]$environment.sessionId
         $record.observedInteractive = [bool]$environment.userInteractive
         $record.observedProcessElevated = [bool]$environment.processElevated
+        $record.observedUacEnabled = $environment.uacEnabled
         $record.note = $Note
         $evidence.updatedUtc = [DateTimeOffset]::UtcNow.ToString("O")
 
         $saved = Save-Evidence -Evidence $evidence -Path $EvidencePath
-        Write-Host "Recorded '$Check' as '$Result'."
+        Write-Host "Recorded '$Check' as '$Result' against package $($identity.sha256)."
         Write-Host "Evidence SHA-256: $($saved.sha256)"
         exit 0
     }
@@ -507,8 +606,12 @@ switch ($Mode) {
     "list" {
         Assert-EvidenceSidecar -Path $EvidencePath | Out-Null
         $evidence = Load-Evidence -Path $EvidencePath
+        Write-Host "Evidence schema: $($evidence.schemaVersion)"
+        Write-Host "Package SHA-256: $($evidence.package.sha256)"
         foreach ($record in @($evidence.checks)) {
-            Write-Host ("{0,-34} {1,-8} {2}" -f $record.id, $record.status, $record.description)
+            $binding = "unbound"
+            if (-not [string]::IsNullOrWhiteSpace([string]$record.packageSha256)) { $binding = ([string]$record.packageSha256).Substring(0, 12) }
+            Write-Host ("{0,-34} {1,-8} {2,-12} {3}" -f $record.id, $record.status, $binding, $record.description)
         }
         exit 0
     }
@@ -527,6 +630,7 @@ switch ($Mode) {
         Assert-EvidenceObject -Evidence $evidence -PackageIdentity $identity -Version $ExpectedVersion
 
         Write-Host "Interactive beta QA evidence is COMPLETE for the exact package."
+        Write-Host "Evidence schema: $($evidence.schemaVersion)"
         Write-Host "Version: $($identity.version)"
         Write-Host "Package SHA-256: $($identity.sha256)"
         Write-Host "Evidence SHA-256: $evidenceHash"
