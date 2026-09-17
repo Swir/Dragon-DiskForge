@@ -8,9 +8,10 @@ namespace DragonDiskForge.Windows.Services;
 
 /// <summary>
 /// Windows physical-device sink candidate for the 0.7 disposable-media validation gate.
-/// The type is deliberately not wired to the application UI. Creation requires a successful
-/// Windows-specific read-only preflight, exclusive locks on every discoverable target volume,
-/// a fresh identity revalidation after the device handle is opened, and sector-aligned writes.
+/// The type is deliberately not wired to the application UI. Creation requires the exact
+/// destination-bound confirmation token, a successful Windows-specific read-only preflight,
+/// exclusive locks on every discoverable target volume, a fresh identity revalidation after
+/// the device handle is opened, and sector-aligned writes.
 /// </summary>
 public sealed class WindowsPhysicalMediaWriteSink : IPhysicalMediaWriteSink, IAsyncDisposable
 {
@@ -40,6 +41,7 @@ public sealed class WindowsPhysicalMediaWriteSink : IPhysicalMediaWriteSink, IAs
 
     public static async Task<WindowsPhysicalMediaWriteSink> OpenAsync(
         PhysicalMediaWritePlan plan,
+        string? suppliedConfirmationToken,
         WindowsPhysicalMediaWritePreflightService? preflightService = null,
         CancellationToken cancellationToken = default)
     {
@@ -47,6 +49,10 @@ public sealed class WindowsPhysicalMediaWriteSink : IPhysicalMediaWriteSink, IAs
 
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Windows physical-media writing is implemented only for Windows.");
+
+        var safety = new PhysicalMediaSafetyService();
+        if (!safety.ConfirmationMatches(plan, suppliedConfirmationToken))
+            throw new InvalidOperationException("The exact destination-bound destructive confirmation token is required before a Windows physical write handle can be opened.");
 
         preflightService ??= new WindowsPhysicalMediaWritePreflightService();
         var initial = await preflightService.ValidateAsync(plan, cancellationToken).ConfigureAwait(false);
@@ -83,11 +89,17 @@ public sealed class WindowsPhysicalMediaWriteSink : IPhysicalMediaWriteSink, IAs
                 throw new InvalidOperationException("Destination identity or sector geometry changed while acquiring the physical write handle.");
             }
 
+            if (!safety.ConfirmationMatches(plan, suppliedConfirmationToken))
+                throw new InvalidOperationException("Destructive confirmation binding changed before the physical write sink became available.");
+
+            // The handle is intentionally synchronous + WRITE_THROUGH. The coordinator still uses
+            // async APIs, but cancellation is guaranteed at chunk boundaries instead of pretending
+            // that an in-flight raw device write can always be cancelled atomically.
             stream = new FileStream(
                 deviceHandle,
                 FileAccess.Write,
                 bufferSize: Math.Max(4096, final.LogicalSectorSizeBytes),
-                isAsync: true);
+                isAsync: false);
             deviceHandle = null; // FileStream now owns the handle lifetime.
 
             return new WindowsPhysicalMediaWriteSink(
