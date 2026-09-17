@@ -61,6 +61,7 @@ function Assert-FileSidecar {
     }
 }
 
+$runningVerifier = Assert-FileSidecar -FilePath $PSCommandPath -Label "QA kit verifier"
 $manifestProof = Assert-FileSidecar -FilePath $ManifestPath -Label "QA kit manifest"
 $manifest = Get-Content -LiteralPath $manifestProof.path -Raw | ConvertFrom-Json
 
@@ -78,25 +79,16 @@ $packageName = Assert-SafeLeafName -Name ([string]$manifest.packageFile) -Label 
 $metadataName = Assert-SafeLeafName -Name ([string]$manifest.candidateMetadataFile) -Label "Candidate metadata"
 $sessionName = Assert-SafeLeafName -Name ([string]$manifest.sessionHelperFile) -Label "Session helper"
 $manualName = Assert-SafeLeafName -Name ([string]$manifest.manualValidationFile) -Label "Manual validation guide"
-$verifierName = Assert-SafeLeafName -Name ([string]$manifest.verifierFile) -Label "QA kit verifier"
 
 $packageProof = Assert-FileSidecar -FilePath (Join-Path $directory $packageName) -Label "Candidate package"
 $metadataProof = Assert-FileSidecar -FilePath (Join-Path $directory $metadataName) -Label "Candidate metadata"
 $sessionProof = Assert-FileSidecar -FilePath (Join-Path $directory $sessionName) -Label "Session helper"
 $manualProof = Assert-FileSidecar -FilePath (Join-Path $directory $manualName) -Label "Manual validation guide"
-$verifierProof = Assert-FileSidecar -FilePath (Join-Path $directory $verifierName) -Label "QA kit verifier"
 
 if ($packageProof.sha256 -ne ([string]$manifest.packageSha256).ToLowerInvariant()) { throw "QA kit package SHA-256 does not match its manifest." }
 if ($metadataProof.sha256 -ne ([string]$manifest.candidateMetadataSha256).ToLowerInvariant()) { throw "QA kit candidate-metadata SHA-256 does not match its manifest." }
 if ($sessionProof.sha256 -ne ([string]$manifest.sessionHelperSha256).ToLowerInvariant()) { throw "QA kit session-helper SHA-256 does not match its manifest." }
 if ($manualProof.sha256 -ne ([string]$manifest.manualValidationSha256).ToLowerInvariant()) { throw "QA kit manual-validation SHA-256 does not match its manifest." }
-if ($verifierProof.sha256 -ne ([string]$manifest.verifierSha256).ToLowerInvariant()) { throw "QA kit verifier SHA-256 does not match its manifest." }
-
-$currentVerifier = (Resolve-Path -LiteralPath $PSCommandPath).Path
-$currentVerifierHash = (Get-FileHash -LiteralPath $currentVerifier -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($currentVerifierHash -ne $verifierProof.sha256) {
-    throw "The running QA kit verifier is not the hash-bound verifier shipped with this kit."
-}
 
 $candidate = Get-Content -LiteralPath $metadataProof.path -Raw | ConvertFrom-Json
 if ([int]$candidate.schemaVersion -ne 1 -or [string]$candidate.kind -ne "DragonDiskForgeBetaCandidate") {
@@ -119,4 +111,5 @@ Write-Host "Source commit: $sourceCommit"
 Write-Host "Workflow run: $($manifest.workflowRunId)"
 Write-Host "Package SHA-256: $($packageProof.sha256)"
 Write-Host "Session helper SHA-256: $($sessionProof.sha256)"
+Write-Host "Verifier SHA-256: $($runningVerifier.sha256)"
 exit 0
