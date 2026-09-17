@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+<title id="title">Dragon DiskForge</title><desc id="desc">SWIR project hero for Dragon DiskForge, a Windows disk image manager</desc>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#02050A"/><stop offset="1" stop-color="#07111C"/></linearGradient><linearGradient id="cyan" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#62E5FF"/><stop offset="1" stop-color="#0088FF"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="1200" height="320" rx="26" fill="url(#bg)"/><path d="M0 260 C240 210 390 310 620 250 S980 200 1200 245" fill="none" stroke="#0D2A3A" stroke-width="2"/><path d="M0 274 C250 224 410 322 640 264 S980 220 1200 260" fill="none" stroke="#0A1B29" stroke-width="1"/>
+<g opacity=".28" stroke="#62E5FF" stroke-width="1"><path d="M45 55H285"/><path d="M920 76h235"/><path d="M960 246h180"/></g>
+<g transform="translate(88 76)" filter="url(#glow)"><circle cx="76" cy="84" r="72" fill="#06131E" stroke="#62E5FF" stroke-width="3"/><circle cx="76" cy="84" r="43" fill="none" stroke="#0088FF" stroke-width="5"/><path d="M76 42v84M34 84h84" stroke="#62E5FF" stroke-width="6" stroke-linecap="round"/><circle cx="76" cy="84" r="11" fill="#62E5FF"/></g>
+<text x="292" y="76" fill="#62E5FF" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="5">SWIR PROJECT</text>
+<text x="292" y="142" fill="#F4FAFF" font-family="Segoe UI,Arial,sans-serif" font-size="54" font-weight="800">DRAGON DISKFORGE</text>
+<text x="294" y="188" fill="#8DA8B8" font-family="Segoe UI,Arial,sans-serif" font-size="24">Universal disk image manager for Windows</text>
+<rect x="292" y="218" width="590" height="3" rx="2" fill="url(#cyan)"/>
+<text x="294" y="258" fill="#62E5FF" font-family="Consolas,monospace" font-size="16">INSPECT • MOUNT • EXPLORE • VERIFY • ANALYZE</text>
+<text x="1080" y="288" fill="#31566A" font-family="Consolas,monospace" font-size="13">by SWIR</text>
+</svg>
