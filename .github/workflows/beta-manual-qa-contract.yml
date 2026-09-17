@@ -21,8 +21,12 @@ jobs:
 
       - name: PowerShell 7 contract self-test
         shell: pwsh
-        run: ./scripts/beta-manual-qa.ps1 -Mode self-test
+        run: |
+          ./scripts/beta-manual-qa.ps1 -Mode self-test
+          ./scripts/beta-qa-session.ps1 -Mode self-test
 
       - name: Windows PowerShell 5.1 contract self-test
         shell: powershell
-        run: .\scripts\beta-manual-qa.ps1 -Mode self-test
+        run: |
+          .\scripts\beta-manual-qa.ps1 -Mode self-test
+          .\scripts\beta-qa-session.ps1 -Mode self-test

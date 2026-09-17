@@ -49,6 +49,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - dedicated **Dragon DiskForge Accessibility Contract** workflow that validates the XAML contract and compiles the WinUI x64 Release app
 - fail-closed `scripts/beta-manual-qa.ps1` evidence workflow for exact-package clean-desktop, normal-user UAC and cross-process drag-out observations
 - dedicated **Dragon DiskForge Beta Manual QA Contract** workflow that self-tests the evidence contract under PowerShell 7 and Windows PowerShell 5.1
+- external `scripts/beta-qa-session.ps1` exact-candidate preparation helper that verifies retained-package identity/runtime completeness, enforces an interactive unelevated UAC-enabled session, initializes evidence through the candidate's own hash-bound QA tool, performs a non-authoritative liveness preflight and opens an isolated Explorer drop target without auto-passing any human gate
 - canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - bounded desktop image-preview admission with a 64 MiB default byte cap and metadata-only fallback for oversized images
 - bounded image-signature admission for desktop rendering; spoofed or truncated image-extension files remain metadata-only
@@ -71,7 +72,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 now also records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
-- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility and self-tests the exact-package manual-QA evidence contract
+- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility, and self-tests both the exact-package manual-QA evidence contract and the external exact-candidate session-preparation helper under PowerShell 7 and Windows PowerShell 5.1
 
 ### Safety
 - inspection/provider/intelligence/image-media CLI paths remain read-only-first
