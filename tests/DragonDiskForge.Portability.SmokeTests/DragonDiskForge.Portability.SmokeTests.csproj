@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/DragonDiskForge.Core/DragonDiskForge.Core.csproj" />
+    <ProjectReference Include="../../src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj" />
   </ItemGroup>
 </Project>
