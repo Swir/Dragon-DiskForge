@@ -13,7 +13,7 @@ Dragon DiskForge follows these rules:
 - the public CLI does not expose the destructive physical-media writer;
 - Windows shell integration is per-user and reversible and does not replace Windows `UserChoice` defaults;
 - mounted Explorer paths below the trusted root reject reparse/junction ancestry before browse, preview/open, copy-out or drag-out;
-- desktop text previews are character-bounded and oversized image files fall back to metadata-only instead of entering the image renderer;
+- desktop text previews are character-bounded; oversized images and image-extension files without a matching bounded signature fall back to metadata-only instead of entering the image renderer;
 - release packages exclude debug/test payloads and bind shipped entry points by SHA-256;
 - crash/support evidence is bounded and deliberately excludes raw exception messages, source-file paths and image content;
 - parsers and guest readers use bounded reads and are covered by malformed/truncated/out-of-bounds regression cases appropriate to each implemented format.
@@ -73,9 +73,9 @@ This reduces reparse-ancestor, stale-path and partial-output risk but is not des
 
 Format parsers and guest readers must treat disk-image bytes as untrusted input. Existing format-specific smoke tests cover malformed, truncated, out-of-range and cancellation cases where applicable. Important bounded components include partition intelligence, filesystem recognition/depth, UDF traversal, QCOW2/VMDK guest readers and guest partition/filesystem intelligence.
 
-Desktop preview follows the same untrusted-input posture. Text preview reads are character-bounded. Image preview admission has a 64 MiB default file-byte budget; recognized images larger than that budget stay metadata-only instead of being passed to the desktop image renderer. The limit is constructor-configurable for deterministic regression testing and rejects non-positive budgets.
+Desktop preview follows the same untrusted-input posture. Text preview reads are character-bounded. Image preview admission has a 64 MiB default file-byte budget; recognized images larger than that budget stay metadata-only instead of being passed to the desktop image renderer. Accepted-size image-extension files must also match the bounded signature currently defined for PNG, JPEG, BMP, GIF, WebP, classic TIFF or ICO before they are classified for rendering. Spoofed or truncated signatures remain metadata-only. The byte limit is constructor-configurable for deterministic regression testing and rejects non-positive budgets.
 
-The image byte budget is resource hardening, not an image-decoder sandbox or a formal decompression-bomb guarantee. Accepted-size images still use the Windows image decoder, so this control is documented narrowly and does not expand the project's support claims.
+The byte/signature checks are resource and input-admission hardening, not an image-decoder sandbox or a formal decompression-bomb guarantee. An accepted file still uses the Windows image decoder, and the file can in principle change between the bounded signature read and a later renderer open. The project therefore does not claim a race-free content handle or formal decoder isolation from these checks.
 
 Security-review completion depends on those regression suites remaining green together with the dedicated security-boundary gate and the full Windows build.
 

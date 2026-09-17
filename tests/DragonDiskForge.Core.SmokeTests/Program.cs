@@ -224,11 +224,47 @@ await WithTempDirectoryAsync(async root =>
     Check(textPreview.Kind == PreviewKind.Text, "Preview service classifies text files");
     Check(textPreview.Text?.Length == 32 && textPreview.IsTruncated, "Preview service enforces bounded text reads");
 
-    var imagePath = Path.Combine(root, "cover.png");
-    await File.WriteAllBytesAsync(imagePath, new byte[] { 1, 2, 3, 4 });
-    Check((await previewer.GetPreviewAsync(imagePath)).Kind == PreviewKind.Image, "Preview service classifies images without executing them");
+    var imageFixtures = new (string Extension, byte[] Signature)[]
+    {
+        (".png", new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
+        (".jpg", new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }),
+        (".jpeg", new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 }),
+        (".bmp", new byte[] { (byte)'B', (byte)'M' }),
+        (".gif", Encoding.ASCII.GetBytes("GIF89a")),
+        (".webp", new byte[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 0, 0, 0, 0, (byte)'W', (byte)'E', (byte)'B', (byte)'P' }),
+        (".tif", new byte[] { (byte)'I', (byte)'I', 0x2A, 0x00 }),
+        (".tiff", new byte[] { (byte)'M', (byte)'M', 0x00, 0x2A }),
+        (".ico", new byte[] { 0x00, 0x00, 0x01, 0x00 })
+    };
 
-    var strictImagePreviewer = new FilePreviewService(maxRenderedImageBytes: 3);
+    foreach (var fixture in imageFixtures)
+    {
+        var fixturePath = Path.Combine(root, $"preview-{Guid.NewGuid():N}{fixture.Extension}");
+        await File.WriteAllBytesAsync(fixturePath, fixture.Signature);
+        Check((await previewer.GetPreviewAsync(fixturePath)).Kind == PreviewKind.Image,
+            $"Preview service admits {fixture.Extension} only after a matching signature");
+    }
+
+    var imagePath = Path.Combine(root, "cover.png");
+    var pngSignature = imageFixtures[0].Signature;
+    await File.WriteAllBytesAsync(imagePath, pngSignature);
+    Check((await previewer.GetPreviewAsync(imagePath)).Kind == PreviewKind.Image,
+        "Preview service admits a matching PNG signature without decoding it in Core");
+
+    var spoofedImagePath = Path.Combine(root, "spoofed.png");
+    await File.WriteAllBytesAsync(spoofedImagePath, Encoding.ASCII.GetBytes("not-an-image"));
+    var spoofedImagePreview = await previewer.GetPreviewAsync(spoofedImagePath);
+    Check(spoofedImagePreview.Kind == PreviewKind.BinaryMetadata,
+        "Preview service keeps extension-spoofed image input metadata-only");
+    Check(spoofedImagePreview.Description.Contains("signature", StringComparison.OrdinalIgnoreCase),
+        "Extension-spoofed image preview reports the signature mismatch truthfully");
+
+    var truncatedImagePath = Path.Combine(root, "truncated.png");
+    await File.WriteAllBytesAsync(truncatedImagePath, new byte[] { 0x89, 0x50 });
+    Check((await previewer.GetPreviewAsync(truncatedImagePath)).Kind == PreviewKind.BinaryMetadata,
+        "Preview service keeps truncated image signatures metadata-only");
+
+    var strictImagePreviewer = new FilePreviewService(maxRenderedImageBytes: pngSignature.Length - 1);
     var oversizedImagePreview = await strictImagePreviewer.GetPreviewAsync(imagePath);
     Check(oversizedImagePreview.Kind == PreviewKind.BinaryMetadata,
         "Preview service keeps oversized image input metadata-only instead of rendering it");

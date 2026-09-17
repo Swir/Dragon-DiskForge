@@ -51,6 +51,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - dedicated **Dragon DiskForge Beta Manual QA Contract** workflow that self-tests the evidence contract under PowerShell 7 and Windows PowerShell 5.1
 - canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - bounded desktop image-preview admission with a 64 MiB default byte cap and metadata-only fallback for oversized images
+- bounded image-signature admission for desktop rendering; spoofed or truncated image-extension files remain metadata-only
 - `docs/ACCESSIBILITY.md` documenting the automated accessibility/keyboard contract and its human-testing limitations
 - `docs/SECURITY-BOUNDARIES.md` documenting reviewed parsing, packaging, shell, diagnostics and privileged-operation boundaries plus manual-gate limitations
 - `docs/CLEAN-MACHINE-RUNTIME.md` documenting the package-only runtime matrix and its explicit interactive/manual limitations
@@ -83,6 +84,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - shell command registration enforces the Dragon executable identity, quotes `%1`, and rejects quote injection
 - mounted Explorer paths fail closed when a component below the trusted root is a reparse point/junction; browse/search/preview/open/copy-out and drag-out share the same canonical boundary, and copy-out revalidates files before opening them
 - oversized image previews fall back to metadata-only rather than invoking the desktop image renderer; this is a byte-budget guard and not a decoder sandbox
+- recognized image extensions must also match a bounded format signature before entering the desktop image renderer; mismatched or truncated signatures stay metadata-only
 - physical-disk planning refuses system disks, ambiguous identity, unknown capacity, physical-device sources, source-on-target and oversized inputs
 - the Windows writer candidate revalidates destination/source evidence, requires locked/dismounted target volumes and fails closed on unprovable topology
 - the disposable-media harness requires explicit destructive opt-in and exact destination-bound evidence; default CI execution cannot write physical media
