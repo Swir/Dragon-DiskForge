@@ -46,6 +46,27 @@ public sealed partial class ExplorerView
                 ? await StorageFolder.GetFolderFromPathAsync(sourcePath)
                 : await StorageFile.GetFileFromPathAsync(sourcePath);
 
+            try
+            {
+                sourcePath = _dragOutValidator.ValidateResolvedStorageItem(
+                    _rootPath,
+                    sourcePath,
+                    storageItem.Path,
+                    item.IsDirectory,
+                    storageItem.IsOfType(item.IsDirectory ? StorageItemTypes.Folder : StorageItemTypes.File),
+                    item.IsReparsePoint);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException
+                                       or FileNotFoundException
+                                       or DirectoryNotFoundException
+                                       or IOException
+                                       or UnauthorizedAccessException)
+            {
+                args.Cancel = true;
+                ShowStatus($"Drag-out blocked after storage resolution: {ShortMessage(ex.Message)}", InfoBarSeverity.Warning);
+                return;
+            }
+
             args.Data.Properties.Title = item.Name;
             args.Data.Properties.Description = "Copy from Dragon DiskForge mounted image";
             args.Data.SetStorageItems(new[] { storageItem }, readOnly: true);
