@@ -2,9 +2,9 @@
 
 This roadmap tracks implemented, testable product deliverables. A checkbox is completed only when a real backing path exists and the required verification has passed. Documentation, placeholders and CI-only work do not count as feature completion.
 
-## Overall progress — 76% toward 1.0
+## Overall progress — 77% toward 1.0
 
-`███████████████░░░░░ 76%`
+`███████████████░░░░░ 77%`
 
 - **0.1 Foundation + Dragon UI — COMPLETE ✅**
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
@@ -13,7 +13,7 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 - **0.5 Partitions + File Systems + Image Intelligence — COMPLETE ✅**
 - **0.6 Create + Convert + Verify — COMPLETE ✅**
 - **0.7 Physical Media Tools — 6/7 (~86%) 🚧**
-- **0.8 Windows Integration + Power Tools — 2/4 (50%) 🚧**
+- **0.8 Windows Integration + Power Tools — 3/4 (75%) 🚧**
 - **0.9 Quality, Security + Beta Hardening — planned**
 - **1.0 Production Release — planned**
 
@@ -104,14 +104,16 @@ See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
 ## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
 
-Current scope: **2/4 (50%)**.
+Current scope: **3/4 (75%)**.
 
 - [ ] Windows file associations and context-menu integration
-- [x] shared-Core read-only CLI (`analyze`, `verify`, `formats`)
+- [x] shared-Core read-only image/verification CLI (`analyze`, `verify`, `formats`)
 - [x] PowerShell-friendly deterministic text/JSON output, stderr diagnostics and stable exit codes
-- [ ] session restore + settings import/export + diagnostic export tooling
+- [x] session restore + settings import/export + sanitized diagnostic export tooling
 
-The CLI reuses the desktop application's canonical Core provider registry and is shipped as a self-contained x64 executable inside the clean Windows package. It intentionally exposes no destructive command.
+The CLI reuses the desktop application's canonical Core provider registry and is shipped as a self-contained x64 executable inside the clean Windows package. State/settings commands are restricted to local Dragon DiskForge application state; no destructive image or physical-media command is exposed.
+
+PR #49 implementation run #353 and Disposable Media Guard #25 passed before the third 0.8 deliverable was marked complete.
 
 See `docs/CLI.md`.
 

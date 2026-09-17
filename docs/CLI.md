@@ -1,6 +1,6 @@
 # Dragon DiskForge CLI
 
-Dragon DiskForge includes a **read-only automation CLI** built on the same Core services and canonical provider registry as the Windows desktop application.
+Dragon DiskForge includes an automation CLI built on the same Core services and canonical provider registry as the Windows desktop application.
 
 The clean Windows x64 package places the self-contained executable at:
 
@@ -10,13 +10,23 @@ No .NET SDK or Visual Studio is required to run that packaged CLI executable. Th
 
 ## Safety boundary
 
-The current CLI exposes inspection/verification only:
+Image/media commands are read-only:
 
 - `analyze`
 - `verify`
 - `formats`
 
-It intentionally does **not** expose:
+The CLI also exposes narrowly scoped Dragon DiskForge **local application-state** tooling:
+
+- `state-show`
+- `state-export`
+- `state-import`
+- `restore-last-image`
+- `diagnostics`
+
+These state commands may read or atomically update Dragon DiskForge's settings/session JSON or create a sanitized support ZIP. They do **not** modify inspected images or physical media.
+
+The CLI intentionally does **not** expose:
 
 - Create
 - Convert
@@ -79,6 +89,60 @@ List the canonical built-in provider registry:
 
 The output includes provider id, display name, supported extensions, declared capabilities and priority. The WinUI app and CLI consume the same `ProviderRegistryFactory`, preventing independent provider lists from drifting apart.
 
+## Session and settings state
+
+The default state file is:
+
+`%LocalAppData%\DragonDiskForge\app-state.json`
+
+Show the current versioned state:
+
+```powershell
+.\cli\dragon-diskforge.exe state-show
+.\cli\dragon-diskforge.exe state-show --format json
+```
+
+Export and later import the state through the same atomic safe-output boundary used by Core file-producing operations:
+
+```powershell
+.\cli\dragon-diskforge.exe state-export .\dragon-state.json
+.\cli\dragon-diskforge.exe state-import .\dragon-state.json
+```
+
+Control best-effort desktop restoration of the last inspected image:
+
+```powershell
+.\cli\dragon-diskforge.exe restore-last-image off
+.\cli\dragon-diskforge.exe restore-last-image on
+```
+
+For tests, portable workflows or automation that must not touch the normal profile, every state command accepts an isolated `--state` path:
+
+```powershell
+.\cli\dragon-diskforge.exe state-show --state .\temporary-state.json --format json
+.\cli\dragon-diskforge.exe restore-last-image off --state .\temporary-state.json
+```
+
+Imports reject unsupported schema versions, oversized/invalid state files and invalid saved-path data before local state is replaced. A rejected import leaves the existing state unchanged.
+
+## Diagnostics
+
+Export a sanitized diagnostic support ZIP:
+
+```powershell
+.\cli\dragon-diskforge.exe diagnostics .\dragon-support.zip
+```
+
+The bundle contains:
+
+- `diagnostics.json` — runtime/OS/process-architecture/product-version/provider evidence
+- `state-summary.json` — sanitized state summary
+- `README.txt` — explicit privacy/scope note
+
+The support ZIP intentionally excludes the full saved image path and image contents. It may include only the saved image's extension, whether a saved session exists, the restore setting and timestamp/runtime/provider evidence.
+
+Use `--state <path>` when diagnostics should summarize an isolated portable state rather than the normal profile.
+
 ## Automation contract
 
 Dragon DiskForge CLI is designed to be predictable in PowerShell and other process automation:
@@ -87,7 +151,9 @@ Dragon DiskForge CLI is designed to be predictable in PowerShell and other proce
 - JSON mode writes **one complete JSON document** to stdout
 - diagnostics/errors are written to **stderr**
 - input/usage failures do not mix partial JSON with stdout
-- no command modifies the inspected image or physical media
+- image inspection/verification commands do not modify the inspected image or physical media
+- state/settings commands modify only Dragon DiskForge local application state
+- no command writes to physical media
 
 ### Exit codes
 
@@ -132,4 +198,6 @@ The Windows packaging pipeline:
 5. launches the extracted CLI and requires `formats --format json` to return the canonical provider set;
 6. publishes the package ZIP plus its independent SHA-256 sidecar only after verification passes.
 
-PR #48 implementation run #343 validates the CLI smoke tests, full existing Windows regression suite, Release x64 build, self-contained CLI packaging and clean-package runtime verification. Disposable Media Guard #15 also remains green on the same implementation head.
+PR #48 implementation run #343 validates the original CLI smoke tests, Release x64 build, self-contained CLI packaging and clean-package runtime verification. Disposable Media Guard #15 is green for that checkpoint.
+
+PR #49 implementation run #353 validates the session/settings/diagnostic portability smoke gate together with the full existing Windows regression suite, native integrations, Release x64 build and clean-package verification. Disposable Media Guard #25 is green for the same implementation head.

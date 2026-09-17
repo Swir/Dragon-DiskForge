@@ -92,16 +92,16 @@ See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
 ## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
 
-Current required engineering scope: **2/4 (50%)**. Safe read-only work advances here while 0.7 waits on hardware evidence.
+Current required engineering scope: **3/4 (75%)**. Safe work advances here while 0.7 waits on hardware evidence.
 
 ### 1. Windows file associations + context menu ⬜
 Not yet implemented.
 
 ### 2. Shared-Core CLI ✅
-- new `DragonDiskForge.Cli` project
-- `analyze`, `verify` and `formats` commands
+- `DragonDiskForge.Cli` project
+- read-only image/media commands `analyze`, `verify` and `formats`
 - same canonical `ProviderRegistryFactory` as the desktop application
-- read-only automation surface; no create/convert/physical mutation commands
+- no create/convert/physical mutation commands
 
 ### 3. PowerShell-friendly output ✅
 - deterministic text/JSON stdout
@@ -113,10 +113,16 @@ Not yet implemented.
 - manifest SHA-256 for the CLI and runtime launch/provider verification after ZIP extraction
 - PR #48 implementation run #343 + Disposable Media Guard #15 passed
 
-### 4. Session/settings/diagnostic portability ⬜
-- session restore
-- settings import/export
-- diagnostic export/support bundle
+### 4. Session/settings/diagnostic portability ✅
+- versioned Core application-state schema
+- atomic local state persistence and validated import/export
+- best-effort desktop last-image restore that cannot block startup
+- CLI state inspection/import/export and restore-setting control
+- sanitized support ZIP without full image paths or image contents
+- fail-closed schema/size/path validation, cancellation and rollback coverage
+- PR #49 implementation run #353 + Disposable Media Guard #25 passed
+
+The remaining 0.8 deliverable is Windows file associations/context-menu integration.
 
 See `docs/CLI.md`.
 

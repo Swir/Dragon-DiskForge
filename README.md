@@ -8,11 +8,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 
 The public beta suffix is intentionally not promoted until the independent gate in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md) passes. Engineering work may continue beyond the 0.5 beta scope without weakening that release gate.
 
-## Project progress — 76% toward 1.0
+## Project progress — 77% toward 1.0
 
-`███████████████░░░░░ 76%`
+`███████████████░░░░░ 77%`
 
-**Overall completion:** **76%**
+**Overall completion:** **77%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
 - `0.2 Native Mount + Unmount` — **100%** ✅
@@ -21,7 +21,7 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - `0.5 Partitions + File Systems + Image Intelligence` — **100%** ✅
 - `0.6 Create + Convert + Verify` — **100%** ✅
 - `0.7 Physical Media Tools` — **~86% (6/7)** 🚧
-- `0.8 Windows Integration + Power Tools` — **50% (2/4)** 🚧
+- `0.8 Windows Integration + Power Tools` — **75% (3/4)** 🚧
 - `0.9 Quality, Security + Beta Hardening` — planned
 - `1.0 Production Release` — planned
 
@@ -45,7 +45,8 @@ The public beta suffix is intentionally not promoted until the independent gate 
 - checksum-verified clean Windows x64 package-candidate pipeline
 - read-only Windows physical-disk inventory and fail-closed physical-media planning/execution contracts
 - gated Windows `PhysicalDriveN` writer candidate with target-volume locking/dismount, sector-aligned writes, flush and read-back SHA-256 verification; **not user-visible and not hardware-approved**
-- shared-Core read-only automation CLI with deterministic text/JSON output
+- shared-Core automation CLI with deterministic text/JSON output and safe local application-state tooling
+- versioned session/settings persistence with best-effort last-image restore and sanitized diagnostic export
 - required **by Swir** + GitHub footer in the Windows UI
 
 ## 0.7 Physical Media Tools — IN PROGRESS 🚧
@@ -62,7 +63,7 @@ See [`docs/PHYSICAL-MEDIA-SAFETY.md`](docs/PHYSICAL-MEDIA-SAFETY.md).
 
 ## 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧
 
-Two of four top-level deliverables are now implemented and validated.
+Three of four top-level deliverables are now implemented and validated.
 
 ### Shared-Core CLI ✅
 
@@ -74,7 +75,7 @@ The clean Windows package includes a self-contained `cli/dragon-diskforge.exe` t
 .\cli\dragon-diskforge.exe formats --format json
 ```
 
-The current CLI is deliberately **read-only**. It does not expose Create/Convert or physical-media mutation. See [`docs/CLI.md`](docs/CLI.md).
+Image inspection/verification commands remain read-only. The CLI also exposes narrowly scoped local application-state commands; it does not expose Create/Convert or physical-media mutation. See [`docs/CLI.md`](docs/CLI.md).
 
 ### PowerShell-friendly automation contract ✅
 
@@ -85,7 +86,18 @@ The current CLI is deliberately **read-only**. It does not expose Create/Convert
 - package manifest stores the CLI entry point and SHA-256
 - clean-package verification launches the unpacked self-contained CLI and validates the provider registry
 
-Remaining 0.8 scope: Windows file associations/context-menu integration and session/settings/diagnostic import-export tooling.
+### Session/settings/diagnostic portability ✅
+
+- versioned application-state schema for settings and the last inspected image
+- best-effort desktop last-image restore that never blocks startup on missing/corrupt state
+- atomic state import/export through the Core safe-output boundary
+- CLI `state-show`, `state-export`, `state-import` and `restore-last-image` commands with an optional isolated `--state` path
+- sanitized diagnostic ZIP export containing runtime/provider evidence and session/settings summary without full image paths or image contents
+- fail-closed schema/size/path validation plus dedicated smoke tests
+
+PR #49 implementation head passed the full Windows x64 regression/build/package path in run #353 and Disposable Media Guard #25 before this progress update.
+
+Remaining 0.8 scope: Windows file associations/context-menu integration.
 
 ## 0.6 Create + Convert + Verify — COMPLETE ✅
 
@@ -127,11 +139,11 @@ Open `DragonDiskForge.sln` in Visual Studio and run `DragonDiskForge.App`, or us
 .\scripts\build.ps1
 ```
 
-CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, the shared-Core CLI, Release x64 build and independently verified clean ZIP package candidate.
+CI validates Core, verification, safe output transactions, RAW pipelines, split/join + gzip, physical-media safety, provider invariants, partition/filesystem intelligence, reporting, QCOW2/VMDK guest-byte translation, all proven providers, Explorer safety, direct ISO integration, native Windows mount/inventory, shared-Core CLI/state portability, Release x64 build and independently verified clean ZIP package candidate.
 
 ## Safety design
 
-Inspection, analysis and CLI automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing.
+Inspection and image/media automation remain read-only-first. Native mounts default to read-only. Parsers validate offsets/lengths and reject contradictory or unsupported states instead of guessing. CLI state/settings commands are restricted to Dragon DiskForge local application state and diagnostic export; they do not modify inspected images or physical media.
 
 Physical-device mutation remains outside the product surface. The Windows writer candidate is kept behind explicit identity/topology/confirmation checks and a disposable-media validation harness; it does not become a user-visible capability until real dedicated-media validation proves the remaining 0.7 gate.
 
