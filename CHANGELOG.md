@@ -21,28 +21,36 @@ The project follows semantic versioning while it evolves toward 1.0.
 - hard-gated Windows `PhysicalDriveN` writer candidate with source/target topology preflight, target-volume lock/dismount, aligned bounded transfer, flush and read-back SHA-256
 - disposable-media validation harness that remains inert without explicit destructive opt-in and destination-bound evidence
 - canonical `ProviderRegistryFactory` in Core shared by desktop and automation front ends
-- read-only `DragonDiskForge.Cli` with `analyze`, `verify` and `formats`
+- `DragonDiskForge.Cli` with read-only image/media commands `analyze`, `verify` and `formats`
 - deterministic CLI text/JSON stdout, stderr diagnostics and stable automation exit codes
 - self-contained x64 `cli/dragon-diskforge.exe` in the clean Windows package
 - package-manifest CLI entry point + SHA-256 and unpacked runtime/provider verification
 - dedicated CLI smoke tests for JSON cleanliness, truthful unknown-format analysis, dual-digest matching/mismatch, provider uniqueness and error contracts
+- versioned Core application-state schema for session/settings portability
+- best-effort desktop last-image persistence/restore with missing/corrupt-state startup isolation
+- atomic state import/export plus CLI `state-show`, `state-export`, `state-import` and `restore-last-image` commands
+- sanitized diagnostic ZIP export plus CLI `diagnostics`, excluding full image paths and image contents
+- dedicated portability smoke coverage for schema validation, rollback, cancellation, diagnostic privacy and CLI contracts
 - `docs/PHYSICAL-MEDIA-SAFETY.md`, `docs/OUTPUT-TRANSACTIONS.md`, `docs/RAW-IMAGE-PIPELINES.md`, `docs/SPLIT-COMPRESSION-PIPELINES.md` and `docs/CLI.md`
 
 ### Changed
-- project progress advances to **76% toward 1.0** after six verified 0.7 deliverables plus two independently verified 0.8 deliverables beyond the 68% 0.6 baseline
+- project progress advances to **77% toward 1.0** after six verified 0.7 deliverables plus three independently verified 0.8 deliverables beyond the 68% 0.6 baseline
 - **0.4 Extended Image Providers** remains **100% complete**
 - **0.5 Partitions + File Systems + Image Intelligence** remains **100% automated engineering complete**
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
-- **0.8 Windows Integration + Power Tools** begins **in progress at 2/4 (50%)** with shared-Core CLI + PowerShell-friendly output
+- **0.8 Windows Integration + Power Tools** advances to **3/4 (75%)** after verified session/settings/diagnostic portability
 - current development metadata remains **0.5.0-alpha.1** until the independent public-beta release gate decides final `0.5.0-beta.1` promotion
-- desktop direct-browse registration now consumes the same canonical Core provider factory as the CLI
-- clean Windows packaging now builds and verifies a self-contained CLI alongside the desktop application
+- desktop direct-browse registration consumes the same canonical Core provider factory as the CLI
+- clean Windows packaging builds and verifies a self-contained CLI alongside the desktop application
+- CLI automation now distinguishes read-only image/media operations from narrowly scoped local Dragon DiskForge application-state mutations
 
 ### Safety
-- inspection/provider/intelligence/CLI paths remain read-only-first
+- inspection/provider/intelligence/image-media CLI paths remain read-only-first
 - unsupported UI actions remain disabled rather than simulated
 - file-producing Core operations publish through explicit transaction boundaries
+- state imports validate version/size/path data before atomically replacing local application state
+- diagnostic bundles intentionally exclude full saved-image paths and image contents
 - physical-disk planning refuses system disks, ambiguous identity, unknown capacity, physical-device sources, source-on-target and oversized inputs
 - the Windows writer candidate revalidates destination/source evidence, requires locked/dismounted target volumes and fails closed on unprovable topology
 - the disposable-media harness requires explicit destructive opt-in and exact destination-bound evidence; default CI execution cannot write physical media
@@ -84,11 +92,12 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #46 / implementation run #319 — bounded physical-write execution/recovery contract
 - PR #47 / full Windows run #338 + Disposable Media Guard #10 — hard-gated Windows writer candidate and non-destructive validation harness
 - PR #48 / implementation run #343 + Disposable Media Guard #15 — shared-Core CLI, deterministic automation contract, self-contained CLI packaging and clean-package runtime verification
+- PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, best-effort desktop restore, CLI state tooling and sanitized diagnostic export
 
 ### Planned
 - complete the independent `0.5.0-beta.1` clean-machine/UAC/cross-process drag-out/final-package release gates
 - complete 0.7 only after real dedicated disposable-media writer validation
-- continue 0.8 with Windows file associations/context menu and session/settings/diagnostic portability
+- complete the remaining 0.8 Windows file associations/context-menu integration
 - keep destructive physical operations out of the product UI until separately validated and deliberately exposed
 
 ## [0.3.0] - 2026-09-15

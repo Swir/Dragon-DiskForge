@@ -17,7 +17,7 @@ The public beta suffix is intentionally not promoted until the independent `0.5.
 
 ## Overall project progress
 
-**76% toward 1.0.** The previously verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables and two verified top-level 0.8 deliverables. The remaining 0.7 item is hardware-gated, so safe independent 0.8 work is progressing out of order rather than treating hardware CI as a substitute for real media validation.
+**77% toward 1.0.** The previously verified 68% baseline through 0.6 is followed by six verified top-level 0.7 deliverables and three verified top-level 0.8 deliverables. The remaining 0.7 item is hardware-gated, so safe independent 0.8 work is progressing out of order rather than treating hardware CI as a substitute for real media validation.
 
 ## Current roadmap position
 
@@ -48,14 +48,14 @@ Until that happens, the application exposes no physical-media write action and 0
 
 See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
-### 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧 — 2/4 (50%)
+### 0.8 Windows Integration + Power Tools — IN PROGRESS 🚧 — 3/4 (75%)
 
-The remaining 0.7 item requires physical disposable-media evidence, so two independent read-only 0.8 slices were implemented without weakening the 0.7 gate.
+The remaining 0.7 item requires physical disposable-media evidence, so independent safe 0.8 slices continue without weakening the 0.7 gate.
 
 #### Shared-Core CLI ✅
 
-- new `DragonDiskForge.Cli` console project targeting .NET 10
-- canonical built-in provider registration moved to `ProviderRegistryFactory` in Core and shared with the WinUI app
+- `DragonDiskForge.Cli` console project targeting .NET 10
+- canonical built-in provider registration in `ProviderRegistryFactory` shared with the WinUI app
 - `analyze <image> --format text|json`
 - `verify <image> [--sha256 ...] [--sha512 ...] --format text|json`
 - `formats --format text|json`
@@ -72,12 +72,24 @@ The remaining 0.7 item requires physical disposable-media evidence, so two indep
 - package manifest includes CLI entry point + SHA-256
 - package verification checks the CLI hash, launches the unpacked CLI and validates its provider output
 
-PR #48 implementation head `8ed9bce0...` passed Disposable Media Guard #15 and full Windows build run #343, including the new CLI smoke tests, Release x64 build, self-contained CLI packaging and clean-package runtime verification.
+PR #48 implementation head passed Disposable Media Guard #15 and full Windows build run #343, including the CLI smoke tests, Release x64 build, self-contained CLI packaging and clean-package runtime verification.
 
-Remaining 0.8 work:
+#### Session/settings/diagnostic portability ✅
+
+- versioned Core schema stores `RestoreLastImage`, last-image path and save timestamp
+- local state is loaded/saved atomically through the safe-output transaction boundary
+- desktop startup can best-effort restore the last image when enabled; missing/corrupt state cannot prevent startup
+- `state-show`, `state-export`, `state-import`, `restore-last-image` and `diagnostics` are available through the CLI
+- optional `--state` paths isolate automation/tests from the normal `%LocalAppData%` state file
+- state import validates schema/size/path data and fails closed before replacing existing local state
+- diagnostic ZIP contains runtime/provider metadata and sanitized settings/session summary, never full saved-image paths or image content
+- smoke tests cover defaults, persistence, rollback on rejected import, cancellation, diagnostic privacy and the CLI state contract
+
+PR #49 implementation head passed full Windows build run #353 and Disposable Media Guard #25, including the new portability smoke gate, native Windows integrations, Release x64 build and clean-package verification.
+
+#### Remaining 0.8 scope ⬜
 
 - Windows file associations/context-menu integration
-- session restore + settings import/export + diagnostic export tooling
 
 See `docs/CLI.md`.
 
@@ -125,6 +137,7 @@ See `docs/CLI.md`.
 
 ### 0.8
 - PR #48 / implementation run #343 + Disposable Media Guard #15 — shared-Core CLI, deterministic automation output and verified self-contained clean-package CLI
+- PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, desktop restore and sanitized diagnostic tooling
 
 ## Beta readiness
 
@@ -138,11 +151,11 @@ The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET*
 - complete basic clean-machine launch/open/mount/explore/verify/analyze regression
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-The self-contained CLI strengthens the package but does not replace any of those manual beta gates.
+The CLI and state/diagnostic tooling strengthen the package but do not replace any of those manual beta gates.
 
 ## Current safety state
 
-Inspection, reporting and CLI automation remain read-only-first. Unsupported capabilities stay disabled. Metadata parsers, guest readers and intelligence services validate offsets/ranges and reject unsupported or contradictory states instead of guessing.
+Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Unsupported capabilities stay disabled. Metadata parsers, guest readers and intelligence services validate offsets/ranges and reject unsupported or contradictory states instead of guessing.
 
 The Windows physical writer candidate is not connected to a user-visible action. Its executable path remains behind destination identity/topology/confirmation checks and a hard-locked disposable-media harness. No completion claim is made until real dedicated-media validation proves the final 0.7 item.
 
