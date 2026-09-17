@@ -60,9 +60,13 @@ Before starting manual QA, confirm that the retained artifact's `beta-candidate.
 
 ### Current reselection checkpoint
 
-The next retained candidate is intentionally selected only after the verified mounted-Explorer reparse/copy-out transaction hardening and bounded image-preview admission/signature hardening through PR #67. The `[beta-candidate]` merge marker on this checkpoint makes the resulting `main` commit—not an earlier candidate—the authoritative source SHA for the next manual-QA session.
+The previous retained candidate is invalid for further beta QA because a real Windows test found that double-clicking `DragonDiskForge.App.exe` could exit without showing the application. PR #69 replaces that candidate boundary with a runtime-complete desktop package: .NET and Windows App SDK are self-contained, the supported VC143 CRT is staged app-local, required runtime payload is verified before packaging, and early managed startup failures become fail-visible through a bounded local log plus native Windows error dialog. The package helper contract was also corrected to stage the actual `dragon-diskforge.exe` and `dragon-diskforge-shell.exe` assembly names.
 
-This reselection does not complete or waive any manual release gate. Clean-desktop WinUI regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media.
+PR #69 exact head `e4475b049f25bfdc898c30efa58e2f7ac3ee2074` passed the complete ten-workflow exact-head gate, including Build, Desktop Runtime Contract, Clean Machine Runtime, Beta Candidate, security, accessibility and beta-proof contracts, before merge. The following `main` checkpoint `43d660602d6524753f68fadabb30b6d421a940c9` then passed all nine push workflows after the runtime-complete packaging fix was present on `main`.
+
+This documentation synchronization deliberately selects the **first post-PR-#69 retained candidate**. The authoritative candidate source is the resulting `main` merge commit that carries `[beta-candidate]`; no earlier artifact or SHA may be reused for the new manual-QA session. The retained candidate workflow must itself finish successfully and its metadata/checksums must bind to that exact merge commit before human testing begins.
+
+This reselection does not complete or waive any manual release gate. Clean-desktop visible WinUI launch/basic regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media. Until that evidence exists, the candidate remains non-public and `0.5.0-beta.1` must not be published as a GitHub Release.
 
 ## Candidate contract script
 
