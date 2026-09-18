@@ -48,17 +48,18 @@ jobs:
           }
           git diff --check
 
-      - name: Commit verified promotion and remove staging
+      - name: Commit verified non-workflow promotion
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm --force -r .automation
-          git rm --force .github/workflows/retain-candidate-113-one-shot.yml
-          git add README.md CHANGELOG.md docs scripts .github/workflows/retained-beta-archive-binding-contract.yml
-          if ((git status --porcelain).Count -eq 0) {
-            throw 'Promotion produced no changes.'
+          if (Test-Path -LiteralPath '.github/workflows/retained-beta-archive-binding-contract.yml') {
+            Remove-Item -LiteralPath '.github/workflows/retained-beta-archive-binding-contract.yml' -Force
+          }
+          git add README.md CHANGELOG.md docs scripts
+          if ((git diff --cached --name-only).Count -eq 0) {
+            throw 'Promotion produced no staged changes.'
           }
           git commit -m 'Bind retained candidate #113 to portable archive evidence'
           git push origin HEAD:release/retain-beta-candidate-113
