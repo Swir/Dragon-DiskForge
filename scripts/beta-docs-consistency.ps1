@@ -125,7 +125,7 @@ function New-SelfTestBlock {
     param([Parameter(Mandatory = $true)]$Evidence, [Parameter(Mandatory = $true)][string]$EvidenceLink)
     return @"
 $StartMarker
-Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) (`$($Evidence.workflowRunId)`), artifact `$($Evidence.artifactName)`, source commit `$($Evidence.sourceCommit)`, package SHA-256 `$($Evidence.packageSha256)`. This is a non-public engineering candidate, not a public release. Authoritative evidence: [$EvidenceLink]($EvidenceLink).
+Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) ($($Evidence.workflowRunId)), artifact $($Evidence.artifactName), source commit $($Evidence.sourceCommit), package SHA-256 $($Evidence.packageSha256). This is a non-public engineering candidate, not a public release. Authoritative evidence: [$EvidenceLink]($EvidenceLink).
 $EndMarker
 "@
 }
