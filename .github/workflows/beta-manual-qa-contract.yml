@@ -25,6 +25,7 @@ jobs:
           ./scripts/beta-manual-qa.ps1 -Mode self-test
           ./scripts/beta-qa-session.ps1 -Mode self-test
           ./scripts/beta-qa-archive.ps1 -Mode self-test
+          ./scripts/beta-qa-desktop-witness.ps1 -Mode self-test
 
       - name: Windows PowerShell 5.1 contract self-test
         shell: powershell
@@ -32,3 +33,4 @@ jobs:
           .\scripts\beta-manual-qa.ps1 -Mode self-test
           .\scripts\beta-qa-session.ps1 -Mode self-test
           .\scripts\beta-qa-archive.ps1 -Mode self-test
+          .\scripts\beta-qa-desktop-witness.ps1 -Mode self-test
