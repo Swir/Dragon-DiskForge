@@ -8,6 +8,12 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$ExpectedInteractiveGates = @(
+    "clean-machine interactive launch/open/mount/explore/verify/analyze",
+    "normal-user UAC validation",
+    "real cross-process Explorer drag-out validation"
+)
+
 function Assert-HexSha256 {
     param([Parameter(Mandatory = $true)][string]$Value, [Parameter(Mandatory = $true)][string]$Label)
     if ($Value -notmatch '^[0-9a-fA-F]{64}$') { throw "$Label must be a 64-character SHA-256 value." }
@@ -61,10 +67,18 @@ function Test-RetainedCandidateEvidence {
 
     if ([bool]$evidence.publicRelease) { throw "Retained candidate evidence must not claim a public release." }
     if ([bool]$evidence.betaReady) { throw "Retained candidate evidence must not claim beta readiness while interactive gates remain open." }
+
     $gates = @($evidence.remainingInteractiveGates)
-    if ($gates.Count -lt 3) { throw "Retained candidate evidence must preserve all known interactive beta blockers." }
-    foreach ($gate in $gates) {
-        if ([string]::IsNullOrWhiteSpace([string]$gate)) { throw "Interactive gate entries must not be empty." }
+    if ($gates.Count -ne $ExpectedInteractiveGates.Count) {
+        throw "Retained candidate evidence must preserve exactly the known interactive beta blockers."
+    }
+    for ($index = 0; $index -lt $ExpectedInteractiveGates.Count; $index++) {
+        $actual = [string]$gates[$index]
+        $expected = [string]$ExpectedInteractiveGates[$index]
+        if ([string]::IsNullOrWhiteSpace($actual)) { throw "Interactive gate entries must not be empty." }
+        if (-not [string]::Equals($actual, $expected, [System.StringComparison]::Ordinal)) {
+            throw "Interactive gate $index changed unexpectedly. Expected '$expected', got '$actual'."
+        }
     }
 
     return [pscustomobject]@{
@@ -87,7 +101,7 @@ function Invoke-SelfTest {
         $good = Join-Path $workspace "good.json"
         Copy-Item -LiteralPath $source -Destination $good
         $proof = Test-RetainedCandidateEvidence -Path $good
-        if ($proof.betaReady -or $proof.publicRelease -or $proof.remainingInteractiveGateCount -lt 3) { throw "Valid fixture produced an unsafe readiness result." }
+        if ($proof.betaReady -or $proof.publicRelease -or $proof.remainingInteractiveGateCount -ne $ExpectedInteractiveGates.Count) { throw "Valid fixture produced an unsafe readiness result." }
 
         $badHash = Join-Path $workspace "bad-hash.json"
         $data = Get-Content -LiteralPath $good -Raw | ConvertFrom-Json
@@ -106,6 +120,12 @@ function Invoke-SelfTest {
         $data.artifactName = "wrong-name"
         $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badArtifact -Encoding UTF8
         try { $null = Test-RetainedCandidateEvidence -Path $badArtifact; throw "Mismatched artifact-name fixture was accepted." } catch { if ($_.Exception.Message -eq "Mismatched artifact-name fixture was accepted.") { throw } }
+
+        $badGate = Join-Path $workspace "bad-gate.json"
+        $data = Get-Content -LiteralPath $good -Raw | ConvertFrom-Json
+        $data.remainingInteractiveGates[0] = "generic manual QA"
+        $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badGate -Encoding UTF8
+        try { $null = Test-RetainedCandidateEvidence -Path $badGate; throw "Mutated interactive-gate fixture was accepted." } catch { if ($_.Exception.Message -eq "Mutated interactive-gate fixture was accepted.") { throw } }
 
         Write-Host "Retained beta candidate evidence contract self-test passed."
     }
