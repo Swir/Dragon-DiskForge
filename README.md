@@ -30,7 +30,7 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #113 (`35327348417`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35327348417`, built from `main` source commit `48054cc5036ca3809915b3f8392599c315bf2ec7`; nested package SHA-256 `8baeddfed293167e54d827ed1c11e511a3d69c3a80af2a567dfe66e4b78200e7`. Evidence is witness-bound (schema v2) and archive-bound to the packaged desktop witness companion and portable evidence-archive companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #123 (`35347521100`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35347521100`, built from `main` source commit `cc74093fc776afef058423ab9ed9acba32ad0cdd`; nested package SHA-256 `d97fc15e2195f7872d232f5ec44c67f5e4ecdac1240be2d5ca905051fa53451a`. Evidence is witness-bound (schema v2) and archive-bound to the packaged desktop witness companion and portable evidence-archive companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
 ## Project progress — 83% toward 1.0
@@ -166,7 +166,7 @@ PR #52 exact implementation head `0ff048a...` passed full Windows build #367, Di
 
 PR #53 adds a fresh-runner package validation path that builds the normal clean ZIP once and then hands only the ZIP, SHA-256 sidecar and runtime probe to `windows-2022` and `windows-latest` jobs with **no repository checkout**. The probe re-verifies package/manifest hashes and hygiene, removes .NET/Visual Studio/Git toolchain paths, exercises self-contained CLI provider/analyze/dual-hash/state/diagnostics paths and performs per-user shell register/status/unregister. Each matrix job publishes machine-readable OS/build/package/runtime evidence.
 
-Exact implementation head `6451939...` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before this roadmap item was marked complete. See [`docs/CLEAN-MACHINE-RUNTIME.md`](docs/CLEAN-MACHINE-RUNTIME.md).
+Exact implementation head `6451939...` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before this deliverable was marked complete. See [`docs/CLEAN-MACHINE-RUNTIME.md`](docs/CLEAN-MACHINE-RUNTIME.md).
 
 ### Accessibility + keyboard hardening ✅
 
