@@ -404,10 +404,10 @@ function Invoke-ArchiveWorkspace {
         Copy-Item -LiteralPath $snapshot.evidenceSidecar -Destination $evidenceSidecarCopy
         Copy-Item -LiteralPath $snapshot.packageManifestPath -Destination $packageManifestCopy
 
-        $files = New-Object 'System.Collections.Generic.List[object]'
-        $files.Add([ordered]@{ name = $Script:EvidenceFileName; sha256 = (Get-Sha256 $evidenceCopy) })
-        $files.Add([ordered]@{ name = "$($Script:EvidenceFileName).sha256"; sha256 = (Get-Sha256 $evidenceSidecarCopy) })
-        $files.Add([ordered]@{ name = "package-manifest.json"; sha256 = (Get-Sha256 $packageManifestCopy) })
+        $files = @()
+        $files += [ordered]@{ name = $Script:EvidenceFileName; sha256 = (Get-Sha256 $evidenceCopy) }
+        $files += [ordered]@{ name = "$($Script:EvidenceFileName).sha256"; sha256 = (Get-Sha256 $evidenceSidecarCopy) }
+        $files += [ordered]@{ name = "package-manifest.json"; sha256 = (Get-Sha256 $packageManifestCopy) }
 
         $witnessDescriptor = [ordered]@{ included = $false; schemaVersion = $null; sha256 = $null; observationCaptured = $false; humanGateClaimed = $false }
         if ($PreserveWitness) {
@@ -415,8 +415,8 @@ function Invoke-ArchiveWorkspace {
             $witnessSidecarCopy = "$witnessCopy.sha256"
             Copy-Item -LiteralPath $snapshot.witness.path -Destination $witnessCopy
             Copy-Item -LiteralPath $snapshot.witness.sidecar -Destination $witnessSidecarCopy
-            $files.Add([ordered]@{ name = $Script:WitnessFileName; sha256 = (Get-Sha256 $witnessCopy) })
-            $files.Add([ordered]@{ name = "$($Script:WitnessFileName).sha256"; sha256 = (Get-Sha256 $witnessSidecarCopy) })
+            $files += [ordered]@{ name = $Script:WitnessFileName; sha256 = (Get-Sha256 $witnessCopy) }
+            $files += [ordered]@{ name = "$($Script:WitnessFileName).sha256"; sha256 = (Get-Sha256 $witnessSidecarCopy) }
             $witnessDescriptor = [ordered]@{
                 included = $true
                 schemaVersion = [int]$snapshot.witness.value.schemaVersion
@@ -447,7 +447,7 @@ function Invoke-ArchiveWorkspace {
             note = "Integrity-preserving snapshot only. Human QA completion must be verified separately against the exact candidate package."
         }
         $provenancePath = Save-JsonAtomic -Value $provenance -Path (Join-Path $temp "session-provenance.json")
-        $files.Add([ordered]@{ name = "session-provenance.json"; sha256 = (Get-Sha256 $provenancePath) })
+        $files += [ordered]@{ name = "session-provenance.json"; sha256 = (Get-Sha256 $provenancePath) }
 
         $manifest = [ordered]@{
             schemaVersion = $Script:ArchiveSchemaVersion
