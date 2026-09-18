@@ -30,6 +30,8 @@ The witness is deliberately bounded and fail-closed:
 - package and manual-QA sidecars are re-verified on every mode;
 - a changed candidate, session identity, process identity or destination tree fails closed.
 
+Because the witness also carries local session/process/drop-target provenance, preservation outside the disposable workspace is explicit rather than automatic. Use the archive helper's `-IncludeWitness` switch only when that supporting evidence is useful for audit.
+
 ## Verify the retained witness companion first
 
 An explicitly retained beta candidate includes `beta-qa-witness-kit.json`, its sidecar, a standalone verifier, this guide and the desktop-witness helper. Verify that companion before using the helper:
@@ -100,9 +102,20 @@ Repeat with a fresh session/baseline as needed for another drag scenario. Do not
 
 ## Evidence lifecycle
 
-The desktop witness is supporting evidence, not the authoritative human gate. The existing `beta-qa-archive.ps1` archive remains focused on package-bound manual-QA evidence and does not currently ingest the witness file. Preserve any witness that is useful for audit before running session cleanup; otherwise cleanup intentionally removes it with the disposable workspace.
+The desktop witness is supporting evidence, not the authoritative human gate. Archive schema v2 can preserve the exact witness and sidecar **only when explicitly requested**:
 
-Final beta release proof continues to consume the exact retained candidate and the packaged human-confirmed evidence. Shipping the helper in the retained artifact removes the repository-checkout dependency for objective support, but it does not change project completion, milestone `0.9` completion or public beta readiness.
+```powershell
+.\beta-qa-archive.ps1 -Mode archive `
+  -WorkspacePath $Workspace `
+  -ArchiveRoot <path-outside-session-workspace> `
+  -IncludeWitness
+```
+
+The archive helper re-verifies the witness sidecar, `humanGateClaimed=false`, candidate package SHA-256, original QA-session metadata SHA-256, immutable manual-QA evidence identity and drop-target binding before copying it. The preserved archive then re-verifies the same bindings without needing the disposable workspace to remain present.
+
+Omitting `-IncludeWitness` keeps the smaller privacy-reduced manual-evidence archive and leaves the witness inside the disposable workspace. Read `BETA-QA-EVIDENCE-ARCHIVE.md` before cleanup when the witness should be retained for audit.
+
+Final beta release proof continues to consume the exact retained candidate and the packaged human-confirmed evidence. Preserving the witness strengthens auditability but does not change project completion, milestone `0.9` completion or public beta readiness.
 
 ## Contract self-test
 
@@ -111,6 +124,7 @@ From a repository checkout:
 ```powershell
 .\scripts\beta-qa-desktop-witness.ps1 -Mode self-test
 .\scripts\beta-qa-witness-kit.ps1 -Mode self-test
+.\scripts\beta-qa-archive.ps1 -Mode self-test
 ```
 
-CI runs both the desktop-witness contract and the retained witness-companion contract under PowerShell 7 and Windows PowerShell 5.1. The tests cover deterministic bounded destination snapshots, sidecar/tamper rejection, path/item limits, immutable evidence-identity binding, retained-companion hash binding and fail-closed rejection of any synthetic human-gate claim.
+CI runs the desktop-witness and retained witness-companion contracts under PowerShell 7 and Windows PowerShell 5.1. The archive contract additionally exercises plain and witness-preserving schema-v2 snapshots under both engines and proves tamper/gate/path failures close safely.
