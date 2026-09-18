@@ -50,6 +50,14 @@ jobs:
         shell: powershell
         run: .\scripts\beta-candidate-retention-policy.ps1 -Mode self-test
 
+      - name: PowerShell 7 retained-candidate currency self-test
+        shell: pwsh
+        run: ./scripts/beta-retained-currency.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 retained-candidate currency self-test
+        shell: powershell
+        run: .\scripts\beta-retained-currency.ps1 -Mode self-test
+
       - name: PowerShell 7 beta QA kit contract self-test
         shell: pwsh
         run: ./scripts/beta-qa-kit.ps1 -Mode self-test
