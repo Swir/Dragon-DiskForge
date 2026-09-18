@@ -80,15 +80,18 @@ $directory = Split-Path -Parent $manifestProof.path
 $coreManifestName = Assert-SafeLeafName -Name ([string]$manifest.qaKitManifestFile) -Label "Core QA kit manifest"
 $verifierName = Assert-SafeLeafName -Name ([string]$manifest.verifierFile) -Label "Live-session companion verifier"
 $helperName = Assert-SafeLeafName -Name ([string]$manifest.liveSessionHelperFile) -Label "Live-session continuity helper"
+$guideName = Assert-SafeLeafName -Name ([string]$manifest.liveSessionGuideFile) -Label "Live-session guide"
 
 if ($runningVerifier.fileName -ne $verifierName) { throw "Running live-session verifier file name does not match the manifest." }
 if ($runningVerifier.sha256 -ne ([string]$manifest.verifierSha256).ToLowerInvariant()) { throw "Running live-session verifier SHA-256 does not match the manifest." }
 
 $coreProof = Assert-FileSidecar -FilePath (Join-Path $directory $coreManifestName) -Label "Core QA kit manifest"
 $helperProof = Assert-FileSidecar -FilePath (Join-Path $directory $helperName) -Label "Live-session continuity helper"
+$guideProof = Assert-FileSidecar -FilePath (Join-Path $directory $guideName) -Label "Live-session guide"
 
 if ($coreProof.sha256 -ne ([string]$manifest.qaKitManifestSha256).ToLowerInvariant()) { throw "Core QA kit manifest SHA-256 does not match the live-session companion." }
 if ($helperProof.sha256 -ne ([string]$manifest.liveSessionHelperSha256).ToLowerInvariant()) { throw "Live-session helper SHA-256 does not match the live-session companion." }
+if ($guideProof.sha256 -ne ([string]$manifest.liveSessionGuideSha256).ToLowerInvariant()) { throw "Live-session guide SHA-256 does not match the live-session companion." }
 
 $core = Get-Content -LiteralPath $coreProof.path -Raw | ConvertFrom-Json
 if ([int]$core.schemaVersion -ne 2) { throw "Live-session companion requires core beta QA kit schema 2." }
@@ -107,4 +110,5 @@ Write-Host "Workflow run: $($manifest.workflowRunId)"
 Write-Host "Package SHA-256: $($manifest.packageSha256)"
 Write-Host "Core QA kit manifest SHA-256: $($coreProof.sha256)"
 Write-Host "Live-session helper SHA-256: $($helperProof.sha256)"
+Write-Host "Live-session guide SHA-256: $($guideProof.sha256)"
 Write-Host "Human gate claimed: false"
