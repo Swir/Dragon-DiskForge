@@ -51,6 +51,14 @@ The helper independently re-verifies the candidate package/runtime completeness,
 
 Follow `BETA-MANUAL-VALIDATION.md` for the exact clean-launch/basic-regression, normal-user UAC and Explorer drag-out observations. Passing observations still require explicit human confirmation through the packaged QA tool.
 
+## Optional repository-side desktop witness
+
+When the repository checkout is available, `scripts/beta-qa-desktop-witness.ps1` can add objective supporting evidence around the drag-out test. It binds to the prepared session and exact candidate, requires the recorded app process to own a visible top-level window, captures an empty Explorer-target baseline, and later records a bounded privacy-preserving hash snapshot of the destination tree.
+
+See [`BETA-QA-DESKTOP-WITNESS.md`](BETA-QA-DESKTOP-WITNESS.md) for the exact `baseline → real human gesture → observe → verify` sequence and its safety boundaries. The witness permanently carries `humanGateClaimed=false`: it cannot prove that the user dragged from Dragon DiskForge, that Windows negotiated Copy semantics, that the source remained unchanged, or that any beta gate passed. Those facts remain explicit human observations recorded through the packaged QA tool.
+
+The desktop witness is intentionally repository-side and does not alter QA-kit schema v2 or the retained candidate identity.
+
 ## Preserve evidence before deleting the session workspace
 
 The retained QA kit remains sufficient to perform and record the human observations without a repository checkout. Release operators using the repository can additionally preserve a compact evidence snapshot with `scripts/beta-qa-archive.ps1` before running session cleanup. See [`BETA-QA-EVIDENCE-ARCHIVE.md`](BETA-QA-EVIDENCE-ARCHIVE.md).
@@ -63,7 +71,7 @@ The Beta Candidate workflow runs the QA-kit builder self-test under PowerShell 7
 
 The independent Beta Release Proof contract also self-tests that final release proof rejects a mismatched/tampered QA-kit companion and requires the QA kit to match the exact candidate source, workflow, package, candidate metadata and shipped entry-point hashes before human QA evidence can complete release proof.
 
-The separate Beta Manual QA Contract self-tests the repository-side evidence archive under PowerShell 7 and Windows PowerShell 5.1. That archive contract is release-process hardening only and does not alter QA-kit schema v2 or the retained artifact.
+The separate Beta Manual QA Contract self-tests the repository-side evidence archive and desktop witness under PowerShell 7 and Windows PowerShell 5.1. The desktop-witness self-test covers deterministic bounded destination snapshots, sidecar/tamper checks, item limits and immutable evidence-identity binding. These contracts are release-process hardening only and do not alter QA-kit schema v2 or the retained artifact.
 
 A verification-only pull-request run does not retain the large candidate artifact. The artifact is retained only on an explicitly selected `main` commit whose message contains `[beta-candidate]`.
 
