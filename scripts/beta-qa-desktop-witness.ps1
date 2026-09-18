@@ -24,15 +24,16 @@ function Write-Utf8NoBom {
     if (-not [string]::IsNullOrWhiteSpace($directory) -and -not (Test-Path -LiteralPath $directory)) {
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
     }
-    $encoding = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($Path, $Text, $encoding)
+    [System.IO.File]::WriteAllText($Path, $Text, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 function Get-Sha256Text {
     param([Parameter(Mandatory = $true)][string]$Text)
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
     $sha = [System.Security.Cryptography.SHA256]::Create()
-    try { return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace("-", "").ToLowerInvariant() }
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
+        return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace("-", "").ToLowerInvariant()
+    }
     finally { $sha.Dispose() }
 }
 
@@ -88,7 +89,9 @@ function Get-IsElevated {
 
 function Get-UacEnabled {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { return $null }
-    try { return ([int](Get-ItemPropertyValue -LiteralPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name EnableLUA -ErrorAction Stop) -ne 0) }
+    try {
+        return ([int](Get-ItemPropertyValue -LiteralPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name EnableLUA -ErrorAction Stop) -ne 0)
+    }
     catch { return $null }
 }
 
@@ -127,10 +130,10 @@ function Get-EvidenceIdentity {
     if ([int]$Evidence.schemaVersion -ne $Script:EvidenceSchemaVersion -or [string]$Evidence.gate -ne $Script:EvidenceGateName) { throw "Manual-QA evidence identity/schema is invalid." }
     if ([string]$Evidence.targetVersion -ne [string]$Session.package.version -or
         [string]$Evidence.package.version -ne [string]$Session.package.version -or
-        [string]$Evidence.package.sha256 -ne ([string]$Session.package.sha256).ToLowerInvariant() -or
-        [string]$Evidence.package.entryPointSha256 -ne [string]$Session.package.entryPointSha256 -or
-        [string]$Evidence.package.betaManualQaEntryPointSha256 -ne [string]$Session.package.qaToolSha256 -or
-        [string]$Evidence.createdQaToolSha256 -ne [string]$Session.package.qaToolSha256) {
+        ([string]$Evidence.package.sha256).ToLowerInvariant() -ne ([string]$Session.package.sha256).ToLowerInvariant() -or
+        ([string]$Evidence.package.entryPointSha256).ToLowerInvariant() -ne ([string]$Session.package.entryPointSha256).ToLowerInvariant() -or
+        ([string]$Evidence.package.betaManualQaEntryPointSha256).ToLowerInvariant() -ne ([string]$Session.package.qaToolSha256).ToLowerInvariant() -or
+        ([string]$Evidence.createdQaToolSha256).ToLowerInvariant() -ne ([string]$Session.package.qaToolSha256).ToLowerInvariant()) {
         throw "Manual-QA evidence is bound to a different candidate identity than the QA session."
     }
     $created = $Evidence.createdEnvironment
@@ -174,7 +177,6 @@ function Get-WorkspaceContext {
     $packageSidecar = (Resolve-Path -LiteralPath ([string]$session.package.checksumFile)).Path
     $packageHash = Assert-Sidecar -PayloadPath $packagePath -SidecarPath $packageSidecar
     if ($packageHash -ne ([string]$session.package.sha256).ToLowerInvariant()) { throw "Candidate package no longer matches session metadata." }
-    $evidenceIdentity = Get-EvidenceIdentity -Evidence $evidence -Session $session
 
     return [pscustomobject]@{
         workspace = $workspaceFull
@@ -184,7 +186,7 @@ function Get-WorkspaceContext {
         dropTarget = $dropTarget
         evidencePath = $evidencePath
         evidenceSha256 = $evidenceHash
-        evidenceIdentitySha256 = $evidenceIdentity
+        evidenceIdentitySha256 = (Get-EvidenceIdentity -Evidence $evidence -Session $session)
         packageSha256 = $packageHash
     }
 }
@@ -224,7 +226,9 @@ function Get-VisibleAppWindow {
     try { $process = Get-Process -Id $processId -ErrorAction Stop } catch { throw "Recorded Dragon DiskForge process is not running." }
     $actualPath = ""
     try { $actualPath = [string]$process.Path } catch { $actualPath = "" }
-    if ([string]::IsNullOrWhiteSpace($actualPath) -or -not [string]::Equals([System.IO.Path]::GetFullPath($actualPath), [System.IO.Path]::GetFullPath([string]$Session.appPath), [StringComparison]::OrdinalIgnoreCase)) { throw "Recorded process id no longer resolves to the prepared Dragon DiskForge executable." }
+    if ([string]::IsNullOrWhiteSpace($actualPath) -or -not [string]::Equals([System.IO.Path]::GetFullPath($actualPath), [System.IO.Path]::GetFullPath([string]$Session.appPath), [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Recorded process id no longer resolves to the prepared Dragon DiskForge executable."
+    }
     $handle = [DragonDiskForge.DesktopWitness.WindowProbe]::FindVisibleTopLevelWindow([uint32]$processId)
     if ($handle -eq [IntPtr]::Zero) { throw "Dragon DiskForge is running but no visible top-level window is currently observable." }
     return [pscustomobject]@{
@@ -239,36 +243,52 @@ function Get-DropSnapshot {
     param([Parameter(Mandatory = $true)][string]$Root, [Parameter(Mandatory = $true)][int]$ItemLimit, [Parameter(Mandatory = $true)][long]$ByteLimit)
     if ($ItemLimit -lt 1 -or $ItemLimit -gt 10000) { throw "MaxItems must be between 1 and 10000." }
     if ($ByteLimit -lt 0 -or $ByteLimit -gt 2147483648) { throw "MaxHashedBytes must be between 0 and 2147483648." }
-    $rootFull = (Resolve-Path -LiteralPath $Root).Path.TrimEnd([char]92, [char]47)
-    $items = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -ErrorAction Stop | Sort-Object FullName)
-    if ($items.Count -gt $ItemLimit) { throw "Explorer drop target contains $($items.Count) items; witness limit is $ItemLimit." }
 
-    $records = @()
+    $rootFull = (Resolve-Path -LiteralPath $Root).Path.TrimEnd([char]92, [char]47)
+    $rootItem = Get-Item -LiteralPath $rootFull -Force -ErrorAction Stop
+    if (($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "Explorer drop root is a reparse point; refusing ambiguous witness input." }
+
+    $pending = New-Object 'System.Collections.Generic.Queue[string]'
+    $pending.Enqueue($rootFull)
+    $records = New-Object 'System.Collections.Generic.List[object]'
     [long]$hashedBytes = 0
-    foreach ($item in $items) {
-        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "Explorer drop target contains a reparse point; refusing ambiguous witness input." }
-        $full = [System.IO.Path]::GetFullPath($item.FullName)
-        if (-not (Test-PathInside -Child $full -Parent $rootFull)) { throw "Explorer drop target traversal escaped the prepared root." }
-        $relative = $full.Substring($rootFull.Length).TrimStart([char]92, [char]47).Replace([char]92, [char]47)
-        $pathHash = Get-Sha256Text -Text $relative
-        if ($item.PSIsContainer) {
-            $records += [pscustomobject]@{ pathSha256 = $pathHash; kind = "directory"; length = [int64]0; contentSha256 = $null }
-        }
-        else {
+    [int]$seenItems = 0
+
+    while ($pending.Count -gt 0) {
+        $directory = $pending.Dequeue()
+        foreach ($item in Get-ChildItem -LiteralPath $directory -Force -ErrorAction Stop) {
+            $seenItems++
+            if ($seenItems -gt $ItemLimit) { throw "Explorer drop target exceeds the bounded item limit of $ItemLimit." }
+            if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "Explorer drop target contains a reparse point; refusing ambiguous witness input." }
+
+            $full = [System.IO.Path]::GetFullPath($item.FullName)
+            if (-not (Test-PathInside -Child $full -Parent $rootFull)) { throw "Explorer drop target traversal escaped the prepared root." }
+            $relative = $full.Substring($rootFull.Length).TrimStart([char]92, [char]47).Replace([char]92, [char]47)
+            $pathHash = Get-Sha256Text -Text $relative
+
+            if ($item.PSIsContainer) {
+                $records.Add([pscustomobject]@{ pathSha256 = $pathHash; kind = "directory"; length = [int64]0; contentSha256 = $null })
+                $pending.Enqueue($full)
+                continue
+            }
+
             $length = [int64]$item.Length
             if (($hashedBytes + $length) -gt $ByteLimit) { throw "Explorer drop target exceeds the bounded hash budget of $ByteLimit bytes." }
-            $records += [pscustomobject]@{ pathSha256 = $pathHash; kind = "file"; length = $length; contentSha256 = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant() }
+            $contentHash = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
             $hashedBytes += $length
+            $records.Add([pscustomobject]@{ pathSha256 = $pathHash; kind = "file"; length = $length; contentSha256 = $contentHash })
         }
     }
-    $canonical = @($records | ForEach-Object { "{0}|{1}|{2}|{3}" -f $_.pathSha256, $_.kind, $_.length, ([string]$_.contentSha256) }) -join "`n"
+
+    $sortedRecords = @($records | Sort-Object pathSha256, kind, length, contentSha256)
+    $canonical = @($sortedRecords | ForEach-Object { "{0}|{1}|{2}|{3}" -f $_.pathSha256, $_.kind, $_.length, ([string]$_.contentSha256) }) -join "`n"
     return [pscustomobject]@{
-        itemCount = $records.Count
-        fileCount = @($records | Where-Object { $_.kind -eq "file" }).Count
-        directoryCount = @($records | Where-Object { $_.kind -eq "directory" }).Count
+        itemCount = $seenItems
+        fileCount = @($sortedRecords | Where-Object { $_.kind -eq "file" }).Count
+        directoryCount = @($sortedRecords | Where-Object { $_.kind -eq "directory" }).Count
         hashedBytes = $hashedBytes
         treeSha256 = (Get-Sha256Text -Text $canonical)
-        records = $records
+        records = $sortedRecords
     }
 }
 
@@ -305,6 +325,7 @@ function Invoke-Baseline {
     $window = Get-VisibleAppWindow -Session $context.session
     $snapshot = Get-DropSnapshot -Root $context.dropTarget -ItemLimit $MaxItems -ByteLimit $MaxHashedBytes
     if ([int]$snapshot.itemCount -ne 0) { throw "Explorer drop target must be empty when the witness baseline is created." }
+
     $witness = [ordered]@{
         schemaVersion = $Script:WitnessSchemaVersion
         createdUtc = [DateTimeOffset]::UtcNow.ToString("O")
@@ -336,6 +357,7 @@ function Invoke-Observe {
     $witness = Load-Witness -Path $path
     Assert-WitnessBinding -Witness $witness -Context $context -Window $window
     if ($null -ne $witness.observation) { throw "Desktop witness already contains an observation; create a fresh baseline for another gesture." }
+
     $snapshot = Get-DropSnapshot -Root $context.dropTarget -ItemLimit $MaxItems -ByteLimit $MaxHashedBytes
     if ([int]$snapshot.itemCount -le 0) { throw "No destination items are present after the gesture; refusing positive witness evidence." }
     $witness.observation = [pscustomobject]@{
@@ -369,8 +391,11 @@ function Invoke-Verify {
     $witness = Load-Witness -Path $path
     Assert-WitnessBinding -Witness $witness -Context $context -Window $window
     if ($null -eq $witness.observation) { throw "Desktop witness has no captured observation." }
+
     $snapshot = Get-DropSnapshot -Root $context.dropTarget -ItemLimit $MaxItems -ByteLimit $MaxHashedBytes
-    if ([string]$snapshot.treeSha256 -ne [string]$witness.observation.treeSha256 -or [int]$snapshot.itemCount -ne [int]$witness.observation.itemCount -or [long]$snapshot.hashedBytes -ne [long]$witness.observation.hashedBytes) { throw "Explorer drop target changed after the recorded observation." }
+    if ([string]$snapshot.treeSha256 -ne [string]$witness.observation.treeSha256 -or [int]$snapshot.itemCount -ne [int]$witness.observation.itemCount -or [long]$snapshot.hashedBytes -ne [long]$witness.observation.hashedBytes) {
+        throw "Explorer drop target changed after the recorded observation."
+    }
     Write-Host "Desktop witness verifies against the same candidate, prepared session, immutable QA evidence identity, app process and destination tree."
     Write-Host "Visible Dragon DiskForge window: true"
     Write-Host "Destination tree SHA-256: $($snapshot.treeSha256)"
@@ -386,23 +411,36 @@ function Invoke-SelfTest {
         New-Item -ItemType Directory -Path $drop -Force | Out-Null
         $empty = Get-DropSnapshot -Root $drop -ItemLimit 16 -ByteLimit 1048576
         if ($empty.itemCount -ne 0) { throw "Self-test failed: empty drop target is not empty." }
+
         Write-Utf8NoBom -Path (Join-Path $drop "sample.txt") -Text "Dragon DiskForge desktop witness"
         New-Item -ItemType Directory -Path (Join-Path $drop "folder") -Force | Out-Null
         Write-Utf8NoBom -Path (Join-Path $drop "folder\nested.bin") -Text "nested"
         $snapshot = Get-DropSnapshot -Root $drop -ItemLimit 16 -ByteLimit 1048576
+        $snapshotAgain = Get-DropSnapshot -Root $drop -ItemLimit 16 -ByteLimit 1048576
         if ($snapshot.itemCount -ne 3 -or $snapshot.fileCount -ne 2 -or $snapshot.directoryCount -ne 1 -or $snapshot.hashedBytes -le 0 -or [string]$snapshot.treeSha256 -notmatch '^[0-9a-f]{64}$') { throw "Self-test failed: bounded destination snapshot is invalid." }
+        if ($snapshot.treeSha256 -ne $snapshotAgain.treeSha256) { throw "Self-test failed: destination snapshot is not deterministic." }
+
+        $itemLimitRejected = $false
+        try { Get-DropSnapshot -Root $drop -ItemLimit 2 -ByteLimit 1048576 | Out-Null } catch { $itemLimitRejected = $true }
+        if (-not $itemLimitRejected) { throw "Self-test failed: item limit was not enforced before unbounded traversal." }
+        $byteLimitRejected = $false
+        try { Get-DropSnapshot -Root $drop -ItemLimit 16 -ByteLimit 1 | Out-Null } catch { $byteLimitRejected = $true }
+        if (-not $byteLimitRejected) { throw "Self-test failed: byte budget was not enforced before hashing beyond the limit." }
 
         $session = [pscustomobject]@{ package = [pscustomobject]@{ version = "0.5.0-beta.1"; sha256 = ("a" * 64); entryPointSha256 = ("b" * 64); qaToolSha256 = ("c" * 64) } }
         $evidence = [pscustomobject]@{
-            schemaVersion = 3; gate = $Script:EvidenceGateName; targetVersion = "0.5.0-beta.1"; createdUtc = "2026-09-18T00:00:00Z"; createdQaToolSha256 = ("c" * 64)
+            schemaVersion = 3
+            gate = $Script:EvidenceGateName
+            targetVersion = "0.5.0-beta.1"
+            createdUtc = "2026-09-18T00:00:00Z"
+            createdQaToolSha256 = ("c" * 64)
             package = [pscustomobject]@{ version = "0.5.0-beta.1"; sha256 = ("a" * 64); entryPointSha256 = ("b" * 64); betaManualQaEntryPointSha256 = ("c" * 64) }
             createdEnvironment = [pscustomobject]@{ osBuild = "26100"; processArchitecture = "X64"; sessionId = 1; userInteractive = $true; processElevated = $false; uacEnabled = $true }
             checks = @([pscustomobject]@{ id = "drag.file-explorer-copy"; status = "pending" })
         }
         $identityBefore = Get-EvidenceIdentity -Evidence $evidence -Session $session
         $evidence.checks[0].status = "pass"
-        $identityAfterMutableRecord = Get-EvidenceIdentity -Evidence $evidence -Session $session
-        if ($identityBefore -ne $identityAfterMutableRecord) { throw "Self-test failed: mutable QA observations changed the immutable evidence identity." }
+        if ($identityBefore -ne (Get-EvidenceIdentity -Evidence $evidence -Session $session)) { throw "Self-test failed: mutable QA observations changed the immutable evidence identity." }
         $evidence.package.sha256 = ("d" * 64)
         $identityMutationRejected = $false
         try { Get-EvidenceIdentity -Evidence $evidence -Session $session | Out-Null } catch { $identityMutationRejected = $true }
@@ -415,9 +453,7 @@ function Invoke-SelfTest {
         $tamperRejected = $false
         try { Assert-Sidecar -PayloadPath $saved.path | Out-Null } catch { $tamperRejected = $true }
         if (-not $tamperRejected) { throw "Self-test failed: tampered witness did not fail closed." }
-        $limitRejected = $false
-        try { Get-DropSnapshot -Root $drop -ItemLimit 2 -ByteLimit 1048576 | Out-Null } catch { $limitRejected = $true }
-        if (-not $limitRejected) { throw "Self-test failed: item limit was not enforced." }
+
         $outside = Join-Path ([System.IO.Path]::GetTempPath()) "outside-witness.json"
         if (Test-PathInside -Child $outside -Parent $tempRoot) { throw "Self-test failed: path containment accepted an external path." }
         Write-Host "Dragon DiskForge desktop witness self-test passed."
