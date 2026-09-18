@@ -14,7 +14,13 @@
 
 **0.5.0-beta.1**
 
-Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. Beta Candidate run #64 retained an independently verified non-public Windows x64 candidate from green `main`; public release remains gated by clean-desktop interactive regression, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release publication.
+Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. Public release remains gated by clean-desktop interactive regression, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release publication.
+
+<!-- retained-beta-candidate:start -->
+Current retained candidate: Beta Candidate run #79 (`35291908987`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35291908987`, built from `main` source commit `a0483311bf000a995598b42ed9ec71019e63902e`; nested package SHA-256 `ecc4f0798ecc4d40fb9f77b433ae9dcbb206a358a9d2346bc9ac5411e8ba66a2`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+<!-- retained-beta-candidate:end -->
+
+The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source predates current `main` only by retained-evidence/contract commits, not product-code changes.
 
 ## Overall project progress
 
@@ -24,147 +30,54 @@ Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate s
 
 ### 0.7 Physical Media Tools — IN PROGRESS 🚧 — 6/7 (~86%)
 
-PR #45 established query-only physical inventory and fail-closed planning. PR #46 established the platform-independent execution/recovery contract. PR #47 adds a hard-gated Windows writer candidate without exposing a destructive UI action.
+Proven scope:
 
-#### Proven Windows writer-candidate boundary
+- read-only Windows physical-disk inventory
+- capacity/bus/removable/vendor/product/revision/serial/system-disk evidence
+- hard refusal for system disks, ambiguous identity and unknown capacity
+- source/destination write-plan preview with same-device and oversize refusal
+- destination-bound destructive confirmation contract
+- bounded execution/recovery contract with a hard-gated Windows writer candidate
+- source/target topology preflight, target-volume lock/dismount, sector-aligned bounded writes, flush and optional read-back SHA-256
 
-- read-only preflight resolves current target identity, capacity, system-disk state and logical sector size
-- local source files are mapped to backing physical-disk extents; same-device sources are refused
-- UNC/unprovable source topology fails closed
-- source length and sector alignment are revalidated
-- target volumes are enumerated, locked and dismounted before write access
-- device writes are sequential and sector aligned
-- final flush is explicit
-- read-back SHA-256 can independently verify the written source-length region
-- the disposable-media harness requires explicit destructive opt-in, exact `PhysicalDriveN`, stable identity, source image and the destination-bound confirmation token
-- fixed media requires an additional explicit confirmation gate
-
-PR #47 implementation run #338 passed the complete Windows x64 regression/build/package path. Disposable Media Guard run #10 passed the non-destructive preflight/harness gate. These results prove the candidate and its locked test harness, **not real-media destructive validation**.
-
-#### Remaining 0.7 scope ⬜
+Remaining 0.7 scope:
 
 - exercise the writer successfully on dedicated disposable media under the documented safety protocol
 
-Until that happens, the application exposes no physical-media write action and 0.7 remains 6/7.
-
-See `docs/PHYSICAL-MEDIA-SAFETY.md`.
+No destructive physical-media action is user-visible. CI proves the locked engineering path, not real-media destructive validation. See `docs/PHYSICAL-MEDIA-SAFETY.md`.
 
 ### 0.8 Windows Integration + Power Tools — COMPLETE ✅ — 4/4 (100%)
 
-The final safe 0.8 slice is implemented and independently verified while 0.7 remains correctly blocked on real hardware evidence.
+Verified scope:
 
-#### Shared-Core CLI ✅
-
-- `DragonDiskForge.Cli` console project targeting .NET 10
-- canonical built-in provider registration in `ProviderRegistryFactory` shared with the WinUI app
-- `analyze <image> --format text|json`
-- `verify <image> [--sha256 ...] [--sha512 ...] --format text|json`
-- `formats --format text|json`
-- no Create/Convert/physical-write command is exposed
-
-#### PowerShell-friendly output + packaging ✅
-
-- stdout contains only requested text or one complete JSON document
-- errors and diagnostics use stderr
-- stable exit codes: success, unexpected failure, usage, input/operation error, checksum mismatch and cancellation
-- expected SHA-256/SHA-512 values are strictly validated and compared case-insensitively
-- clean package includes self-contained `cli/dragon-diskforge.exe`
-- package manifest includes CLI entry point + SHA-256
-- package verification checks the CLI hash, launches the unpacked CLI and validates its provider output
-
-PR #48 implementation head passed Disposable Media Guard #15 and full Windows build run #343.
-
-#### Session/settings/diagnostic portability ✅
-
-- versioned Core schema stores `RestoreLastImage`, last-image path and save timestamp
-- local state is loaded/saved atomically through the safe-output transaction boundary
-- desktop startup can best-effort restore the last image when enabled; missing/corrupt state cannot prevent startup
-- `state-show`, `state-export`, `state-import`, `restore-last-image` and `diagnostics` are available through the CLI
-- diagnostic ZIP excludes full saved-image paths and image content
-
-PR #49 implementation head passed full Windows build run #353 and Disposable Media Guard #25.
-
-#### Windows shell integration ✅
-
-- canonical supported extensions are derived directly from Core `SupportedFormats`
-- per-user registration uses `HKCU\Software\Classes`; no administrator requirement is introduced
-- Dragon DiskForge is registered for Open With discovery plus an explicit **Open with Dragon DiskForge** context-menu verb
-- Windows `UserChoice`/default-app selection is not replaced
-- unregister is idempotent and removes only Dragon-owned application/verb keys
-- startup image arguments are validated against supported existing image paths and take precedence over saved-session restore
-- clean package contains self-contained `tools/dragon-diskforge-shell.exe`
-- package manifest records/verifies the shell-helper SHA-256
-- isolated registry/startup smoke tests cover registration, unrelated-verb preservation and safe activation
-
-PR #50 implementation run #356 and Disposable Media Guard #28 passed before the milestone was marked complete. This proves the implementation/package contract, not a human visual check of every Explorer menu variant.
+- canonical supported-format shell registration under `HKCU\Software\Classes`
+- reversible Open With/context-menu integration without `UserChoice` takeover
+- shared-Core read-only CLI (`analyze`, `verify`, `formats`) with deterministic text/JSON output and stable exit codes
+- self-contained packaged CLI and shell helper with SHA-256 manifest binding
+- versioned session/settings persistence and validated import/export
+- best-effort desktop last-image restore
+- sanitized diagnostic export that excludes full image paths and image contents
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
 ### 0.9 Quality, Security + Beta Hardening — IN PROGRESS 🚧 — 5/7 (~71%)
 
-#### Crash/diagnostic release-support hardening ✅
+Verified deliverables:
 
-- WinUI unhandled exceptions are captured best-effort without marking the exception handled
-- persisted crash reports are bounded to ten entries and 64 KiB per report
-- evidence is limited to schema/time, exception type, HRESULT, SHA-256 fingerprint, exception-chain type names and method-only stack frames
-- raw exception messages, source-file paths and image contents are not persisted
-- malformed/oversized crash evidence is ignored during collection
-- the existing diagnostic ZIP includes at most three sanitized crash summaries through the same safe-output transaction boundary
-- portability/privacy tests prove that a private image path and raw exception message do not leak into persisted crash JSON or the support ZIP
+- crash/diagnostic release-support hardening ✅
+- performance + large-image regression evidence ✅
+- parsing/package/privileged-boundary security review ✅
+- package-only clean-machine runtime matrix ✅
+- accessibility/keyboard/screen-reader hardening ✅
 
-#### Performance + large-image regression evidence ✅
+Remaining deliverables:
 
-- 128 MiB generated fixture exercises the real one-pass SHA-256 + SHA-512 verification service
-- CI records throughput and managed-allocation evidence with conservative regression ceilings
-- 8 GiB sparse RAW/IMG fixture contains a valid MBR and bounded partition so recognition resolves through the real `raw-partitions` provider
-- recognition runtime and managed allocations are bounded
-- benchmark evidence is emitted as JSON and uploaded as a dedicated CI artifact
+- normal-user UAC validation ⬜
+- real cross-process Explorer drag-out validation ⬜
 
-PR #51 implementation head `44a075a471f38a8350587400e72f4a4e781954ac` passed full Windows build/package run #360 and Disposable Media Guard #32, including the crash/privacy tests and performance gate.
+The clean-machine runtime path builds the clean package once and exercises package identity, manifest hashes, self-contained CLI/state/diagnostic paths and reversible per-user shell integration on fresh Windows runner images without repository checkout. The accessibility gate verifies XAML semantics and a WinUI Release build. These automated gates do not substitute for interactive desktop UAC/Explorer evidence.
 
-#### Parsing/package/privileged-boundary security review ✅
-
-- the desktop application manifest explicitly requests `asInvoker` with `uiAccess=false`; normal desktop startup does not request ambient administrator elevation
-- a dedicated Security Boundary workflow regression-tests the reviewed invariants on Windows
-- per-user shell integration remains rooted in `HKCU\Software\Classes`, does not write HKLM and does not modify Windows `UserChoice`
-- the public CLI remains isolated from the physical-media execution service, Windows raw-write sink and destructive test opt-in contract
-- clean packaging continues excluding debug/test payloads and binds the app, CLI and shell-helper entry points by SHA-256
-- default CI execution remains incapable of enabling destructive disposable-media writes
-- physical-media safety tests prove fail-closed behavior for system disks, unstable identity, unknown/insufficient capacity and physical-device sources, plus exact destination-bound confirmation
-- shell command construction retains strict executable identity and quoting/injection rejection
-- parser/guest-reader security review relies on the existing bounded/truncated/OOB/cancellation regression suites and is documented without overstating formal sandbox guarantees
-
-PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this deliverable was marked complete. See `docs/SECURITY-BOUNDARIES.md`.
-
-#### Package-only clean-machine runtime matrix ✅
-
-- a clean Windows x64 ZIP is built and package-verified once, then handed to fresh `windows-2022` and `windows-latest` runtime jobs
-- runtime jobs intentionally have no repository checkout and assert that `.git`/`src` are absent
-- the probe rechecks the ZIP sidecar, manifest schema/architecture, app/CLI/shell SHA-256 bindings and absence of PDB/test payloads
-- .NET/Visual Studio/Git toolchain paths are removed before packaged entry points are launched, reducing the chance of hidden developer-SDK dependence
-- the self-contained CLI is exercised for provider enumeration, `analyze`, SHA-256/SHA-512 `verify`, isolated state/settings and sanitized diagnostics
-- the self-contained shell helper is exercised through per-user register → status → unregister
-- every runtime image emits machine-readable OS/build/package/runtime evidence
-
-PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 on both matrix images before this deliverable was marked complete. See `docs/CLEAN-MACHINE-RUNTIME.md`.
-
-#### Accessibility/keyboard/screen-reader hardening ✅
-
-- Direct Browse, Dragon Explorer, multi-image workspace, Images and Mounted surfaces expose explicit UI Automation names/help text for important interactive and dynamic elements
-- status, item-count, path and preview changes use polite live-region metadata where appropriate
-- stable common actions expose per-view keyboard access keys without adding hidden destructive shortcuts
-- list/tab collections and progress indicators are explicitly named for automation clients
-- `scripts/accessibility-contract.ps1` fails closed on missing labels/live regions/named collections/progress indicators and duplicate per-view access keys
-- the dedicated Windows Accessibility Contract workflow runs the XAML contract and then compiles the WinUI x64 Release application
-
-PR #54 exact implementation head `69490fe118614e9fb6bc39433756ccd0c50d5dd9` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before this deliverable was marked complete. This is repeatable automated accessibility/keyboard evidence, not a claim of formal accessibility certification or a human Narrator/NVDA/JAWS validation. See `docs/ACCESSIBILITY.md`.
-
-#### Remaining 0.9 scope ⬜
-
-- normal-user UAC validation
-- real cross-process Explorer drag-out validation
-
-The clean-machine package-only and accessibility gates are repeatable automation. Interactive WinUI launch, UAC, real cross-process Explorer behavior and dedicated-media validation retain their independent evidence requirements.
+See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACCESSIBILITY.md`.
 
 ## Proven validation checkpoints
 
@@ -209,34 +122,34 @@ The clean-machine package-only and accessibility gates are repeatable automation
 - PR #47 / implementation run #338 + Disposable Media Guard #10 — hard-gated Windows writer candidate and preflight/harness coverage
 
 ### 0.8
-- PR #48 / implementation run #343 + Disposable Media Guard #15 — shared-Core CLI, deterministic automation output and verified self-contained clean-package CLI
-- PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, desktop restore and sanitized diagnostic tooling
-- PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration, launch activation and verified shell-helper packaging
+- PR #48 / implementation run #343 + Disposable Media Guard #15 — shared-Core CLI and verified self-contained clean-package CLI
+- PR #49 / implementation run #353 + Disposable Media Guard #25 — session/settings portability, restore and sanitized diagnostics
+- PR #50 / implementation run #356 + Disposable Media Guard #28 — safe per-user shell integration and verified shell-helper packaging
 
-### 0.9
-- PR #51 / implementation run #360 + Disposable Media Guard #32 — sanitized crash/support evidence and large-image performance regression gate
-- PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — repeatable parsing/package/privileged security review and explicit asInvoker boundary
-- PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix across fresh Windows runner images
-- PR #54 / implementation run #381 + Accessibility Contract #1 + Disposable Media Guard #53 + Security Boundary #15 + Clean Machine Runtime #8 — automated accessibility/keyboard/screen-reader semantics hardening
-- PR #73 / PR-head Build #456 + fully green main Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening, `0.5.0-beta.1` source promotion and retained exact Windows x64 candidate
+### 0.9 and beta hardening
+- PR #51 / implementation run #360 + Disposable Media Guard #32 — sanitized crash/support evidence and large-image performance gate
+- PR #52 / implementation run #367 + Disposable Media Guard #39 + Security Boundary #1 — repeatable security review and explicit `asInvoker` boundary
+- PR #53 / implementation run #374 + Disposable Media Guard #46 + Security Boundary #8 + Clean Machine Runtime #1 — package-only clean-machine runtime matrix
+- PR #54 / implementation run #381 + Accessibility Contract #1 + Disposable Media Guard #53 + Security Boundary #15 + Clean Machine Runtime #8 — automated accessibility/keyboard semantics hardening
+- PR #55 / implementation run #389 + Beta Manual QA Contract #1 — exact-package interactive beta-QA evidence foundation
+- PR #73 / PR-head Build #456 + main Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening and beta source promotion
+- PR #78 — retained-candidate evidence hardened and bound to the newer retained run recorded above
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime, accessibility-hardening and retained exact-candidate gates are green. Beta Candidate run #64 retained artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35282836549` from `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`; its nested package SHA-256 is `6d4191f5a3e6751328ff43b5d2beb609e747bfd042b96b28012fa3e292980e2d`. The remaining independent release gates are:
+The planned first public beta remains **`0.5.0-beta.1`** and is **NOT READY YET**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime, accessibility-hardening and retained exact-candidate evidence gates are green. The authoritative candidate identity is the retained-evidence block above.
+
+Remaining independent release gates:
 
 - human-confirmed WinUI launch and basic open/mount/explore/verify/analyze regression on a clean supported Windows desktop
 - complete normal-user UAC validation
 - complete real cross-process Explorer drag-out validation
 - publish the final ZIP, SHA-256 and GitHub pre-release only after those checks pass
 
-The automated accessibility contract proves checked XAML semantics plus a successful WinUI build; it deliberately does not claim a human assistive-technology certification session. The package-only runtime matrix proves that the clean packaged CLI/shell/state/diagnostic paths run without a repository checkout and without relying on developer toolchain paths. Neither gate substitutes for remaining interactive desktop/UAC/Explorer validation.
-
 ## Current safety state
 
-Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Shell integration is explicit, per-user, reversible and does not replace Windows default-app choices. Unsupported capabilities stay disabled. The desktop manifest is explicitly `asInvoker`, so ordinary startup does not request ambient elevation.
+Inspection, reporting and image/media automation remain read-only-first. CLI state/settings commands mutate only Dragon DiskForge local application state. Shell integration is explicit, per-user and reversible and does not replace Windows default-app choices. Unsupported capabilities stay disabled. The desktop manifest is explicitly `asInvoker`, so ordinary startup does not request ambient elevation.
 
 Crash evidence is bounded, rotated and privacy-preserving; support export deliberately excludes raw exception messages, source-file paths and image contents. Performance fixtures are generated locally and removed after testing.
 
 The Windows physical writer candidate is not connected to a user-visible action. Its executable path remains behind destination identity/topology/confirmation checks and a hard-locked disposable-media harness. No completion claim is made until real dedicated-media validation proves the final 0.7 item.
-
-Interactive WinUI clean-desktop launch, normal-user UAC and real cross-process Explorer drag-out remain beta QA gates.
