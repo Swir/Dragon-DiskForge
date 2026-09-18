@@ -1,0 +1,50 @@
+name: Dragon DiskForge Retained Beta Archive Binding
+
+on:
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'docs/BETA-CANDIDATE.md'
+      - 'docs/BETA-RELEASE.md'
+      - 'docs/MILESTONES.md'
+      - 'docs/ROADMAP.md'
+      - 'docs/STATUS.md'
+      - 'docs/retained-beta-candidate.json'
+      - 'scripts/retained-beta-archive-binding-contract.ps1'
+      - '.github/workflows/retained-beta-archive-binding-contract.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'docs/BETA-CANDIDATE.md'
+      - 'docs/BETA-RELEASE.md'
+      - 'docs/MILESTONES.md'
+      - 'docs/ROADMAP.md'
+      - 'docs/STATUS.md'
+      - 'docs/retained-beta-candidate.json'
+      - 'scripts/retained-beta-archive-binding-contract.ps1'
+      - '.github/workflows/retained-beta-archive-binding-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-retained-archive-binding:
+    name: Verify retained candidate portable archive binding
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: PowerShell 7 archive-binding self-test
+        shell: pwsh
+        run: ./scripts/retained-beta-archive-binding-contract.ps1 -Mode self-test
+      - name: Windows PowerShell 5.1 archive-binding self-test
+        shell: powershell
+        run: .\scripts\retained-beta-archive-binding-contract.ps1 -Mode self-test
+      - name: Verify canonical retained evidence and documentation
+        shell: pwsh
+        run: ./scripts/retained-beta-archive-binding-contract.ps1 -Mode verify
