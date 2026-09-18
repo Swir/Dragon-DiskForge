@@ -1,15 +1,15 @@
 # Dragon DiskForge — Desktop Beta QA Witness
 
-The desktop witness is a repository-side helper for the remaining interactive Windows beta gate. It strengthens the evidence around a real retained-candidate session without pretending to replace the human observation required by `docs/BETA-RELEASE.md`.
+The desktop witness strengthens the evidence around a real retained-candidate Windows session without pretending to replace the human observations required by `BETA-RELEASE.md`. The helper is available both from a repository checkout and, when a candidate is explicitly retained, as a hash-bound companion inside that retained artifact.
 
-`scripts/beta-qa-desktop-witness.ps1` binds an objective witness to the exact prepared beta-QA session, candidate package and immutable manual-QA evidence identity. It verifies that the recorded Dragon DiskForge process still resolves to the prepared executable, that the same process owns a visible top-level window, and that the isolated Explorer drop target changes from a verified empty baseline to a bounded, hash-described destination tree.
+`beta-qa-desktop-witness.ps1` binds an objective witness to the exact prepared beta-QA session, candidate package and immutable manual-QA evidence identity. It verifies that the recorded Dragon DiskForge process still resolves to the prepared executable, that the same process owns a visible top-level window, and that the isolated Explorer drop target changes from a verified empty baseline to a bounded, hash-described destination tree.
 
 ## Truth boundary
 
 A successful witness proves only objective facts that can be observed locally without synthesizing the user's gesture:
 
 - the same retained candidate package remains bound to the QA session;
-- the packaged manual-QA evidence still has the same immutable candidate/session identity, even if individual human check results were recorded after the baseline;
+- the packaged manual-QA evidence still has the same immutable candidate/session identity even if individual human results were recorded after the baseline;
 - the same Dragon DiskForge process remains alive and owns a visible top-level window;
 - the prepared Explorer drop target was empty at baseline;
 - after the user performs the test, destination files/directories exist and match a bounded deterministic hash snapshot;
@@ -30,6 +30,18 @@ The witness is deliberately bounded and fail-closed:
 - package and manual-QA sidecars are re-verified on every mode;
 - a changed candidate, session identity, process identity or destination tree fails closed.
 
+## Verify the retained witness companion first
+
+An explicitly retained beta candidate includes `beta-qa-witness-kit.json`, its sidecar, a standalone verifier, this guide and the desktop-witness helper. Verify that companion before using the helper:
+
+```powershell
+.\beta-qa-witness-kit-verify.ps1 -ManifestPath .\beta-qa-witness-kit.json
+```
+
+The verifier binds the helper and this guide to the exact core QA-kit manifest, source commit, workflow run and candidate package SHA-256. It permanently rejects `humanGateClaimed=true` and `publicRelease=true`.
+
+When working from a repository checkout instead of a retained artifact, the same helper is available at `scripts/beta-qa-desktop-witness.ps1` and its deterministic contract is exercised by CI.
+
 ## Recommended drag-out sequence
 
 First prepare the retained candidate from an ordinary **unelevated** interactive Windows session with UAC enabled:
@@ -40,11 +52,21 @@ First prepare the retained candidate from an ordinary **unelevated** interactive
   -ChecksumFile .\DragonDiskForge-win-x64.zip.sha256
 ```
 
-From the repository checkout, create the objective baseline against that prepared workspace before putting anything in its Explorer drop target:
+Use the exact workspace path printed by the session helper. Set the helper path once, depending on whether you are using the retained artifact or a repository checkout:
 
 ```powershell
-.\scripts\beta-qa-desktop-witness.ps1 -Mode baseline `
-  -WorkspacePath .\artifacts\manual-qa\session-<package-sha-prefix>
+$Workspace = '<workspace-path-printed-by-beta-qa-session.ps1>'
+$WitnessHelper = if (Test-Path -LiteralPath '.\beta-qa-desktop-witness.ps1') {
+    '.\beta-qa-desktop-witness.ps1'
+} else {
+    '.\scripts\beta-qa-desktop-witness.ps1'
+}
+```
+
+Create the objective baseline before putting anything in the Explorer drop target:
+
+```powershell
+& $WitnessHelper -Mode baseline -WorkspacePath $Workspace
 ```
 
 The baseline requires the target to be empty and the prepared Dragon DiskForge process to own a visible top-level window. It does not mark `desktop.clean-launch` or any drag check as passed.
@@ -52,8 +74,7 @@ The baseline requires the target to be empty and the prepared Dragon DiskForge p
 Next, physically perform the real cross-process drag from Dragon DiskForge into the Explorer window opened by the session helper. After the destination operation completes, capture the objective destination state:
 
 ```powershell
-.\scripts\beta-qa-desktop-witness.ps1 -Mode observe `
-  -WorkspacePath .\artifacts\manual-qa\session-<package-sha-prefix>
+& $WitnessHelper -Mode observe -WorkspacePath $Workspace
 ```
 
 The manual-QA evidence file may have gained human-confirmed records between `baseline` and `observe`. The witness deliberately binds to the evidence's immutable package/session identity rather than to the mutable whole-file hash, so legitimate recording of individual checklist results does not invalidate the baseline. Changing the candidate identity still fails closed.
@@ -61,8 +82,8 @@ The manual-QA evidence file may have gained human-confirmed records between `bas
 After visually confirming the required Copy semantics and source-preservation behavior, record the corresponding packaged manual-QA check with `-HumanConfirmed`. Use the exact check IDs from `BETA-MANUAL-VALIDATION.md`; for example:
 
 ```powershell
-& '<workspace>\package\tools\beta-manual-qa.ps1' -Mode record `
-  -EvidencePath '<workspace>\beta-manual-qa.json' `
+& "$Workspace\package\tools\beta-manual-qa.ps1" -Mode record `
+  -EvidencePath "$Workspace\beta-manual-qa.json" `
   -Check drag.file-explorer-copy `
   -Result pass `
   -HumanConfirmed `
@@ -72,22 +93,24 @@ After visually confirming the required Copy semantics and source-preservation be
 Finally, re-verify the objective witness if the destination should still be unchanged:
 
 ```powershell
-.\scripts\beta-qa-desktop-witness.ps1 -Mode verify `
-  -WorkspacePath .\artifacts\manual-qa\session-<package-sha-prefix>
+& $WitnessHelper -Mode verify -WorkspacePath $Workspace
 ```
 
 Repeat with a fresh session/baseline as needed for another drag scenario. Do not reuse a witness observation for multiple checklist checks.
 
 ## Evidence lifecycle
 
-The desktop witness is supporting evidence, not the authoritative human gate. The existing `beta-qa-archive.ps1` archive remains focused on package-bound manual-QA evidence and does not currently ingest the witness file. Preserve any witness that is useful for audit before running `beta-qa-session.ps1 -Mode cleanup`; otherwise cleanup intentionally removes it with the disposable workspace.
+The desktop witness is supporting evidence, not the authoritative human gate. The existing `beta-qa-archive.ps1` archive remains focused on package-bound manual-QA evidence and does not currently ingest the witness file. Preserve any witness that is useful for audit before running session cleanup; otherwise cleanup intentionally removes it with the disposable workspace.
 
-Final beta release proof continues to consume the exact retained candidate and the packaged human-confirmed evidence. This helper does not change QA-kit schema v2, project completion, milestone `0.9` completion or public beta readiness.
+Final beta release proof continues to consume the exact retained candidate and the packaged human-confirmed evidence. Shipping the helper in the retained artifact removes the repository-checkout dependency for objective support, but it does not change project completion, milestone `0.9` completion or public beta readiness.
 
 ## Contract self-test
 
+From a repository checkout:
+
 ```powershell
 .\scripts\beta-qa-desktop-witness.ps1 -Mode self-test
+.\scripts\beta-qa-witness-kit.ps1 -Mode self-test
 ```
 
-The deterministic self-test validates bounded destination snapshots, witness SHA-256 sidecars, tamper rejection, path/item limits, and the important identity rule that normal mutation of checklist results does not change the immutable evidence identity while candidate-identity mutation is rejected. CI runs the self-test under PowerShell 7 and Windows PowerShell 5.1 as part of the Beta Manual QA Contract.
+CI runs both the desktop-witness contract and the retained witness-companion contract under PowerShell 7 and Windows PowerShell 5.1. The tests cover deterministic bounded destination snapshots, sidecar/tamper rejection, path/item limits, immutable evidence-identity binding, retained-companion hash binding and fail-closed rejection of any synthetic human-gate claim.
