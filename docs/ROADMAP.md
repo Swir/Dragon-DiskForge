@@ -4,8 +4,6 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 
 ## Overall progress — 83% toward 1.0
 
-`█████████████████░░░ 83%`
-
 - **0.1 Foundation + Dragon UI — COMPLETE ✅**
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
 - **0.3 Dragon Explorer — COMPLETE ✅**
