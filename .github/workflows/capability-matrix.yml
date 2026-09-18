@@ -1,0 +1,45 @@
+name: Dragon DiskForge Capability Matrix
+
+on:
+  pull_request:
+    paths:
+      - 'src/DragonDiskForge.Core/Providers/**'
+      - 'src/DragonDiskForge.Cli/**'
+      - 'docs/SUPPORTED-CAPABILITIES.md'
+      - 'scripts/generate-capability-matrix.ps1'
+      - '.github/workflows/capability-matrix.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/DragonDiskForge.Core/Providers/**'
+      - 'src/DragonDiskForge.Cli/**'
+      - 'docs/SUPPORTED-CAPABILITIES.md'
+      - 'scripts/generate-capability-matrix.ps1'
+      - '.github/workflows/capability-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-capability-matrix:
+    name: Verify source-derived capability matrix
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Renderer fail-closed self-tests (PowerShell 7)
+        shell: pwsh
+        run: ./scripts/generate-capability-matrix.ps1 -SelfTest
+      - name: Renderer fail-closed self-tests (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./scripts/generate-capability-matrix.ps1 -SelfTest
+      - name: Verify matrix against canonical provider registry
+        shell: pwsh
+        run: ./scripts/generate-capability-matrix.ps1 -Check
