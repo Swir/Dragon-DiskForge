@@ -1,0 +1,31 @@
+name: Dragon DiskForge Beta QA Live Session Kit Contract
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dragon-beta-qa-live-kit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Portable live-session companion contract
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 live-session companion self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-live-kit.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 live-session companion self-test
+        shell: powershell
+        run: .\scripts\beta-qa-live-kit.ps1 -Mode self-test

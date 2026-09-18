@@ -66,6 +66,14 @@ jobs:
         shell: powershell
         run: .\scripts\beta-qa-kit.ps1 -Mode self-test
 
+      - name: PowerShell 7 live-session companion self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-live-kit.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 live-session companion self-test
+        shell: powershell
+        run: .\scripts\beta-qa-live-kit.ps1 -Mode self-test
+
       - name: PowerShell 7 desktop witness companion self-test
         shell: pwsh
         run: ./scripts/beta-qa-witness-kit.ps1 -Mode self-test
@@ -136,6 +144,18 @@ jobs:
         shell: powershell
         run: .\artifacts\windows\beta-qa-kit-verify.ps1 -ManifestPath .\artifacts\windows\beta-qa-kit.json
 
+      - name: Build hash-bound live-session companion
+        shell: pwsh
+        run: ./scripts/beta-qa-live-kit.ps1 -Mode build
+
+      - name: Verify standalone live-session companion with PowerShell 7
+        shell: pwsh
+        run: ./artifacts/windows/beta-qa-live-kit-verify.ps1 -ManifestPath ./artifacts/windows/beta-qa-live-kit.json
+
+      - name: Verify standalone live-session companion with Windows PowerShell 5.1
+        shell: powershell
+        run: .\artifacts\windows\beta-qa-live-kit-verify.ps1 -ManifestPath .\artifacts\windows\beta-qa-live-kit.json
+
       - name: Build hash-bound desktop witness companion
         shell: pwsh
         run: ./scripts/beta-qa-witness-kit.ps1 -Mode build
@@ -180,6 +200,14 @@ jobs:
             artifacts/windows/BETA-QA-KIT.md.sha256
             artifacts/windows/BETA-MANUAL-VALIDATION.md
             artifacts/windows/BETA-MANUAL-VALIDATION.md.sha256
+            artifacts/windows/beta-qa-live-kit.json
+            artifacts/windows/beta-qa-live-kit.json.sha256
+            artifacts/windows/beta-qa-live-kit-verify.ps1
+            artifacts/windows/beta-qa-live-kit-verify.ps1.sha256
+            artifacts/windows/beta-qa-live-session.ps1
+            artifacts/windows/beta-qa-live-session.ps1.sha256
+            artifacts/windows/BETA-QA-LIVE-SESSION.md
+            artifacts/windows/BETA-QA-LIVE-SESSION.md.sha256
             artifacts/windows/beta-qa-witness-kit.json
             artifacts/windows/beta-qa-witness-kit.json.sha256
             artifacts/windows/beta-qa-witness-kit-verify.ps1
@@ -203,5 +231,5 @@ jobs:
         if: steps.retention-policy.outputs.retain != 'true'
         shell: pwsh
         run: |
-          Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit, desktop-witness companion and portable evidence-archive kit build/verification passed."
+          Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit, live-session companion, desktop-witness companion and portable evidence-archive kit build/verification passed."
           Write-Host "No retained 160+ MiB artifact was uploaded because this run was not explicitly selected by the fail-closed retention policy."
