@@ -40,6 +40,14 @@ jobs:
         shell: powershell
         run: .\scripts\beta-candidate.ps1 -Mode self-test
 
+      - name: PowerShell 7 beta QA kit contract self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-kit.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 beta QA kit contract self-test
+        shell: powershell
+        run: .\scripts\beta-qa-kit.ps1 -Mode self-test
+
       - name: Promote workspace metadata to beta suffix
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode prepare
@@ -65,6 +73,35 @@ jobs:
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode metadata -ExpectedPrefix 0.5.0 -BetaSuffix beta.1 -SourceCommit $env:SOURCE_COMMIT -WorkflowRunId '${{ github.run_id }}'
 
+      - name: Stage standalone beta QA kit verifier and start guide
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD 'artifacts/windows'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          $items = @(
+            @{ Source = './scripts/beta-qa-kit-verify.ps1'; Name = 'beta-qa-kit-verify.ps1' },
+            @{ Source = './docs/BETA-QA-KIT.md'; Name = 'BETA-QA-KIT.md' }
+          )
+          foreach ($item in $items) {
+            $destination = Join-Path $output $item.Name
+            Copy-Item -LiteralPath $item.Source -Destination $destination -Force
+            $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            $line = "{0}  {1}{2}" -f $hash, [System.IO.Path]::GetFileName($destination), [Environment]::NewLine
+            [System.IO.File]::WriteAllText("$destination.sha256", $line, (New-Object System.Text.UTF8Encoding($false)))
+          }
+
+      - name: Build hash-bound beta QA kit
+        shell: pwsh
+        run: ./scripts/beta-qa-kit.ps1 -Mode build
+
+      - name: Verify standalone beta QA kit with PowerShell 7
+        shell: pwsh
+        run: ./artifacts/windows/beta-qa-kit-verify.ps1 -ManifestPath ./artifacts/windows/beta-qa-kit.json
+
+      - name: Verify standalone beta QA kit with Windows PowerShell 5.1
+        shell: powershell
+        run: .\artifacts\windows\beta-qa-kit-verify.ps1 -ManifestPath .\artifacts\windows\beta-qa-kit.json
+
       - name: Publish explicitly selected non-public beta candidate
         if: github.event_name == 'push' && contains(github.event.head_commit.message, '[beta-candidate]')
         uses: actions/upload-artifact@v4
@@ -75,6 +112,16 @@ jobs:
             artifacts/windows/DragonDiskForge-win-x64.zip.sha256
             artifacts/windows/beta-candidate.json
             artifacts/windows/beta-candidate.json.sha256
+            artifacts/windows/beta-qa-kit.json
+            artifacts/windows/beta-qa-kit.json.sha256
+            artifacts/windows/beta-qa-kit-verify.ps1
+            artifacts/windows/beta-qa-kit-verify.ps1.sha256
+            artifacts/windows/beta-qa-session.ps1
+            artifacts/windows/beta-qa-session.ps1.sha256
+            artifacts/windows/BETA-QA-KIT.md
+            artifacts/windows/BETA-QA-KIT.md.sha256
+            artifacts/windows/BETA-MANUAL-VALIDATION.md
+            artifacts/windows/BETA-MANUAL-VALIDATION.md.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -82,5 +129,5 @@ jobs:
         if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[beta-candidate]')
         shell: pwsh
         run: |
-          Write-Host "Candidate build and verification passed."
+          Write-Host "Candidate package, metadata and hash-bound QA kit build/verification passed."
           Write-Host "No retained 160+ MiB artifact was uploaded because this was not an explicitly selected [beta-candidate] main commit."
