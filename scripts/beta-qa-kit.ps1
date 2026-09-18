@@ -8,7 +8,9 @@ param(
     [string]$PackageChecksumFile = "",
     [string]$CandidateMetadataPath = "artifacts/windows/beta-candidate.json",
     [string]$CandidateMetadataChecksumFile = "",
+    [string]$VerifierPath = "scripts/beta-qa-kit-verify.ps1",
     [string]$SessionHelperPath = "scripts/beta-qa-session.ps1",
+    [string]$StartGuidePath = "docs/BETA-QA-KIT.md",
     [string]$ManualValidationPath = "docs/MANUAL-VALIDATION.md",
     [string]$QaKitPath = "artifacts/windows/beta-qa-kit.json"
 )
@@ -48,7 +50,7 @@ function Assert-SafeLeafName {
     if ([string]::IsNullOrWhiteSpace($Name)) {
         throw "$Label file name is empty."
     }
-    if ([System.IO.Path]::GetFileName($Name) -ne $Name -or $Name.Contains('/') -or $Name.Contains('\\')) {
+    if ([System.IO.Path]::GetFileName($Name) -ne $Name -or $Name.Contains('/') -or $Name.Contains('\')) {
         throw "$Label must be a leaf file name without path traversal."
     }
     return $Name
@@ -65,6 +67,7 @@ function Write-Sha256Sidecar {
         path = $resolved
         sidecar = $sidecar
         sha256 = $hash
+        fileName = [System.IO.Path]::GetFileName($resolved)
     }
 }
 
@@ -167,13 +170,17 @@ function Invoke-BuildKit {
         New-Item -ItemType Directory -Path $output -Force | Out-Null
     }
 
+    $verifierDestination = Join-Path $output "beta-qa-kit-verify.ps1"
     $sessionDestination = Join-Path $output "beta-qa-session.ps1"
+    $startGuideDestination = Join-Path $output "BETA-QA-KIT.md"
     $manualDestination = Join-Path $output "BETA-MANUAL-VALIDATION.md"
+    $verifierProof = Copy-BoundFile -SourcePath $VerifierPath -DestinationPath $verifierDestination -Label "QA kit verifier"
     $sessionProof = Copy-BoundFile -SourcePath $SessionHelperPath -DestinationPath $sessionDestination -Label "QA session helper"
+    $startGuideProof = Copy-BoundFile -SourcePath $StartGuidePath -DestinationPath $startGuideDestination -Label "QA kit start guide"
     $manualProof = Copy-BoundFile -SourcePath $ManualValidationPath -DestinationPath $manualDestination -Label "Manual validation guide"
 
     $kit = [ordered]@{
-        schemaVersion = 1
+        schemaVersion = 2
         kind = "DragonDiskForgeBetaQaKit"
         product = "Dragon DiskForge"
         version = $context.version
@@ -186,9 +193,13 @@ function Invoke-BuildKit {
         candidateMetadataSha256 = $context.metadata.sha256
         entryPointSha256 = $context.entryPointSha256
         betaManualQaEntryPointSha256 = $context.betaManualQaEntryPointSha256
-        sessionHelperFile = [System.IO.Path]::GetFileName($sessionProof.path)
+        verifierFile = $verifierProof.fileName
+        verifierSha256 = $verifierProof.sha256
+        sessionHelperFile = $sessionProof.fileName
         sessionHelperSha256 = $sessionProof.sha256
-        manualValidationFile = [System.IO.Path]::GetFileName($manualProof.path)
+        startGuideFile = $startGuideProof.fileName
+        startGuideSha256 = $startGuideProof.sha256
+        manualValidationFile = $manualProof.fileName
         manualValidationSha256 = $manualProof.sha256
         createdUtc = [DateTimeOffset]::UtcNow.ToString("O")
         publicRelease = $false
@@ -199,10 +210,12 @@ function Invoke-BuildKit {
     Write-Sha256Sidecar -Path $kitPath | Out-Null
 
     Invoke-VerifyKit -KitPath $kitPath
-    Write-Host "Built and verified hash-bound beta QA kit."
+    Write-Host "Built and verified hash-bound beta QA kit schema v2."
     Write-Host "Source commit: $($context.sourceCommit)"
     Write-Host "Package SHA-256: $($context.package.sha256)"
+    Write-Host "Verifier SHA-256: $($verifierProof.sha256)"
     Write-Host "Session helper SHA-256: $($sessionProof.sha256)"
+    Write-Host "Start guide SHA-256: $($startGuideProof.sha256)"
     Write-Host "QA kit manifest: $kitPath"
 }
 
@@ -211,7 +224,7 @@ function Invoke-VerifyKit {
 
     $kitProof = Assert-FileSidecar -FilePath $KitPath -Label "QA kit manifest"
     $kit = Get-Content -LiteralPath $kitProof.path -Raw | ConvertFrom-Json
-    if ([int]$kit.schemaVersion -ne 1) { throw "Unsupported beta QA kit schema '$($kit.schemaVersion)'." }
+    if ([int]$kit.schemaVersion -ne 2) { throw "Unsupported beta QA kit schema '$($kit.schemaVersion)'; expected schema 2." }
     if ([string]$kit.kind -ne "DragonDiskForgeBetaQaKit") { throw "Unexpected beta QA kit kind '$($kit.kind)'." }
     if ([string]$kit.product -ne "Dragon DiskForge") { throw "Unexpected beta QA kit product '$($kit.product)'." }
     if ([string]$kit.version -ne "0.5.0-beta.1") { throw "Unexpected beta QA kit version '$($kit.version)'." }
@@ -223,38 +236,44 @@ function Invoke-VerifyKit {
     $directory = Split-Path -Parent $kitProof.path
     $packageName = Assert-SafeLeafName -Name ([string]$kit.packageFile) -Label "Package"
     $metadataName = Assert-SafeLeafName -Name ([string]$kit.candidateMetadataFile) -Label "Candidate metadata"
+    $verifierName = Assert-SafeLeafName -Name ([string]$kit.verifierFile) -Label "QA kit verifier"
     $sessionName = Assert-SafeLeafName -Name ([string]$kit.sessionHelperFile) -Label "Session helper"
+    $startGuideName = Assert-SafeLeafName -Name ([string]$kit.startGuideFile) -Label "QA kit start guide"
     $manualName = Assert-SafeLeafName -Name ([string]$kit.manualValidationFile) -Label "Manual validation guide"
 
-    $packagePath = Join-Path $directory $packageName
-    $metadataPath = Join-Path $directory $metadataName
-    $sessionPath = Join-Path $directory $sessionName
-    $manualPath = Join-Path $directory $manualName
-
-    $packageProof = Assert-FileSidecar -FilePath $packagePath -Label "Candidate package"
-    $metadataProof = Assert-FileSidecar -FilePath $metadataPath -Label "Candidate metadata"
-    $sessionProof = Assert-FileSidecar -FilePath $sessionPath -Label "QA session helper"
-    $manualProof = Assert-FileSidecar -FilePath $manualPath -Label "Manual validation guide"
+    $packageProof = Assert-FileSidecar -FilePath (Join-Path $directory $packageName) -Label "Candidate package"
+    $metadataProof = Assert-FileSidecar -FilePath (Join-Path $directory $metadataName) -Label "Candidate metadata"
+    $verifierProof = Assert-FileSidecar -FilePath (Join-Path $directory $verifierName) -Label "QA kit verifier"
+    $sessionProof = Assert-FileSidecar -FilePath (Join-Path $directory $sessionName) -Label "QA session helper"
+    $startGuideProof = Assert-FileSidecar -FilePath (Join-Path $directory $startGuideName) -Label "QA kit start guide"
+    $manualProof = Assert-FileSidecar -FilePath (Join-Path $directory $manualName) -Label "Manual validation guide"
 
     if ($packageProof.sha256 -ne ([string]$kit.packageSha256).ToLowerInvariant()) { throw "QA kit package SHA-256 does not match its manifest." }
     if ($metadataProof.sha256 -ne ([string]$kit.candidateMetadataSha256).ToLowerInvariant()) { throw "QA kit candidate-metadata SHA-256 does not match its manifest." }
+    if ($verifierProof.sha256 -ne ([string]$kit.verifierSha256).ToLowerInvariant()) { throw "QA kit verifier SHA-256 does not match its manifest." }
     if ($sessionProof.sha256 -ne ([string]$kit.sessionHelperSha256).ToLowerInvariant()) { throw "QA kit session-helper SHA-256 does not match its manifest." }
+    if ($startGuideProof.sha256 -ne ([string]$kit.startGuideSha256).ToLowerInvariant()) { throw "QA kit start-guide SHA-256 does not match its manifest." }
     if ($manualProof.sha256 -ne ([string]$kit.manualValidationSha256).ToLowerInvariant()) { throw "QA kit manual-validation SHA-256 does not match its manifest." }
 
     $candidate = Get-Content -LiteralPath $metadataProof.path -Raw | ConvertFrom-Json
     if ([int]$candidate.schemaVersion -ne 1 -or [string]$candidate.kind -ne "DragonDiskForgeBetaCandidate") {
         throw "QA kit candidate metadata has an unsupported identity."
     }
+    if ([string]$candidate.product -ne "Dragon DiskForge" -or [string]$candidate.version -ne [string]$kit.version -or [string]$candidate.architecture -ne [string]$kit.architecture) {
+        throw "QA kit candidate product/version/architecture does not match its manifest."
+    }
     if ((Assert-ExactCommit -Commit ([string]$candidate.sourceCommit)) -ne $sourceCommit) { throw "QA kit source commit does not match candidate metadata." }
     if ([string]$candidate.workflowRunId -ne [string]$kit.workflowRunId) { throw "QA kit workflow run does not match candidate metadata." }
+    if ([bool]$candidate.publicRelease) { throw "Candidate metadata unexpectedly claims a public release." }
     if ([string]$candidate.packageFile -ne $packageName) { throw "QA kit package file does not match candidate metadata." }
     if ([string]$candidate.packageSha256 -ne $packageProof.sha256) { throw "QA kit package hash does not match candidate metadata." }
     if ([string]$candidate.entryPointSha256 -ne [string]$kit.entryPointSha256) { throw "QA kit desktop entry-point hash does not match candidate metadata." }
     if ([string]$candidate.betaManualQaEntryPointSha256 -ne [string]$kit.betaManualQaEntryPointSha256) { throw "QA kit packaged manual-QA tool hash does not match candidate metadata." }
 
-    Write-Host "Beta QA kit verification passed."
+    Write-Host "Beta QA kit schema v2 verification passed."
     Write-Host "Source commit: $sourceCommit"
     Write-Host "Package SHA-256: $($packageProof.sha256)"
+    Write-Host "Verifier SHA-256: $($verifierProof.sha256)"
 }
 
 function Invoke-SelfTest {
@@ -265,8 +284,12 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $package -Text "self-test-package"
         $packageProof = Write-Sha256Sidecar -Path $package
 
+        $verifier = Join-Path $tempRoot "source-verifier.ps1"
+        Write-Utf8NoBom -Path $verifier -Text "Write-Host 'verifier'"
         $helper = Join-Path $tempRoot "source-helper.ps1"
         Write-Utf8NoBom -Path $helper -Text "Write-Host 'helper'"
+        $startGuide = Join-Path $tempRoot "source-start-guide.md"
+        Write-Utf8NoBom -Path $startGuide -Text "# Beta QA Kit"
         $manual = Join-Path $tempRoot "source-manual.md"
         Write-Utf8NoBom -Path $manual -Text "# Manual QA"
 
@@ -295,7 +318,9 @@ function Invoke-SelfTest {
         $oldPackageChecksum = $script:PackageChecksumFile
         $oldMetadata = $script:CandidateMetadataPath
         $oldMetadataChecksum = $script:CandidateMetadataChecksumFile
+        $oldVerifier = $script:VerifierPath
         $oldHelper = $script:SessionHelperPath
+        $oldStartGuide = $script:StartGuidePath
         $oldManual = $script:ManualValidationPath
         $oldKit = $script:QaKitPath
         try {
@@ -304,15 +329,24 @@ function Invoke-SelfTest {
             $script:PackageChecksumFile = "$package.sha256"
             $script:CandidateMetadataPath = $metadata
             $script:CandidateMetadataChecksumFile = "$metadata.sha256"
+            $script:VerifierPath = $verifier
             $script:SessionHelperPath = $helper
+            $script:StartGuidePath = $startGuide
             $script:ManualValidationPath = $manual
             $script:QaKitPath = Join-Path $tempRoot "beta-qa-kit.json"
             Invoke-BuildKit
 
-            Add-Content -LiteralPath (Join-Path $tempRoot "beta-qa-session.ps1") -Value "# tampered"
-            $tamperRejected = $false
-            try { Invoke-VerifyKit -KitPath $script:QaKitPath } catch { $tamperRejected = $true }
-            if (-not $tamperRejected) { throw "Self-test failed: tampered QA session helper was accepted." }
+            Add-Content -LiteralPath (Join-Path $tempRoot "beta-qa-kit-verify.ps1") -Value "# tampered"
+            $verifierTamperRejected = $false
+            try { Invoke-VerifyKit -KitPath $script:QaKitPath } catch { $verifierTamperRejected = $true }
+            if (-not $verifierTamperRejected) { throw "Self-test failed: tampered QA kit verifier was accepted." }
+
+            Copy-Item -LiteralPath $verifier -Destination (Join-Path $tempRoot "beta-qa-kit-verify.ps1") -Force
+            Write-Sha256Sidecar -Path (Join-Path $tempRoot "beta-qa-kit-verify.ps1") | Out-Null
+            Add-Content -LiteralPath (Join-Path $tempRoot "BETA-QA-KIT.md") -Value "# tampered"
+            $guideTamperRejected = $false
+            try { Invoke-VerifyKit -KitPath $script:QaKitPath } catch { $guideTamperRejected = $true }
+            if (-not $guideTamperRejected) { throw "Self-test failed: tampered QA kit start guide was accepted." }
         }
         finally {
             $script:OutputDirectory = $oldOutput
@@ -320,12 +354,14 @@ function Invoke-SelfTest {
             $script:PackageChecksumFile = $oldPackageChecksum
             $script:CandidateMetadataPath = $oldMetadata
             $script:CandidateMetadataChecksumFile = $oldMetadataChecksum
+            $script:VerifierPath = $oldVerifier
             $script:SessionHelperPath = $oldHelper
+            $script:StartGuidePath = $oldStartGuide
             $script:ManualValidationPath = $oldManual
             $script:QaKitPath = $oldKit
         }
 
-        Write-Host "Dragon DiskForge beta QA kit contract self-test passed."
+        Write-Host "Dragon DiskForge beta QA kit schema v2 contract self-test passed."
     }
     finally {
         if (Test-Path -LiteralPath $tempRoot) {

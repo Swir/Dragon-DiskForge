@@ -73,24 +73,7 @@ jobs:
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode metadata -ExpectedPrefix 0.5.0 -BetaSuffix beta.1 -SourceCommit $env:SOURCE_COMMIT -WorkflowRunId '${{ github.run_id }}'
 
-      - name: Stage standalone beta QA kit verifier and start guide
-        shell: pwsh
-        run: |
-          $output = Join-Path $PWD 'artifacts/windows'
-          New-Item -ItemType Directory -Path $output -Force | Out-Null
-          $items = @(
-            @{ Source = './scripts/beta-qa-kit-verify.ps1'; Name = 'beta-qa-kit-verify.ps1' },
-            @{ Source = './docs/BETA-QA-KIT.md'; Name = 'BETA-QA-KIT.md' }
-          )
-          foreach ($item in $items) {
-            $destination = Join-Path $output $item.Name
-            Copy-Item -LiteralPath $item.Source -Destination $destination -Force
-            $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
-            $line = "{0}  {1}{2}" -f $hash, [System.IO.Path]::GetFileName($destination), [Environment]::NewLine
-            [System.IO.File]::WriteAllText("$destination.sha256", $line, (New-Object System.Text.UTF8Encoding($false)))
-          }
-
-      - name: Build hash-bound beta QA kit
+      - name: Build hash-bound beta QA kit schema v2
         shell: pwsh
         run: ./scripts/beta-qa-kit.ps1 -Mode build
 
@@ -129,5 +112,5 @@ jobs:
         if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[beta-candidate]')
         shell: pwsh
         run: |
-          Write-Host "Candidate package, metadata and hash-bound QA kit build/verification passed."
+          Write-Host "Candidate package, metadata and complete schema-v2 hash-bound QA kit build/verification passed."
           Write-Host "No retained 160+ MiB artifact was uploaded because this was not an explicitly selected [beta-candidate] main commit."
