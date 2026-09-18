@@ -8,6 +8,7 @@ param(
     [string]$QaKitManifestChecksumFile = "",
     [string]$VerifierPath = "scripts/beta-qa-live-kit-verify.ps1",
     [string]$LiveSessionHelperPath = "scripts/beta-qa-live-session.ps1",
+    [string]$LiveSessionGuidePath = "docs/BETA-QA-LIVE-SESSION.md",
     [string]$LiveKitPath = "artifacts/windows/beta-qa-live-kit.json"
 )
 
@@ -117,6 +118,7 @@ function Invoke-BuildLiveKit {
         [string]$CoreManifestSidecar,
         [Parameter(Mandatory = $true)][string]$VerifierSource,
         [Parameter(Mandatory = $true)][string]$HelperSource,
+        [Parameter(Mandatory = $true)][string]$GuideSource,
         [Parameter(Mandatory = $true)][string]$ManifestOutput
     )
     $core = Get-CoreQaKitIdentity -ManifestPath $CoreManifest -ManifestSidecarPath $CoreManifestSidecar
@@ -125,6 +127,7 @@ function Invoke-BuildLiveKit {
 
     $verifierProof = Copy-BoundFile -SourcePath $VerifierSource -DestinationPath (Join-Path $outputFull "beta-qa-live-kit-verify.ps1") -Label "Live-session companion verifier"
     $helperProof = Copy-BoundFile -SourcePath $HelperSource -DestinationPath (Join-Path $outputFull "beta-qa-live-session.ps1") -Label "Live-session continuity helper"
+    $guideProof = Copy-BoundFile -SourcePath $GuideSource -DestinationPath (Join-Path $outputFull "BETA-QA-LIVE-SESSION.md") -Label "Live-session guide"
 
     $manifest = [ordered]@{
         schemaVersion = 1
@@ -142,6 +145,8 @@ function Invoke-BuildLiveKit {
         verifierSha256 = $verifierProof.sha256
         liveSessionHelperFile = $helperProof.fileName
         liveSessionHelperSha256 = $helperProof.sha256
+        liveSessionGuideFile = $guideProof.fileName
+        liveSessionGuideSha256 = $guideProof.sha256
         createdUtc = [DateTimeOffset]::UtcNow.ToString("O")
         humanGateClaimed = $false
         publicRelease = $false
@@ -155,6 +160,7 @@ function Invoke-BuildLiveKit {
     Write-Host "Built and verified hash-bound beta QA live-session companion."
     Write-Host "Core QA kit SHA-256: $($core.proof.sha256)"
     Write-Host "Live-session helper SHA-256: $($helperProof.sha256)"
+    Write-Host "Live-session guide SHA-256: $($guideProof.sha256)"
     Write-Host "Human gate claimed: false"
 }
 
@@ -192,7 +198,7 @@ function Invoke-SelfTest {
         Copy-Item -LiteralPath "$corePath.sha256" -Destination (Join-Path $output "beta-qa-kit.json.sha256") -Force
         $manifestPath = Join-Path $output "beta-qa-live-kit.json"
 
-        Invoke-BuildLiveKit -Output $output -CoreManifest (Join-Path $output "beta-qa-kit.json") -CoreManifestSidecar (Join-Path $output "beta-qa-kit.json.sha256") -VerifierSource $VerifierPath -HelperSource $LiveSessionHelperPath -ManifestOutput $manifestPath
+        Invoke-BuildLiveKit -Output $output -CoreManifest (Join-Path $output "beta-qa-kit.json") -CoreManifestSidecar (Join-Path $output "beta-qa-kit.json.sha256") -VerifierSource $VerifierPath -HelperSource $LiveSessionHelperPath -GuideSource $LiveSessionGuidePath -ManifestOutput $manifestPath
 
         $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
         if ([int]$manifest.schemaVersion -ne 1 -or [bool]$manifest.humanGateClaimed -or [bool]$manifest.publicRelease) {
@@ -224,7 +230,7 @@ function Invoke-SelfTest {
 
 switch ($Mode) {
     "build" {
-        Invoke-BuildLiveKit -Output $OutputDirectory -CoreManifest $QaKitManifestPath -CoreManifestSidecar $QaKitManifestChecksumFile -VerifierSource $VerifierPath -HelperSource $LiveSessionHelperPath -ManifestOutput $LiveKitPath
+        Invoke-BuildLiveKit -Output $OutputDirectory -CoreManifest $QaKitManifestPath -CoreManifestSidecar $QaKitManifestChecksumFile -VerifierSource $VerifierPath -HelperSource $LiveSessionHelperPath -GuideSource $LiveSessionGuidePath -ManifestOutput $LiveKitPath
     }
     "verify" {
         Invoke-VerifyLiveKit -VerifierFile $VerifierPath -ManifestFile $LiveKitPath
