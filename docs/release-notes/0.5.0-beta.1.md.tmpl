@@ -1,0 +1,105 @@
+# Dragon DiskForge {{VERSION}}
+
+Dragon DiskForge {{VERSION}} is the first public beta candidate intended for real Windows x64 testing after the exact retained package, QA kit and interactive manual evidence have all passed the repository release-proof contract.
+
+> **Pre-release:** this build is for testing. Keep backups of important data and use read-only inspection paths first.
+
+## Download
+
+- `DragonDiskForge-{{VERSION}}-win-x64.zip`
+- SHA-256: `{{PACKAGE_SHA256}}`
+- Git tag: `{{TAG}}`
+- Verified source commit: `{{SOURCE_COMMIT}}`
+- Candidate workflow run: `{{CANDIDATE_RUN_ID}}`
+
+The release bundle is prepared only after the exact package checksum, retained candidate metadata, hash-bound QA kit and schema-v3 manual QA evidence pass the fail-closed release-proof contract.
+
+## What is included
+
+- self-contained Windows x64 WinUI 3 / .NET 10 desktop package
+- native read-only-first ISO/VHD/VHDX Mount + Unmount path
+- Dragon Explorer navigation, search, preview and safe Copy out for proven mounted/direct-browse paths
+- managed ISO9660/Joliet direct browsing without a native mount
+- image Analyze reporting with text/JSON output and JSON export
+- SHA-256 + SHA-512 verification
+- shared-Core read-only automation CLI
+- reversible per-user Windows Open With/context-menu helper
+- exact capability documentation generated from the canonical provider registry
+
+The release includes `SUPPORTED-CAPABILITIES-{{VERSION}}.md`, a snapshot of the source-derived provider capability matrix used during release preparation. The maintained repository copy remains under `docs/SUPPORTED-CAPABILITIES.md`.
+
+Capability-matrix SHA-256 used during release preparation: `{{CAPABILITY_MATRIX_SHA256}}`.
+
+## Important capability boundaries
+
+- Provider `Inspect` support does not imply arbitrary filesystem extraction, mounting or writing.
+- QCOW2 and hosted-sparse VMDK guest-byte access is limited to the explicitly proven uncompressed subsets documented by the project.
+- WIM/ESD and FFU support is bounded container metadata inspection; this beta does not claim image application or mutation for those formats.
+- DMG/UDIF support is bounded metadata inspection; unsupported compressed `blkx` decoding is not claimed.
+- The physical-media writer remains a hard-gated engineering candidate and is **not exposed in the application UI or public CLI**.
+- The public beta asset in this release is Windows x64. An ARM64 project target does not imply an ARM64 beta download.
+
+## Manual release evidence
+
+Interactive release evidence was recorded against the exact package before this bundle could be prepared.
+
+- Manual QA evidence SHA-256: `{{MANUAL_QA_SHA256}}`
+- Required observations include clean desktop launch/basic regression, normal-user UAC behavior and real cross-process Explorer drag-out.
+
+The evidence file itself is not published as a release asset; its SHA-256 is retained in the release manifest for provenance without exposing tester notes or machine/session details unnecessarily.
+
+## Install / run
+
+1. Download `DragonDiskForge-{{VERSION}}-win-x64.zip` and its `.sha256` file.
+2. Verify the SHA-256 before extraction.
+3. Extract the ZIP to a normal user-writable folder.
+4. Start `DragonDiskForge.App.exe` from the extracted package.
+
+No installer is used for this beta package.
+
+## Optional Windows shell integration
+
+Shell integration is explicit, per-user and reversible:
+
+```powershell
+.\tools\dragon-diskforge-shell.exe register
+.\tools\dragon-diskforge-shell.exe status
+.\tools\dragon-diskforge-shell.exe unregister
+```
+
+It does not replace Windows `UserChoice` defaults.
+
+## Removal
+
+If shell integration was enabled, run:
+
+```powershell
+.\tools\dragon-diskforge-shell.exe unregister
+```
+
+Then close Dragon DiskForge and delete the extracted folder. Application state/support data stored under the current user profile may be removed separately if desired.
+
+## Safety and known limitations
+
+- Inspection, reporting and verification remain read-only-first.
+- Unsupported UI actions remain disabled rather than simulated.
+- Ordinary startup runs as `asInvoker`; the application does not request ambient administrator elevation.
+- Native operations may request elevation only where Windows requires it; the beta release proof includes normal-user UAC observations.
+- Do not use the hidden physical-media engineering path on valuable media.
+- This is a pre-release; report reproducible failures with the exact package SHA-256 and diagnostic bundle when available.
+
+## Integrity / provenance
+
+- Version: `{{VERSION}}`
+- Tag: `{{TAG}}`
+- Source commit: `{{SOURCE_COMMIT}}`
+- Candidate run: `{{CANDIDATE_RUN_ID}}`
+- Package SHA-256: `{{PACKAGE_SHA256}}`
+- Manual QA evidence SHA-256: `{{MANUAL_QA_SHA256}}`
+- Capability matrix SHA-256: `{{CAPABILITY_MATRIX_SHA256}}`
+
+Project: https://github.com/{{REPOSITORY}}
+
+---
+
+Dragon DiskForge · by Swir
