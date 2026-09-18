@@ -19,6 +19,8 @@ Set-StrictMode -Version Latest
 $Script:SchemaVersion = 3
 $Script:GateName = "Dragon DiskForge interactive beta QA"
 $Script:ScriptPath = $PSCommandPath
+$Script:MinObservationNoteLength = 12
+$Script:MaxObservationNoteLength = 1000
 
 function Get-RequiredChecks {
     return @(
@@ -123,6 +125,22 @@ function Assert-InteractiveUnelevated {
     if (-not [bool]$EnvironmentInfo.uacEnabled) {
         throw "$Context cannot prove the UAC gate while Windows UAC (EnableLUA) is disabled."
     }
+}
+
+function Assert-ObservationNote {
+    param(
+        [AllowEmptyString()][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Context
+    )
+
+    $normalized = if ($null -eq $Value) { "" } else { $Value.Trim() }
+    if ($normalized.Length -lt $Script:MinObservationNoteLength) {
+        throw "$Context requires an observation note of at least $($Script:MinObservationNoteLength) characters after trimming."
+    }
+    if ($normalized.Length -gt $Script:MaxObservationNoteLength) {
+        throw "$Context observation note is limited to $($Script:MaxObservationNoteLength) characters after trimming."
+    }
+    return $normalized
 }
 
 function Write-Utf8NoBom {
@@ -462,6 +480,7 @@ function Assert-EvidenceObject {
         if (-not [bool]$record.humanConfirmed) {
             throw "Manual QA check '$($definition.id)' was not explicitly human-confirmed."
         }
+        Assert-ObservationNote -Value ([string]$record.note) -Context "Manual QA check '$($definition.id)'" | Out-Null
         if ([string]$record.packageVersion -ne [string]$PackageIdentity.version -or [string]$record.packageSha256 -ne [string]$PackageIdentity.sha256) {
             throw "Manual QA check '$($definition.id)' was not recorded against this exact package."
         }
@@ -545,6 +564,7 @@ function Invoke-SelfTest {
         $record.observedInteractive = $true
         $record.observedProcessElevated = $false
         $record.observedUacEnabled = $true
+        $record.note = "Self-test observation confirmed."
     }
 
     Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1"
@@ -570,6 +590,13 @@ function Invoke-SelfTest {
     try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedClosed = $true }
     if (-not $failedClosed) { throw "Self-test failed: pending evidence did not fail closed." }
     $evidence.checks[0].status = "pass"
+
+    $savedNote = $evidence.checks[0].note
+    $evidence.checks[0].note = "too short"
+    $failedShortNote = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedShortNote = $true }
+    if (-not $failedShortNote) { throw "Self-test failed: underspecified observation note did not fail closed." }
+    $evidence.checks[0].note = $savedNote
 
     $evidence.checks[1].packageSha256 = ("d" * 64)
     $failedPackageBinding = $false
@@ -637,7 +664,7 @@ function Invoke-SelfTest {
         }
     }
 
-    Write-Host "Dragon DiskForge beta manual-QA evidence schema v3 self-test passed."
+    Write-Host "Dragon DiskForge beta manual-QA evidence schema v3 self-test passed with mandatory observation notes."
 }
 
 switch ($Mode) {
@@ -669,7 +696,7 @@ switch ($Mode) {
         Write-Host "Interactive session ID: $($environment.sessionId)"
         Write-Host "UAC enabled: $($environment.uacEnabled)"
         Write-Host "Evidence: $($saved.path)"
-        Write-Host "Every subsequent record operation must supply the same -PackagePath and run in this same interactive Windows session so each observation remains bound to one candidate, packaged QA tool and desktop boundary."
+        Write-Host "Every subsequent record operation must supply the same -PackagePath, a concise observation -Note, and run in this same interactive Windows session so each observation remains bound to one candidate, packaged QA tool and desktop boundary."
         exit 0
     }
 
@@ -686,9 +713,7 @@ switch ($Mode) {
         if ($Result -eq "pass" -and -not $HumanConfirmed) {
             throw "A passing manual QA result requires -HumanConfirmed."
         }
-        if ($Note.Length -gt 1000) {
-            throw "-Note is limited to 1000 characters."
-        }
+        $normalizedNote = Assert-ObservationNote -Value $Note -Context "Manual QA observation '$Check'"
         if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
             throw "Interactive beta QA is supported only on Windows."
         }
@@ -733,7 +758,7 @@ switch ($Mode) {
         $record.observedInteractive = [bool]$environment.userInteractive
         $record.observedProcessElevated = [bool]$environment.processElevated
         $record.observedUacEnabled = $environment.uacEnabled
-        $record.note = $Note
+        $record.note = $normalizedNote
         $evidence.updatedUtc = [DateTimeOffset]::UtcNow.ToString("O")
 
         $saved = Save-Evidence -Evidence $evidence -Path $EvidencePath

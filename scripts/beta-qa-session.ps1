@@ -347,6 +347,15 @@ function Invoke-ManualEvidenceInitialization {
     }
 }
 
+function Get-RecordExampleCommand {
+    param(
+        [Parameter(Mandatory = $true)]$Identity,
+        [Parameter(Mandatory = $true)][string]$EvidencePath
+    )
+
+    return "  & '$($Identity.qaTool)' -Mode record -PackagePath '$($Identity.packagePath)' -ChecksumFile '$($Identity.checksumFile)' -EvidencePath '$EvidencePath' -Check desktop.clean-launch -Result pass -HumanConfirmed -Note 'Visual clean-desktop launch confirmed.'"
+}
+
 function Write-NextSteps {
     param(
         [Parameter(Mandatory = $true)]$Identity,
@@ -363,13 +372,13 @@ function Write-NextSteps {
     Write-Host ""
     Write-Host "IMPORTANT: the launch probe only proves that the process remained alive locally."
     Write-Host "It does NOT mark desktop.clean-launch or any UAC/Explorer gate as passed."
-    Write-Host "After physically performing each checklist observation, record it with the packaged tool and -HumanConfirmed."
+    Write-Host "After physically performing each checklist observation, record it with the packaged tool, exact package/checksum, -HumanConfirmed and a concise -Note."
     Write-Host ""
     Write-Host "List checks:"
     Write-Host "  & '$($Identity.qaTool)' -Mode list -EvidencePath '$EvidencePath'"
     Write-Host ""
     Write-Host "Example after visibly confirming the clean desktop launch:"
-    Write-Host "  & '$($Identity.qaTool)' -Mode record -EvidencePath '$EvidencePath' -Check desktop.clean-launch -Result pass -HumanConfirmed -Note 'Visual clean-desktop launch confirmed.'"
+    Write-Host (Get-RecordExampleCommand -Identity $Identity -EvidencePath $EvidencePath)
     Write-Host ""
     Write-Host "Final verification:"
     Write-Host "  & '$($Identity.qaTool)' -Mode verify -PackagePath '$($Identity.packagePath)' -ChecksumFile '$($Identity.checksumFile)' -EvidencePath '$EvidencePath'"
@@ -574,6 +583,11 @@ function Invoke-SelfTest {
         if ($identity.version -ne "0.5.0-beta.1" -or $identity.architecture -ne "x64") { throw "Self-test failed: candidate identity mismatch." }
         if (-not (Test-Path -LiteralPath $identity.entryPoint -PathType Leaf)) { throw "Self-test failed: entry point was not extracted." }
         if (-not (Test-Path -LiteralPath $identity.qaTool -PathType Leaf)) { throw "Self-test failed: QA tool was not extracted." }
+
+        $recordExample = Get-RecordExampleCommand -Identity $identity -EvidencePath (Join-Path $tempRoot "beta-manual-qa.json")
+        if ($recordExample -notmatch [regex]::Escape("-PackagePath '$($identity.packagePath)'")) { throw "Self-test failed: record guidance does not bind the exact package path." }
+        if ($recordExample -notmatch [regex]::Escape("-ChecksumFile '$($identity.checksumFile)'")) { throw "Self-test failed: record guidance does not bind the exact checksum sidecar." }
+        if ($recordExample -notmatch "-HumanConfirmed" -or $recordExample -notmatch "-Note") { throw "Self-test failed: record guidance omits human confirmation or observation-note requirements." }
 
         $badSidecar = Join-Path $tempRoot "bad.sha256"
         Write-Utf8NoBom -Path $badSidecar -Text (("0" * 64) + "  DragonDiskForge-win-x64.zip" + [Environment]::NewLine)
