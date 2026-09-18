@@ -5,6 +5,7 @@ on:
     paths:
       - 'README.md'
       - 'docs/ROADMAP.md'
+      - 'docs/STATUS.md'
       - 'assets/readme/progress-*.svg'
       - 'scripts/generate-progress-assets.ps1'
       - '.github/workflows/progress-assets.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'README.md'
       - 'docs/ROADMAP.md'
+      - 'docs/STATUS.md'
       - 'assets/readme/progress-*.svg'
       - 'scripts/generate-progress-assets.ps1'
       - '.github/workflows/progress-assets.yml'
@@ -33,3 +35,29 @@ jobs:
       - name: Verify progress data, SVG/XML and embeddings
         shell: pwsh
         run: ./scripts/generate-progress-assets.ps1 -Check
+      - name: Reject retired character progress meters
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $targets = @('README.md', 'docs/ROADMAP.md', 'docs/STATUS.md')
+          $patterns = @(
+            '[█▓▒░■□▪▫]{3,}',
+            '\[[#=\-]{5,}\]'
+          )
+
+          $violations = @()
+          foreach ($target in $targets) {
+            $text = Get-Content -LiteralPath $target -Raw
+            foreach ($pattern in $patterns) {
+              if ($text -match $pattern) {
+                $violations += "$target matches retired progress-meter pattern: $pattern"
+              }
+            }
+          }
+
+          if ($violations.Count -gt 0) {
+            $violations | ForEach-Object { Write-Error $_ }
+            throw 'Legacy character progress meter detected. Use the canonical SVG plus plain numeric fallback.'
+          }
+
+          Write-Host 'No retired character progress meters found in maintained progress dashboards.'
