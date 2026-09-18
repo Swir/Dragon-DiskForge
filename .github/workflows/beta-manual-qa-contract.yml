@@ -25,6 +25,7 @@ jobs:
           ./scripts/beta-manual-qa.ps1 -Mode self-test
           ./scripts/beta-qa-session.ps1 -Mode self-test
           ./scripts/beta-qa-session-integrity.ps1 -Mode self-test
+          ./scripts/beta-qa-live-session.ps1 -Mode self-test
           ./scripts/beta-qa-archive.ps1 -Mode self-test
           ./scripts/beta-qa-desktop-witness.ps1 -Mode self-test
 
@@ -34,5 +35,6 @@ jobs:
           .\scripts\beta-manual-qa.ps1 -Mode self-test
           .\scripts\beta-qa-session.ps1 -Mode self-test
           .\scripts\beta-qa-session-integrity.ps1 -Mode self-test
+          .\scripts\beta-qa-live-session.ps1 -Mode self-test
           .\scripts\beta-qa-archive.ps1 -Mode self-test
           .\scripts\beta-qa-desktop-witness.ps1 -Mode self-test
