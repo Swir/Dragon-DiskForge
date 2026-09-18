@@ -17,10 +17,10 @@
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. Public release remains gated by clean-desktop interactive regression, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release publication.
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #79 (`35291908987`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35291908987`, built from `main` source commit `a0483311bf000a995598b42ed9ec71019e63902e`; nested package SHA-256 `ecc4f0798ecc4d40fb9f77b433ae9dcbb206a358a9d2346bc9ac5411e8ba66a2`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #95 (`35305773840`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` source commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`; nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
-The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source predates current `main` only by retained-evidence/contract commits, not product-code changes.
+The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source is the latest deliberately retained `[beta-candidate]` `main` checkpoint; the synchronization commits that record this evidence do not alter packaged product code.
 
 ## Overall project progress
 
@@ -133,7 +133,8 @@ See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACC
 - PR #54 / implementation run #381 + Accessibility Contract #1 + Disposable Media Guard #53 + Security Boundary #15 + Clean Machine Runtime #8 — automated accessibility/keyboard semantics hardening
 - PR #55 / implementation run #389 + Beta Manual QA Contract #1 — exact-package interactive beta-QA evidence foundation
 - PR #73 / PR-head Build #456 + main Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening and beta source promotion
-- PR #78 — retained-candidate evidence hardened and bound to the newer retained run recorded above
+- PR #78 — retained-candidate evidence hardened and bound to its then-current retained run
+- PR #82 / exact PR head `357bda52a2bfa18c49ba1bb241b9c1596ddd07c2` + `main` Build #488 + Beta Candidate #95 — session-bound beta-QA evidence hardening, SVG progress presentation cleanup and fresh retained candidate selection
 
 ## Beta readiness
 
