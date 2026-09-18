@@ -299,7 +299,7 @@ function Invoke-VerifyArchive {
     $files = @($manifest.files)
     $actualNames = @($files | ForEach-Object { [string]$_.name } | Sort-Object)
     $expectedNames = Get-ExpectedArchiveFileNames -SchemaVersion $schema -WitnessIncluded $witnessIncluded
-    if ($actualNames.Count -ne $expectedNames.Count -or (Compare-Object -ReferenceObject $expectedNames -DifferenceObject $actualNames).Count -ne 0) {
+    if ($actualNames.Count -ne $expectedNames.Count -or @(Compare-Object -ReferenceObject $expectedNames -DifferenceObject $actualNames).Count -ne 0) {
         throw "Evidence archive manifest payload set is not canonical for schema $schema."
     }
 
