@@ -6,7 +6,7 @@ Automated CI is the primary quality gate, but a few Windows desktop behaviors de
 
 The clean Windows package contains `tools/beta-manual-qa.ps1`. It is intentionally fail-closed and is used only to record the remaining human desktop observations against the exact final `0.5.0-beta.1` release candidate.
 
-The tool binds the evidence to the ZIP SHA-256, package version, desktop entry-point SHA-256 and packaged QA-tool SHA-256. Passing observations require the same interactive **unelevated** Windows desktop session ID used to initialize the evidence, UAC enabled, and explicit human confirmation. The evidence JSON is written atomically and receives its own SHA-256 sidecar. `verify` fails if a required check is pending/failing, the package changed, the evidence was tampered with, initialization or observation was elevated/non-interactive, an observation came from a different Windows build/process architecture/interactive session than the baseline, or explicit human confirmation is absent.
+The tool binds the evidence to the ZIP SHA-256, package version, desktop entry-point SHA-256 and packaged QA-tool SHA-256. Passing observations require the same interactive **unelevated** Windows desktop session ID used to initialize the evidence, UAC enabled, explicit human confirmation and a concise observation note. Every recorded pass or fail requires a trimmed `-Note` between 12 and 1000 characters; final verification rejects passing evidence whose note is missing or underspecified. The evidence JSON is written atomically and receives its own SHA-256 sidecar. `verify` fails if a required check is pending/failing, the package changed, the evidence was tampered with, initialization or observation was elevated/non-interactive, an observation came from a different Windows build/process architecture/interactive session than the baseline, explicit human confirmation is absent or the recorded observation note is too short.
 
 The committed source metadata is now promoted to `0.5.0-beta.1`, but a verification-only PR artifact is not the final manual-QA target. Initialize final evidence only against the retained `0.5.0-beta.1` ZIP/checksum pair produced from the exact green `main` commit selected for beta testing. Run from a normal unelevated PowerShell session, for example:
 
@@ -21,7 +21,7 @@ The committed source metadata is now promoted to `0.5.0-beta.1`, but a verificat
 
 Keep the QA session open until all required observations are recorded. Reconnecting through a different interactive Windows session invalidates continuity for release evidence; initialize a new evidence set in the session that will actually be qualified instead of combining observations across sessions.
 
-After physically performing one checklist observation, record exactly that result. A passing result requires `-HumanConfirmed`:
+After physically performing one checklist observation, record exactly that result. A passing result requires `-HumanConfirmed`, and every pass/fail record requires the bounded observation `-Note` described above:
 
 ```powershell
 .\tools\beta-manual-qa.ps1 -Mode record `
