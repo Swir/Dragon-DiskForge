@@ -1,0 +1,35 @@
+name: Dragon DiskForge Beta Docs Consistency
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dragon-beta-docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Retained candidate documentation consistency
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 consistency self-test
+        shell: pwsh
+        run: ./scripts/beta-docs-consistency.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 consistency self-test
+        shell: powershell
+        run: .\scripts\beta-docs-consistency.ps1 -Mode self-test
+
+      - name: Verify current beta documentation
+        shell: pwsh
+        run: ./scripts/beta-docs-consistency.ps1 -Mode verify

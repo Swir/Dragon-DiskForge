@@ -177,7 +177,7 @@ PR #52 exact implementation head `0ff048a264469406c86ab056d7a3471b82dfc4cb` pass
 
 PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` passed full Windows build #374, Disposable Media Guard #46, Security Boundary #8 and Clean Machine Runtime #1 before the clean-machine matrix was marked complete.
 
-PR #54 exact implementation head `69490fe118614e9fb6bc39433756ccd0c50d5dd9` passed full Windows build #381, Accessibility Contract #1, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is repeatable automated semantics/compile evidence; it does not claim formal certification or a human Narrator/NVDA/JAWS session.
+PR #54 exact implementation head `69490fe118614e9fb6bc39433756ccd0c50d5dd9` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is repeatable automated semantics/compile evidence; it does not claim formal certification or a human Narrator/NVDA/JAWS session.
 
 See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACCESSIBILITY.md`.
 
@@ -191,6 +191,10 @@ Production release requires all final capability, package, documentation, checks
 
 ## Beta release track
 
-The first planned public beta remains **`0.5.0-beta.1`**. Source/package metadata is promoted and Beta Candidate run #64 retained an independently verified non-public Windows x64 candidate from green `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`. The package-only clean-machine runtime matrix, automated engineering, clean-package, security-boundary, accessibility-hardening and candidate-retention gates are green. Interactive WinUI clean-desktop launch/open/mount/explore/verify/analyze, normal-user UAC, real cross-process Explorer drag-out and public Release/checksum publication remain open.
+The first planned public beta remains **`0.5.0-beta.1`**. Source/package metadata is promoted and automated engineering, clean-package, security-boundary, accessibility-hardening, clean-machine runtime and candidate-retention gates are green. Interactive WinUI clean-desktop launch/open/mount/explore/verify/analyze, normal-user UAC, real cross-process Explorer drag-out and public Release/checksum publication remain open.
+
+<!-- retained-beta-candidate:start -->
+Current retained candidate: Beta Candidate run #79 (`35291908987`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35291908987`, built from `main` source commit `a0483311bf000a995598b42ed9ec71019e63902e`; nested package SHA-256 `ecc4f0798ecc4d40fb9f77b433ae9dcbb206a358a9d2346bc9ac5411e8ba66a2`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+<!-- retained-beta-candidate:end -->
 
 A capability becomes user-visible only after its real backing path and tests exist.

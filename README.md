@@ -27,7 +27,11 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 
 ## Current development version — 0.5.0-beta.1
 
-Source and clean-package metadata are now promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
+Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
+
+<!-- retained-beta-candidate:start -->
+Current retained candidate: Beta Candidate run #79 (`35291908987`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35291908987`, built from `main` source commit `a0483311bf000a995598b42ed9ec71019e63902e`; nested package SHA-256 `ecc4f0798ecc4d40fb9f77b433ae9dcbb206a358a9d2346bc9ac5411e8ba66a2`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
+<!-- retained-beta-candidate:end -->
 
 ## Project progress — 83% toward 1.0
 
@@ -126,7 +130,7 @@ Image inspection/verification commands remain read-only. The CLI also exposes na
 
 ### Windows shell integration ✅
 
-The clean package now includes `tools/dragon-diskforge-shell.exe`:
+The clean package includes `tools/dragon-diskforge-shell.exe`:
 
 ```powershell
 .\tools\dragon-diskforge-shell.exe register
@@ -146,7 +150,7 @@ Current scope: **5/7 (~71%)**.
 
 ### Crash + support evidence ✅
 
-Unhandled WinUI failures are captured best-effort into a bounded rotated local crash history. Reports store only exception type, HRESULT, a SHA-256 fingerprint, exception-chain type names and method-only frames. Raw exception messages, source-file paths and image contents are intentionally excluded. The support ZIP now includes at most three sanitized crash summaries and keeps using the existing transactional safe-output boundary.
+Unhandled WinUI failures are captured best-effort into a bounded rotated local crash history. Reports store only exception type, HRESULT, a SHA-256 fingerprint, exception-chain type names and method-only frames. Raw exception messages, source-file paths and image contents are intentionally excluded. The support ZIP includes at most three sanitized crash summaries and keeps using the existing transactional safe-output boundary.
 
 ### Large-image performance regression gate ✅
 
@@ -156,7 +160,7 @@ PR #51 implementation head `44a075a...` passed full Windows run #360 and Disposa
 
 ### Security boundary review ✅
 
-The Windows desktop manifest explicitly remains `asInvoker` with `uiAccess=false`; ordinary startup therefore does not request ambient administrator elevation. A dedicated security-boundary workflow now regression-tests the high-value architectural invariants: HKCU-only shell integration with no `UserChoice` takeover, public CLI isolation from the raw physical writer, clean-package debug/test exclusion and SHA-256 entry-point binding, destructive-writer CI lockout, physical-media fail-closed/confirmation cases and shell command quoting/injection rejection.
+The Windows desktop manifest explicitly remains `asInvoker` with `uiAccess=false`; ordinary startup therefore does not request ambient administrator elevation. A dedicated security-boundary workflow regression-tests the high-value architectural invariants: HKCU-only shell integration with no `UserChoice` takeover, public CLI isolation from the raw physical writer, clean-package debug/test exclusion and SHA-256 entry-point binding, destructive-writer CI lockout, physical-media fail-closed/confirmation cases and shell command quoting/injection rejection.
 
 PR #52 exact implementation head `0ff048a...` passed full Windows build #367, Disposable Media Guard #39 and Security Boundary #1 before this roadmap item was marked complete. The review and its explicit limitations are documented in [`docs/SECURITY-BOUNDARIES.md`](docs/SECURITY-BOUNDARIES.md).
 
@@ -186,7 +190,7 @@ Public beta publication remains a separate release decision gated by [`docs/BETA
 
 ## Beta readiness
 
-The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime, accessibility-hardening and exact-candidate retention gates are green. Beta Candidate run #64 retained an independently verified Windows x64 package bound to `main` commit `b9242802ea98c390280f5bd91ec4fb710e70be58`; it remains a non-public engineering candidate. These independent interactive/manual/release gates remain:
+The planned first public beta remains **`0.5.0-beta.1`** and is **not ready yet**. Automated engineering, security-boundary, clean-package, package-only clean-machine runtime, accessibility-hardening and exact-candidate retention gates are green. The authoritative retained candidate is the exact run/source/package identity recorded above; it remains a non-public engineering candidate. These independent interactive/manual/release gates remain:
 
 - human-confirmed clean supported Windows WinUI launch and basic open/mount/explore/verify/analyze regression
 - normal-user UAC validation
