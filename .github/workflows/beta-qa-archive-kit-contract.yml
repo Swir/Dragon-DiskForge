@@ -8,6 +8,7 @@ on:
       - 'scripts/beta-qa-archive.ps1'
       - 'docs/BETA-QA-EVIDENCE-ARCHIVE.md'
       - 'docs/BETA-QA-KIT.md'
+      - 'docs/BETA-QA-DESKTOP-WITNESS.md'
       - '.github/workflows/beta-qa-archive-kit-contract.yml'
       - '.github/workflows/beta-candidate.yml'
   push:
@@ -18,6 +19,7 @@ on:
       - 'scripts/beta-qa-archive.ps1'
       - 'docs/BETA-QA-EVIDENCE-ARCHIVE.md'
       - 'docs/BETA-QA-KIT.md'
+      - 'docs/BETA-QA-DESKTOP-WITNESS.md'
       - '.github/workflows/beta-qa-archive-kit-contract.yml'
       - '.github/workflows/beta-candidate.yml'
   workflow_dispatch:
@@ -29,10 +31,16 @@ jobs:
   verify-portable-archive-kit:
     name: Verify hash-bound portable evidence archive kit
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: PowerShell 7 archive helper self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-archive.ps1 -Mode self-test
+      - name: Windows PowerShell 5.1 archive helper self-test
+        shell: powershell
+        run: .\scripts\beta-qa-archive.ps1 -Mode self-test
       - name: PowerShell 7 archive kit self-test
         shell: pwsh
         run: ./scripts/beta-qa-archive-kit.ps1 -Mode self-test
