@@ -30,6 +30,18 @@ jobs:
         shell: powershell
         run: .\scripts\beta-docs-consistency.ps1 -Mode self-test
 
+      - name: PowerShell 7 retained read-back self-test
+        shell: pwsh
+        run: ./scripts/beta-retained-readback-contract.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 retained read-back self-test
+        shell: powershell
+        run: .\scripts\beta-retained-readback-contract.ps1 -Mode self-test
+
       - name: Verify current beta documentation
         shell: pwsh
         run: ./scripts/beta-docs-consistency.ps1 -Mode verify
+
+      - name: Verify retained beta read-back hashes
+        shell: pwsh
+        run: ./scripts/beta-retained-readback-contract.ps1 -Mode verify
