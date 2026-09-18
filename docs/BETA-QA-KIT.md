@@ -1,10 +1,10 @@
 # Dragon DiskForge — Retained Beta QA Kit
 
-The retained `0.5.0-beta.1` candidate is an engineering test artifact, not a public release. Its purpose is to let the remaining interactive Windows checks run against one exact package identity without requiring a repository checkout to obtain the verifier, session helper, manual checklist or objective desktop-witness helper.
+The retained `0.5.0-beta.1` candidate is an engineering test artifact, not a public release. Its purpose is to let the remaining interactive Windows checks run against one exact package identity without requiring a repository checkout to obtain the verifier, session helper, manual checklist, objective desktop-witness helper or evidence-archive tooling.
 
 ## What the retained artifact contains
 
-An explicitly selected `[beta-candidate]` build retains the exact candidate package and core QA kit together with a separate hash-bound desktop-witness companion:
+An explicitly selected `[beta-candidate]` build retains the exact candidate package and core QA kit together with separate hash-bound desktop-witness and evidence-archive companions:
 
 - `DragonDiskForge-win-x64.zip`
 - `DragonDiskForge-win-x64.zip.sha256`
@@ -28,10 +28,20 @@ An explicitly selected `[beta-candidate]` build retains the exact candidate pack
 - `beta-qa-desktop-witness.ps1.sha256`
 - `BETA-QA-DESKTOP-WITNESS.md`
 - `BETA-QA-DESKTOP-WITNESS.md.sha256`
+- `beta-qa-archive-kit.json`
+- `beta-qa-archive-kit.json.sha256`
+- `beta-qa-archive-kit-verify.ps1`
+- `beta-qa-archive-kit-verify.ps1.sha256`
+- `beta-qa-archive.ps1`
+- `beta-qa-archive.ps1.sha256`
+- `BETA-QA-EVIDENCE-ARCHIVE.md`
+- `BETA-QA-EVIDENCE-ARCHIVE.md.sha256`
 
 Core QA-kit manifest schema v2 binds the exact source commit/workflow run, candidate package SHA-256, candidate-metadata SHA-256, desktop entry-point SHA-256, packaged manual-QA tool SHA-256, standalone verifier SHA-256, external session-helper SHA-256, start-guide SHA-256 and manual-validation guide SHA-256. Every retained companion file carries a conventional SHA-256 sidecar.
 
 The separate desktop-witness companion uses schema v1. It binds its standalone verifier, desktop-witness helper and witness guide to the exact core QA-kit manifest SHA-256, source commit, workflow run and candidate package SHA-256. It permanently carries `humanGateClaimed=false` and `publicRelease=false`; it cannot elevate objective supporting evidence into a human release-gate claim.
+
+The portable evidence-archive companion uses its own schema v1. It binds the archive verifier, `beta-qa-archive.ps1` and archive guide to the exact core QA-kit manifest, desktop-witness manifest, source commit, workflow run and candidate package SHA-256. It also permanently carries `humanGateClaimed=false` and `publicRelease=false`.
 
 ## Verify before interactive testing
 
@@ -40,15 +50,16 @@ Run from an ordinary PowerShell prompt in the extracted retained artifact direct
 ```powershell
 .\beta-qa-kit-verify.ps1 -ManifestPath .\beta-qa-kit.json
 .\beta-qa-witness-kit-verify.ps1 -ManifestPath .\beta-qa-witness-kit.json
+.\beta-qa-archive-kit-verify.ps1 -ManifestPath .\beta-qa-archive-kit.json
 ```
 
-The core verifier checks its own filename/hash, all core companion files, source/workflow/package identity and candidate bindings. The witness-companion verifier independently checks its own filename/hash, the core QA-kit manifest hash, the exact desktop-witness helper and guide, source/workflow/package identity and the permanent false release/human-gate claims.
+The core verifier checks its own filename/hash, all core companion files, source/workflow/package identity and candidate bindings. The witness-companion verifier independently checks its own filename/hash, the core QA-kit manifest hash, the exact desktop-witness helper and guide, source/workflow/package identity and the permanent false release/human-gate claims. The archive-kit verifier independently checks its own filename/hash, both upstream manifests, the archive helper and guide, the same source/workflow/package identity and the same fail-closed release/human-gate boundary.
 
 A successful result proves only that the retained test inputs are internally consistent with the selected GitHub Actions candidate. It does **not** prove that the WinUI application visibly launched, that UAC behaved correctly, that the user performed a real cross-process Explorer drag gesture or that any manual beta gate passed.
 
 ## Prepare the Windows desktop session
 
-After both standalone verifiers pass, use the retained session helper from an interactive **unelevated** Windows session with UAC enabled:
+After all standalone verifiers pass, use the retained session helper from an interactive **unelevated** Windows session with UAC enabled:
 
 ```powershell
 .\beta-qa-session.ps1 -Mode prepare `
@@ -66,21 +77,30 @@ The retained `beta-qa-desktop-witness.ps1` can add objective supporting evidence
 
 See `BETA-QA-DESKTOP-WITNESS.md` for the exact `baseline → real human gesture → observe → verify` sequence and safety boundaries. The witness permanently carries `humanGateClaimed=false`: it cannot prove that the user dragged from Dragon DiskForge, that Windows negotiated Copy semantics, that the source remained unchanged, that UAC behaved correctly or that any beta gate passed. Those facts remain explicit human observations recorded through the packaged QA tool.
 
-The witness companion is deliberately a separate manifest rather than a silent mutation of core QA-kit schema v2. That keeps the established candidate/QA-kit contract stable while making the new objective witness independently hash-bound and usable from the retained artifact itself.
+The witness companion is deliberately a separate manifest rather than a silent mutation of core QA-kit schema v2. That keeps the established candidate/QA-kit contract stable while making the objective witness independently hash-bound and usable from the retained artifact itself.
 
 ## Preserve evidence before deleting the session workspace
 
-The retained QA kit remains sufficient to perform and record the human observations without a repository checkout. Release operators using a repository checkout can additionally preserve a compact evidence snapshot with `scripts/beta-qa-archive.ps1` before running session cleanup. See `BETA-QA-EVIDENCE-ARCHIVE.md`.
+Evidence preservation no longer requires a repository checkout. After completing or pausing an interactive QA session, use the retained archive helper **before** deleting the disposable workspace:
 
-The archive utility does not change the retained candidate identity and cannot mark any human gate as passed. The desktop witness is supporting evidence and remains separate from authoritative packaged manual-QA evidence unless it is deliberately preserved for audit before cleanup.
+```powershell
+.\beta-qa-archive.ps1 -Mode archive `
+  -WorkspacePath <session-workspace> `
+  -ArchivePath <path-outside-session-workspace>
+
+.\beta-qa-archive.ps1 -Mode verify `
+  -ArchivePath <path-outside-session-workspace>
+```
+
+Read `BETA-QA-EVIDENCE-ARCHIVE.md` for the exact preserve → verify → cleanup sequence and default paths. The archive utility does not change the retained candidate identity, does not duplicate the large candidate ZIP and cannot mark any human gate as passed. The desktop witness is supporting evidence and remains separate from authoritative packaged manual-QA evidence unless it is deliberately preserved for audit before cleanup.
 
 ## CI contract
 
-The Beta Candidate workflow runs the core QA-kit builder self-test and desktop-witness-companion self-test under PowerShell 7 and Windows PowerShell 5.1. It then builds and verifies the real package/candidate metadata, creates the schema-v2 core QA kit, executes the retained standalone core verifier under both PowerShell engines, creates the schema-v1 witness companion, and executes its retained standalone verifier under both engines.
+The Beta Candidate workflow runs the core QA-kit builder self-test, desktop-witness-companion self-test and portable archive-kit self-test under PowerShell 7 and Windows PowerShell 5.1. It then builds and verifies the real package/candidate metadata, creates the schema-v2 core QA kit, executes the retained standalone core verifier under both PowerShell engines, creates the schema-v1 witness companion and verifies it under both engines, then creates the portable archive companion and executes its retained standalone verifier under both engines.
 
-A separate Beta QA Witness Kit Contract provides a fast deterministic gate for the companion builder/verifier, including tamper rejection and fail-closed rejection of `humanGateClaimed=true`. The Beta Manual QA Contract continues to self-test the actual desktop witness logic under both PowerShell engines.
+A separate Beta QA Witness Kit Contract provides a fast deterministic gate for the witness builder/verifier, including tamper rejection and fail-closed rejection of `humanGateClaimed=true`. A separate Beta QA Archive Kit Contract does the same for the portable archive companion, including tampered-helper and candidate-identity rejection. The Beta Manual QA Contract continues to self-test the actual desktop witness logic under both PowerShell engines.
 
-The independent Beta Release Proof contract continues to require the exact candidate source, workflow, package, core QA kit and packaged human-confirmed evidence. The objective witness companion strengthens and simplifies the real desktop QA session, but it does not replace the authoritative human evidence or weaken any final release proof requirement.
+The independent Beta Release Proof contract continues to require the exact candidate source, workflow, package, core QA kit and packaged human-confirmed evidence. The witness and portable archive companions strengthen and simplify the real desktop QA session, but neither replaces the authoritative human evidence or weakens any final release proof requirement.
 
 A verification-only pull-request run does not retain the large candidate artifact. The artifact is retained only on an explicitly selected `main` commit whose message contains `[beta-candidate]`.
 
