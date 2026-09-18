@@ -23,7 +23,7 @@ function Assert-SafeLeafName {
     if ([string]::IsNullOrWhiteSpace($Name)) {
         throw "$Label file name is empty."
     }
-    if ([System.IO.Path]::GetFileName($Name) -ne $Name -or $Name.Contains('/') -or $Name.Contains('\\')) {
+    if ([System.IO.Path]::GetFileName($Name) -ne $Name -or $Name.Contains('/') -or $Name.Contains('\')) {
         throw "$Label must be a leaf file name without path traversal."
     }
     return $Name
@@ -65,7 +65,7 @@ $runningVerifier = Assert-FileSidecar -FilePath $PSCommandPath -Label "QA kit ve
 $manifestProof = Assert-FileSidecar -FilePath $ManifestPath -Label "QA kit manifest"
 $manifest = Get-Content -LiteralPath $manifestProof.path -Raw | ConvertFrom-Json
 
-if ([int]$manifest.schemaVersion -ne 1) { throw "Unsupported beta QA kit schema '$($manifest.schemaVersion)'." }
+if ([int]$manifest.schemaVersion -ne 2) { throw "Unsupported beta QA kit schema '$($manifest.schemaVersion)'; expected schema 2." }
 if ([string]$manifest.kind -ne "DragonDiskForgeBetaQaKit") { throw "Unexpected beta QA kit kind '$($manifest.kind)'." }
 if ([string]$manifest.product -ne "Dragon DiskForge") { throw "Unexpected beta QA kit product '$($manifest.product)'." }
 if ([string]$manifest.version -ne "0.5.0-beta.1") { throw "Unexpected beta QA kit version '$($manifest.version)'." }
@@ -77,17 +77,24 @@ if ([bool]$manifest.publicRelease) { throw "QA kit must describe a retained non-
 $directory = Split-Path -Parent $manifestProof.path
 $packageName = Assert-SafeLeafName -Name ([string]$manifest.packageFile) -Label "Package"
 $metadataName = Assert-SafeLeafName -Name ([string]$manifest.candidateMetadataFile) -Label "Candidate metadata"
+$verifierName = Assert-SafeLeafName -Name ([string]$manifest.verifierFile) -Label "QA kit verifier"
 $sessionName = Assert-SafeLeafName -Name ([string]$manifest.sessionHelperFile) -Label "Session helper"
+$startGuideName = Assert-SafeLeafName -Name ([string]$manifest.startGuideFile) -Label "QA kit start guide"
 $manualName = Assert-SafeLeafName -Name ([string]$manifest.manualValidationFile) -Label "Manual validation guide"
+
+if ($runningVerifier.fileName -ne $verifierName) { throw "Running QA kit verifier file name does not match the manifest." }
+if ($runningVerifier.sha256 -ne ([string]$manifest.verifierSha256).ToLowerInvariant()) { throw "Running QA kit verifier SHA-256 does not match the manifest." }
 
 $packageProof = Assert-FileSidecar -FilePath (Join-Path $directory $packageName) -Label "Candidate package"
 $metadataProof = Assert-FileSidecar -FilePath (Join-Path $directory $metadataName) -Label "Candidate metadata"
 $sessionProof = Assert-FileSidecar -FilePath (Join-Path $directory $sessionName) -Label "Session helper"
+$startGuideProof = Assert-FileSidecar -FilePath (Join-Path $directory $startGuideName) -Label "QA kit start guide"
 $manualProof = Assert-FileSidecar -FilePath (Join-Path $directory $manualName) -Label "Manual validation guide"
 
 if ($packageProof.sha256 -ne ([string]$manifest.packageSha256).ToLowerInvariant()) { throw "QA kit package SHA-256 does not match its manifest." }
 if ($metadataProof.sha256 -ne ([string]$manifest.candidateMetadataSha256).ToLowerInvariant()) { throw "QA kit candidate-metadata SHA-256 does not match its manifest." }
 if ($sessionProof.sha256 -ne ([string]$manifest.sessionHelperSha256).ToLowerInvariant()) { throw "QA kit session-helper SHA-256 does not match its manifest." }
+if ($startGuideProof.sha256 -ne ([string]$manifest.startGuideSha256).ToLowerInvariant()) { throw "QA kit start-guide SHA-256 does not match its manifest." }
 if ($manualProof.sha256 -ne ([string]$manifest.manualValidationSha256).ToLowerInvariant()) { throw "QA kit manual-validation SHA-256 does not match its manifest." }
 
 $candidate = Get-Content -LiteralPath $metadataProof.path -Raw | ConvertFrom-Json
@@ -105,11 +112,12 @@ if ([string]$candidate.packageSha256 -ne $packageProof.sha256) { throw "QA kit p
 if ([string]$candidate.entryPointSha256 -ne [string]$manifest.entryPointSha256) { throw "QA kit desktop entry-point hash does not match candidate metadata." }
 if ([string]$candidate.betaManualQaEntryPointSha256 -ne [string]$manifest.betaManualQaEntryPointSha256) { throw "QA kit packaged manual-QA tool hash does not match candidate metadata." }
 
-Write-Host "Dragon DiskForge beta QA kit verification passed."
+Write-Host "Dragon DiskForge beta QA kit schema v2 verification passed."
 Write-Host "Version: $($manifest.version) / $($manifest.architecture)"
 Write-Host "Source commit: $sourceCommit"
 Write-Host "Workflow run: $($manifest.workflowRunId)"
 Write-Host "Package SHA-256: $($packageProof.sha256)"
 Write-Host "Session helper SHA-256: $($sessionProof.sha256)"
+Write-Host "Start guide SHA-256: $($startGuideProof.sha256)"
 Write-Host "Verifier SHA-256: $($runningVerifier.sha256)"
 exit 0
