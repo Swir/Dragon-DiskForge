@@ -206,6 +206,8 @@ jobs:
             artifacts/windows/beta-qa-live-kit-verify.ps1.sha256
             artifacts/windows/beta-qa-live-session.ps1
             artifacts/windows/beta-qa-live-session.ps1.sha256
+            artifacts/windows/BETA-QA-LIVE-SESSION.md
+            artifacts/windows/BETA-QA-LIVE-SESSION.md.sha256
             artifacts/windows/beta-qa-witness-kit.json
             artifacts/windows/beta-qa-witness-kit.json.sha256
             artifacts/windows/beta-qa-witness-kit-verify.ps1
