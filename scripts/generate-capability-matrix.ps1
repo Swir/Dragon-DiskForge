@@ -10,7 +10,6 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $CliProject = Join-Path $RepoRoot 'src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj'
-$CliDll = Join-Path $RepoRoot 'src/DragonDiskForge.Cli/bin/Release/net10.0/dragon-disk-forge.dll'
 $DocumentPath = Join-Path $RepoRoot 'docs/SUPPORTED-CAPABILITIES.md'
 $AllowedCapabilities = @(
     'Inspect',
@@ -214,34 +213,44 @@ function Get-CanonicalProviders {
         throw "CLI project not found: $CliProject"
     }
 
-    & dotnet build $CliProject --configuration Release --nologo
-    if ($LASTEXITCODE -ne 0) {
-        throw "Release CLI build failed with exit code $LASTEXITCODE."
-    }
-
-    if (-not (Test-Path -LiteralPath $CliDll -PathType Leaf)) {
-        throw "Release CLI output not found after build: $CliDll"
-    }
-
-    $jsonLines = & dotnet $CliDll formats --format json
-    if ($LASTEXITCODE -ne 0) {
-        throw "Canonical 'formats --format json' command failed with exit code $LASTEXITCODE."
-    }
-
-    $json = $jsonLines -join "`n"
-    if ([string]::IsNullOrWhiteSpace($json)) {
-        throw 'Canonical provider command returned empty output.'
-    }
+    $buildRoot = Join-Path ([IO.Path]::GetTempPath()) ('dragon-diskforge-capability-matrix-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $buildRoot -Force | Out-Null
 
     try {
-        $providers = @($json | ConvertFrom-Json)
-    }
-    catch {
-        throw "Canonical provider JSON could not be parsed: $($_.Exception.Message)"
-    }
+        & dotnet build $CliProject --configuration Release --nologo --output $buildRoot | Out-Host
+        if ($LASTEXITCODE -ne 0) {
+            throw "Release CLI build failed with exit code $LASTEXITCODE."
+        }
 
-    Assert-ProviderCatalog $providers
-    return ,$providers
+        $cliDll = Join-Path $buildRoot 'dragon-disk-forge.dll'
+        if (-not (Test-Path -LiteralPath $cliDll -PathType Leaf)) {
+            $outputs = @(Get-ChildItem -LiteralPath $buildRoot -File | Select-Object -ExpandProperty Name)
+            throw "Release CLI output not found after build: $cliDll. Outputs: $($outputs -join ', ')"
+        }
+
+        $jsonLines = & dotnet $cliDll formats --format json
+        if ($LASTEXITCODE -ne 0) {
+            throw "Canonical 'formats --format json' command failed with exit code $LASTEXITCODE."
+        }
+
+        $json = $jsonLines -join "`n"
+        if ([string]::IsNullOrWhiteSpace($json)) {
+            throw 'Canonical provider command returned empty output.'
+        }
+
+        try {
+            $providers = @($json | ConvertFrom-Json)
+        }
+        catch {
+            throw "Canonical provider JSON could not be parsed: $($_.Exception.Message)"
+        }
+
+        Assert-ProviderCatalog $providers
+        return ,$providers
+    }
+    finally {
+        Remove-Item -LiteralPath $buildRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Invoke-SelfTest {
