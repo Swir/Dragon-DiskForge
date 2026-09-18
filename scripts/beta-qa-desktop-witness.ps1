@@ -28,7 +28,7 @@ function Write-Utf8NoBom {
 }
 
 function Get-Sha256Text {
-    param([Parameter(Mandatory = $true)][string]$Text)
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text)
     $sha = [System.Security.Cryptography.SHA256]::Create()
     try {
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
