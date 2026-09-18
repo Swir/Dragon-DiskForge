@@ -55,10 +55,10 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [ ] final public package SHA-256 published with the Release
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #79 (`35291908987`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35291908987`, built from `main` source commit `a0483311bf000a995598b42ed9ec71019e63902e`; nested package SHA-256 `ecc4f0798ecc4d40fb9f77b433ae9dcbb206a358a9d2346bc9ac5411e8ba66a2`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #95 (`35305773840`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` source commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`; nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
-Independent retained-artifact read-back confirms package manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA entry points. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch gate.
+Independent retained-artifact read-back confirms GitHub artifact SHA-256 `f3cdf99f9d2503389d4f9ed6b000ba7772d3d10bfed74a26ccd9c7bcba4732b2`, package manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA entry points. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch gate.
 
 ### Regression and manual QA
 - [x] Core smoke tests green
