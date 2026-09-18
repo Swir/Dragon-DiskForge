@@ -55,6 +55,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - retained-candidate evidence schema v2 binding the candidate package, beta QA kit and desktop witness companion hashes while preserving fail-closed beta readiness
 - additive retained-candidate archive binding for the portable evidence-archive manifest, verifier, helper and guide, enforced by a dedicated fail-closed contract without changing beta readiness
 - fail-closed beta candidate retention policy that permits retaining an exact `main` candidate through a meaningful `[beta-candidate]` push or an explicit `workflow_dispatch` request while rejecting pull requests, non-main refs and verification-only runs
+- fail-closed retained-candidate currency guard that rejects stale packaged manual-QA tool hashes for final human evidence while permitting explicit inspection-only readback
 - canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - bounded desktop image-preview admission with a 64 MiB default byte cap and metadata-only fallback for oversized images
 - bounded image-signature admission for desktop rendering; spoofed or truncated image-extension files remain metadata-only
@@ -71,9 +72,9 @@ The project follows semantic versioning while it evolves toward 1.0.
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
-- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention, session-bound manual-QA evidence, witness/archive-bound release provenance and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
+- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention, session-bound manual-QA evidence, witness/archive-bound release provenance, retained-candidate currency hardening and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
 - current development metadata is **0.5.0-beta.1**; this is candidate metadata and does not imply a public release
-- Beta Candidate run #123 on `main` commit `cc74093fc776afef058423ab9ed9acba32ad0cdd` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `04f05b3bdd3b554717cb8686323df480a4aabab30aeb33bf8e4fa59855da9f8b`, nested package SHA-256 `d97fc15e2195f7872d232f5ec44c67f5e4ecdac1240be2d5ca905051fa53451a`; canonical evidence remains schema v2, witness-bound and additionally archive-bound to the portable evidence-archive companion
+- Beta Candidate run #133 on `main` commit `c5e68e36c645d9a05a129bedffb8f139e026722c` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `8ab9fa539d3ce66e4cd463efb123d8f19ee4ecfef78a56e564dbbf06af64ae64`, nested package SHA-256 `abe37ea41adfe8e6461907454e2951ecea76fcdc4986f8c6c9867c86e356573b`; canonical evidence remains schema v2, witness-bound and additionally archive-bound to the portable evidence-archive companion
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
@@ -150,7 +151,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #73 / PR-head Build #456 + fully green `main` Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening, `0.5.0-beta.1` source promotion and retained exact Windows x64 candidate
 - PR #82 / exact PR head `357bda52a2bfa18c49ba1bb241b9c1596ddd07c2` + fully green `main` Build #488 + Beta Candidate #95 — session-bound beta-QA evidence hardening, SVG-only progress presentation cleanup and refreshed exact Windows x64 retained candidate
 - PR #87 / exact PR head `96f20d422d6d1104da30ef28c40e815ca0ea7830` + green post-merge Beta Candidate #109 on `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422` — witness-bound retained-candidate schema v2 and fresh witness-enabled Windows x64 candidate
-- PR #93 / exact PR head `88221ccac1e3e0d702423d7baf337cc418ea0070` + fully green merge `cc74093fc776afef058423ab9ed9acba32ad0cdd` + Beta Candidate #123 — fail-closed exact-main retention policy and current witness/archive-bound Windows x64 candidate
+- PR #93 / exact PR head `88221ccac1e3e0d702423d7baf337cc418ea0070` + fully green merge `cc74093fc776afef058423ab9ed9acba32ad0cdd` + Beta Candidate #123 — fail-closed exact-main retention policy and witness/archive-bound Windows x64 candidate
+- PR #96 / exact PR head `5c4e6e49b0cdd9ffed0c8e06fccab8487eb43344` + fully green `main` Build #526 (attempt 2) + Beta Candidate #133 on `c5e68e36c645d9a05a129bedffb8f139e026722c` — fail-closed retained-candidate QA-tool currency guard and fresh current witness/archive-bound Windows x64 candidate
 
 ### Planned
 - complete the remaining `0.5.0-beta.1` interactive clean-desktop/UAC/cross-process drag-out gates against the retained exact candidate, then publish the final public ZIP/checksum/pre-release only if those observations pass
