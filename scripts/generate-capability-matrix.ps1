@@ -130,7 +130,7 @@ function ConvertTo-CapabilityMatrixMarkdown {
     $lines = New-Object 'System.Collections.Generic.List[string]'
     [void]$lines.Add('# Dragon DiskForge — Supported Provider Capabilities')
     [void]$lines.Add('')
-    [void]$lines.Add('> This document is generated from the canonical Core provider registry exposed by `dragon-disk-forge formats --format json`. Do not hand-edit provider rows; update the implementation and regenerate the matrix.')
+    [void]$lines.Add('> This document is generated from the canonical Core provider registry exposed by `dragon-diskforge formats --format json`. Do not hand-edit provider rows; update the implementation and regenerate the matrix.')
     [void]$lines.Add('')
     [void]$lines.Add('This matrix describes **provider-layer capabilities only**. It does not turn metadata-only providers into full decoders, does not imply write support, and does not replace the separate native Windows mount contract or beta release gates.')
     [void]$lines.Add('')
@@ -222,7 +222,7 @@ function Get-CanonicalProviders {
             throw "Release CLI build failed with exit code $LASTEXITCODE."
         }
 
-        $cliDll = Join-Path $buildRoot 'dragon-disk-forge.dll'
+        $cliDll = Join-Path $buildRoot 'dragon-diskforge.dll'
         if (-not (Test-Path -LiteralPath $cliDll -PathType Leaf)) {
             $outputs = @(Get-ChildItem -LiteralPath $buildRoot -File | Select-Object -ExpandProperty Name)
             throw "Release CLI output not found after build: $cliDll. Outputs: $($outputs -join ', ')"

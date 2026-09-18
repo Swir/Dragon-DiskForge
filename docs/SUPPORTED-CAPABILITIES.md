@@ -1,6 +1,6 @@
 # Dragon DiskForge — Supported Provider Capabilities
 
-> This document is generated from the canonical Core provider registry exposed by `dragon-disk-forge formats --format json`. Do not hand-edit provider rows; update the implementation and regenerate the matrix.
+> This document is generated from the canonical Core provider registry exposed by `dragon-diskforge formats --format json`. Do not hand-edit provider rows; update the implementation and regenerate the matrix.
 
 This matrix describes **provider-layer capabilities only**. It does not turn metadata-only providers into full decoders, does not imply write support, and does not replace the separate native Windows mount contract or beta release gates.
 
