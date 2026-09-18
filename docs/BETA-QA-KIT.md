@@ -51,11 +51,19 @@ The helper independently re-verifies the candidate package/runtime completeness,
 
 Follow `BETA-MANUAL-VALIDATION.md` for the exact clean-launch/basic-regression, normal-user UAC and Explorer drag-out observations. Passing observations still require explicit human confirmation through the packaged QA tool.
 
+## Preserve evidence before deleting the session workspace
+
+The retained QA kit remains sufficient to perform and record the human observations without a repository checkout. Release operators using the repository can additionally preserve a compact evidence snapshot with `scripts/beta-qa-archive.ps1` before running session cleanup. See [`BETA-QA-EVIDENCE-ARCHIVE.md`](BETA-QA-EVIDENCE-ARCHIVE.md).
+
+The archive utility is deliberately **not** part of QA-kit schema v2 and does not change the retained candidate identity. It stores integrity/provenance for the already package-bound evidence; it is not a substitute for the exact retained ZIP, the packaged manual-QA verifier or final release proof, and it cannot mark any human gate as passed.
+
 ## CI contract
 
 The Beta Candidate workflow runs the QA-kit builder self-test under PowerShell 7 and Windows PowerShell 5.1. It then builds and verifies the real package/candidate metadata, creates the schema-v2 QA kit, and executes the retained standalone verifier under both PowerShell engines.
 
 The independent Beta Release Proof contract also self-tests that final release proof rejects a mismatched/tampered QA-kit companion and requires the QA kit to match the exact candidate source, workflow, package, candidate metadata and shipped entry-point hashes before human QA evidence can complete release proof.
+
+The separate Beta Manual QA Contract self-tests the repository-side evidence archive under PowerShell 7 and Windows PowerShell 5.1. That archive contract is release-process hardening only and does not alter QA-kit schema v2 or the retained artifact.
 
 A verification-only pull-request run does not retain the large candidate artifact. The artifact is retained only on an explicitly selected `main` commit whose message contains `[beta-candidate]`.
 
