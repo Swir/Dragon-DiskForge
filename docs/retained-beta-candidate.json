@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgeRetainedBetaCandidateEvidence",
+  "product": "Dragon DiskForge",
+  "version": "0.5.0-beta.1",
+  "architecture": "x64",
+  "sourceCommit": "a0483311bf000a995598b42ed9ec71019e63902e",
+  "workflowRunId": "35291908987",
+  "workflowRunNumber": 79,
+  "artifactId": "10527066449",
+  "artifactName": "DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35291908987",
+  "artifactDigestSha256": "e4422ea2ec38e97ff24534cc3c39609679173a81800f6ec80c256f09e45bdd90",
+  "artifactCreatedAtUtc": "2026-09-18T00:40:10Z",
+  "artifactExpiresAtUtc": "2026-10-02T00:40:03Z",
+  "packageFile": "DragonDiskForge-win-x64.zip",
+  "packageSha256": "ecc4f0798ecc4d40fb9f77b433ae9dcbb206a358a9d2346bc9ac5411e8ba66a2",
+  "candidateMetadataSha256": "d09ee3e973a97b81bfdc7cd7f6bd1b5190be2ac0e29a6f2bc4871a0872a15163",
+  "qaKitManifestSha256": "b7c917b7b98b3d3df2d38bbbe9d049bb96f0bb4f01771491a65e9a5e00b59391",
+  "packageManifestSchema": 5,
+  "qaKitSchema": 2,
+  "entryPointSha256": "3e352d15c89d53da0050b32c5e5c10e1679acd7a4b32a9a3a6ce583b30c71ab3",
+  "betaManualQaEntryPointSha256": "3ed9bc04397c24c1ea05b74cd91a306106ea326dc19ef398017ee4d22a36bed7",
+  "runtimeDeployment": {
+    "dotNet": "self-contained",
+    "windowsAppSdk": "self-contained",
+    "visualCpp": "app-local"
+  },
+  "publicRelease": false,
+  "betaReady": false,
+  "remainingInteractiveGates": [
+    "clean-machine interactive launch/open/mount/explore/verify/analyze",
+    "normal-user UAC validation",
+    "real cross-process Explorer drag-out validation"
+  ],
+  "note": "This retained GitHub Actions artifact is temporary CI evidence, not durable public release hosting. Public beta publication remains blocked until the interactive release gates pass."
+}

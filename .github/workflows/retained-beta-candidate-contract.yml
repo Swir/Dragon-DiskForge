@@ -1,0 +1,39 @@
+name: Dragon DiskForge Retained Beta Candidate Evidence
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dragon-retained-beta-candidate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence-contract:
+    name: Retained candidate evidence stays fail-closed
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 contract self-test
+        shell: pwsh
+        run: ./scripts/retained-beta-candidate-contract.ps1 -Mode self-test
+
+      - name: PowerShell 7 verify committed evidence
+        shell: pwsh
+        run: ./scripts/retained-beta-candidate-contract.ps1 -Mode verify
+
+      - name: Windows PowerShell 5.1 contract self-test
+        shell: powershell
+        run: .\scripts\retained-beta-candidate-contract.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 verify committed evidence
+        shell: powershell
+        run: .\scripts\retained-beta-candidate-contract.ps1 -Mode verify

@@ -1,0 +1,123 @@
+[CmdletBinding()]
+param(
+    [ValidateSet("verify", "self-test")]
+    [string]$Mode = "verify",
+    [string]$EvidencePath = "docs/retained-beta-candidate.json"
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+function Assert-HexSha256 {
+    param([Parameter(Mandatory = $true)][string]$Value, [Parameter(Mandatory = $true)][string]$Label)
+    if ($Value -notmatch '^[0-9a-fA-F]{64}$') { throw "$Label must be a 64-character SHA-256 value." }
+    return $Value.ToLowerInvariant()
+}
+
+function Assert-ExactCommit {
+    param([Parameter(Mandatory = $true)][string]$Value)
+    if ($Value -notmatch '^[0-9a-fA-F]{40}$') { throw "sourceCommit must be an exact 40-character Git SHA." }
+    return $Value.ToLowerInvariant()
+}
+
+function Test-RetainedCandidateEvidence {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "Retained candidate evidence file is missing: $Path" }
+    $evidence = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+
+    if ([int]$evidence.schemaVersion -ne 1) { throw "Unsupported retained-candidate evidence schema '$($evidence.schemaVersion)'." }
+    if ([string]$evidence.kind -ne "DragonDiskForgeRetainedBetaCandidateEvidence") { throw "Unexpected retained-candidate evidence kind." }
+    if ([string]$evidence.product -ne "Dragon DiskForge") { throw "Unexpected product in retained-candidate evidence." }
+    if ([string]$evidence.version -ne "0.5.0-beta.1") { throw "Unexpected beta candidate version '$($evidence.version)'." }
+    if ([string]$evidence.architecture -ne "x64") { throw "Retained beta candidate must be x64." }
+
+    $commit = Assert-ExactCommit -Value ([string]$evidence.sourceCommit)
+    $runId = [string]$evidence.workflowRunId
+    if ($runId -notmatch '^[1-9][0-9]*$') { throw "workflowRunId must be a positive integer string." }
+    if ([int64]$evidence.workflowRunNumber -le 0) { throw "workflowRunNumber must be positive." }
+    if ([string]$evidence.artifactId -notmatch '^[1-9][0-9]*$') { throw "artifactId must be a positive integer string." }
+
+    $expectedArtifactName = "DragonDiskForge-$($evidence.version)-win-x64-candidate-$runId"
+    if ([string]$evidence.artifactName -ne $expectedArtifactName) { throw "artifactName does not match the version/run identity." }
+    if ([string]$evidence.packageFile -ne "DragonDiskForge-win-x64.zip") { throw "Unexpected nested package filename." }
+
+    $null = Assert-HexSha256 -Value ([string]$evidence.artifactDigestSha256) -Label "artifactDigestSha256"
+    $null = Assert-HexSha256 -Value ([string]$evidence.packageSha256) -Label "packageSha256"
+    $null = Assert-HexSha256 -Value ([string]$evidence.candidateMetadataSha256) -Label "candidateMetadataSha256"
+    $null = Assert-HexSha256 -Value ([string]$evidence.qaKitManifestSha256) -Label "qaKitManifestSha256"
+    $null = Assert-HexSha256 -Value ([string]$evidence.entryPointSha256) -Label "entryPointSha256"
+    $null = Assert-HexSha256 -Value ([string]$evidence.betaManualQaEntryPointSha256) -Label "betaManualQaEntryPointSha256"
+
+    if ([int]$evidence.packageManifestSchema -ne 5) { throw "Retained package evidence must bind package manifest schema 5." }
+    if ([int]$evidence.qaKitSchema -ne 2) { throw "Retained package evidence must bind beta QA kit schema 2." }
+    if ([string]$evidence.runtimeDeployment.dotNet -ne "self-contained") { throw ".NET runtime deployment must be self-contained." }
+    if ([string]$evidence.runtimeDeployment.windowsAppSdk -ne "self-contained") { throw "Windows App SDK runtime deployment must be self-contained." }
+    if ([string]$evidence.runtimeDeployment.visualCpp -ne "app-local") { throw "Visual C++ runtime deployment must be app-local." }
+
+    $created = [DateTimeOffset]::Parse([string]$evidence.artifactCreatedAtUtc)
+    $expires = [DateTimeOffset]::Parse([string]$evidence.artifactExpiresAtUtc)
+    if ($expires -le $created) { throw "Artifact expiry must be later than creation time." }
+
+    if ([bool]$evidence.publicRelease) { throw "Retained candidate evidence must not claim a public release." }
+    if ([bool]$evidence.betaReady) { throw "Retained candidate evidence must not claim beta readiness while interactive gates remain open." }
+    $gates = @($evidence.remainingInteractiveGates)
+    if ($gates.Count -lt 3) { throw "Retained candidate evidence must preserve all known interactive beta blockers." }
+    foreach ($gate in $gates) {
+        if ([string]::IsNullOrWhiteSpace([string]$gate)) { throw "Interactive gate entries must not be empty." }
+    }
+
+    return [pscustomobject]@{
+        version = [string]$evidence.version
+        sourceCommit = $commit
+        workflowRunId = $runId
+        artifactName = [string]$evidence.artifactName
+        packageSha256 = ([string]$evidence.packageSha256).ToLowerInvariant()
+        publicRelease = [bool]$evidence.publicRelease
+        betaReady = [bool]$evidence.betaReady
+        remainingInteractiveGateCount = $gates.Count
+    }
+}
+
+function Invoke-SelfTest {
+    $workspace = Join-Path ([System.IO.Path]::GetTempPath()) ("DragonDiskForge-retained-candidate-contract-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $workspace -Force | Out-Null
+    try {
+        $source = (Resolve-Path -LiteralPath $EvidencePath).Path
+        $good = Join-Path $workspace "good.json"
+        Copy-Item -LiteralPath $source -Destination $good
+        $proof = Test-RetainedCandidateEvidence -Path $good
+        if ($proof.betaReady -or $proof.publicRelease -or $proof.remainingInteractiveGateCount -lt 3) { throw "Valid fixture produced an unsafe readiness result." }
+
+        $badHash = Join-Path $workspace "bad-hash.json"
+        $data = Get-Content -LiteralPath $good -Raw | ConvertFrom-Json
+        $data.packageSha256 = "00"
+        $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badHash -Encoding UTF8
+        try { $null = Test-RetainedCandidateEvidence -Path $badHash; throw "Invalid SHA-256 fixture was accepted." } catch { if ($_.Exception.Message -eq "Invalid SHA-256 fixture was accepted.") { throw } }
+
+        $badReady = Join-Path $workspace "bad-ready.json"
+        $data = Get-Content -LiteralPath $good -Raw | ConvertFrom-Json
+        $data.betaReady = $true
+        $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badReady -Encoding UTF8
+        try { $null = Test-RetainedCandidateEvidence -Path $badReady; throw "Unsafe beta-ready fixture was accepted." } catch { if ($_.Exception.Message -eq "Unsafe beta-ready fixture was accepted.") { throw } }
+
+        $badArtifact = Join-Path $workspace "bad-artifact.json"
+        $data = Get-Content -LiteralPath $good -Raw | ConvertFrom-Json
+        $data.artifactName = "wrong-name"
+        $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badArtifact -Encoding UTF8
+        try { $null = Test-RetainedCandidateEvidence -Path $badArtifact; throw "Mismatched artifact-name fixture was accepted." } catch { if ($_.Exception.Message -eq "Mismatched artifact-name fixture was accepted.") { throw } }
+
+        Write-Host "Retained beta candidate evidence contract self-test passed."
+    }
+    finally {
+        Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+if ($Mode -eq "self-test") {
+    Invoke-SelfTest
+    exit 0
+}
+
+$proof = Test-RetainedCandidateEvidence -Path $EvidencePath
+Write-Host ("Retained candidate evidence verified: {0} / run {1} / package SHA-256 {2} / interactive blockers {3}." -f $proof.sourceCommit, $proof.workflowRunId, $proof.packageSha256, $proof.remainingInteractiveGateCount)
