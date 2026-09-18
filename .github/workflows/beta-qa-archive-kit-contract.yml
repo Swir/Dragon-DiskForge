@@ -1,0 +1,41 @@
+name: Dragon DiskForge Beta QA Archive Kit Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/beta-qa-archive-kit.ps1'
+      - 'scripts/beta-qa-archive-kit-verify.ps1'
+      - 'scripts/beta-qa-archive.ps1'
+      - 'docs/BETA-QA-EVIDENCE-ARCHIVE.md'
+      - 'docs/BETA-QA-KIT.md'
+      - '.github/workflows/beta-qa-archive-kit-contract.yml'
+      - '.github/workflows/beta-candidate.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/beta-qa-archive-kit.ps1'
+      - 'scripts/beta-qa-archive-kit-verify.ps1'
+      - 'scripts/beta-qa-archive.ps1'
+      - 'docs/BETA-QA-EVIDENCE-ARCHIVE.md'
+      - 'docs/BETA-QA-KIT.md'
+      - '.github/workflows/beta-qa-archive-kit-contract.yml'
+      - '.github/workflows/beta-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-portable-archive-kit:
+    name: Verify hash-bound portable evidence archive kit
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: PowerShell 7 archive kit self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-archive-kit.ps1 -Mode self-test
+      - name: Windows PowerShell 5.1 archive kit self-test
+        shell: powershell
+        run: .\scripts\beta-qa-archive-kit.ps1 -Mode self-test
