@@ -56,6 +56,14 @@ jobs:
         shell: powershell
         run: .\scripts\beta-qa-witness-kit.ps1 -Mode self-test
 
+      - name: PowerShell 7 portable evidence archive kit self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-archive-kit.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 portable evidence archive kit self-test
+        shell: powershell
+        run: .\scripts\beta-qa-archive-kit.ps1 -Mode self-test
+
       - name: Promote workspace metadata to beta suffix
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode prepare
@@ -105,6 +113,18 @@ jobs:
         shell: powershell
         run: .\artifacts\windows\beta-qa-witness-kit-verify.ps1 -ManifestPath .\artifacts\windows\beta-qa-witness-kit.json
 
+      - name: Build hash-bound portable evidence archive kit
+        shell: pwsh
+        run: ./scripts/beta-qa-archive-kit.ps1 -Mode build
+
+      - name: Verify standalone portable evidence archive kit with PowerShell 7
+        shell: pwsh
+        run: ./artifacts/windows/beta-qa-archive-kit-verify.ps1 -ManifestPath ./artifacts/windows/beta-qa-archive-kit.json
+
+      - name: Verify standalone portable evidence archive kit with Windows PowerShell 5.1
+        shell: powershell
+        run: .\artifacts\windows\beta-qa-archive-kit-verify.ps1 -ManifestPath .\artifacts\windows\beta-qa-archive-kit.json
+
       - name: Publish explicitly selected non-public beta candidate
         if: github.event_name == 'push' && contains(github.event.head_commit.message, '[beta-candidate]')
         uses: actions/upload-artifact@v4
@@ -133,6 +153,14 @@ jobs:
             artifacts/windows/beta-qa-desktop-witness.ps1.sha256
             artifacts/windows/BETA-QA-DESKTOP-WITNESS.md
             artifacts/windows/BETA-QA-DESKTOP-WITNESS.md.sha256
+            artifacts/windows/beta-qa-archive-kit.json
+            artifacts/windows/beta-qa-archive-kit.json.sha256
+            artifacts/windows/beta-qa-archive-kit-verify.ps1
+            artifacts/windows/beta-qa-archive-kit-verify.ps1.sha256
+            artifacts/windows/beta-qa-archive.ps1
+            artifacts/windows/beta-qa-archive.ps1.sha256
+            artifacts/windows/BETA-QA-EVIDENCE-ARCHIVE.md
+            artifacts/windows/BETA-QA-EVIDENCE-ARCHIVE.md.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -140,5 +168,5 @@ jobs:
         if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[beta-candidate]')
         shell: pwsh
         run: |
-          Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit and schema-v1 desktop-witness companion build/verification passed."
+          Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit, desktop-witness companion and portable evidence-archive kit build/verification passed."
           Write-Host "No retained 160+ MiB artifact was uploaded because this was not an explicitly selected [beta-candidate] main commit."
