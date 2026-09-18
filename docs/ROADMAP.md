@@ -4,8 +4,6 @@ This roadmap tracks implemented, testable product deliverables. A checkbox is co
 
 ## Overall progress — 83% toward 1.0
 
-`█████████████████░░░ 83%`
-
 - **0.1 Foundation + Dragon UI — COMPLETE ✅**
 - **0.2 Native Mount + Unmount — COMPLETE ✅**
 - **0.3 Dragon Explorer — COMPLETE ✅**
@@ -119,7 +117,7 @@ Current scope: **4/4 (100%)**.
 
 The shell-integration path is per-user and reversible. It registers Dragon DiskForge under `HKCU\Software\Classes`, derives its extension set from canonical `SupportedFormats`, adds an explicit **Open with Dragon DiskForge** verb, and deliberately does not replace Windows `UserChoice` defaults. The clean package includes the self-contained registration helper plus manifest/hash verification. Command-line file activation feeds the same image-open path as normal desktop opens.
 
-PR #50 implementation run #356 and Disposable Media Guard #28 passed before this milestone was marked complete. Automated validation proves the registry/package/startup contract; clean-machine visual Explorer behavior remains part of later manual quality/release QA rather than being overstated here.
+PR #50 implementation run #356 and Disposable Media Guard #28 passed before this milestone was marked complete. Automated validation proves the registry/package/activation contract; clean-machine visual Explorer behavior remains part of later manual quality/release QA rather than being overstated here.
 
 See `docs/CLI.md` and `docs/WINDOWS-SHELL-INTEGRATION.md`.
 
