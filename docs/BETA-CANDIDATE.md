@@ -1,25 +1,26 @@
 # Dragon DiskForge — Exact Beta Candidate Pipeline
 
-The first public beta target is `0.5.0-beta.1`. This document describes how Dragon DiskForge produces an exact, auditable **non-public** Windows x64 release candidate without prematurely changing the committed engineering version or publishing a GitHub Release.
+The first public beta target is `0.5.0-beta.1`. This document describes how Dragon DiskForge produces an exact, auditable **non-public** Windows x64 release candidate without prematurely publishing a GitHub Release.
 
 ## Why this exists
 
-The committed development version remains `0.5.0-alpha.1` until the independent beta release gate is satisfied. Manual clean-desktop, normal-user UAC and real cross-process Explorer drag-out checks must be performed against the exact package that would be published. Rebuilding after those checks would invalidate the evidence.
+Committed development metadata is currently `0.5.0-beta.1`, but that version label is **candidate metadata, not release approval**. Manual clean-desktop, normal-user UAC and real cross-process Explorer drag-out checks must be performed against the exact package that would be published. Rebuilding after those checks would invalidate the evidence.
 
 The beta candidate pipeline solves that boundary explicitly:
 
 1. checkout one exact source commit,
-2. temporarily promote only the CI workspace version suffix from `alpha.1` to `beta.1`,
+2. normalize the disposable CI workspace to the expected `0.5.0-beta.1` metadata and fail closed on an unexpected version prefix,
 3. build the WinUI Release x64 application from that workspace,
 4. build the normal clean package using the same packaging script as engineering CI,
 5. independently verify package version, hashes, icon, package hygiene, CLI, shell helper and packaged manual-QA tool,
 6. bind candidate metadata to the exact source commit and ZIP SHA-256,
-7. retain the ZIP, checksum and metadata only when a `main` commit is deliberately marked `[beta-candidate]`,
-8. record interactive evidence with the exact manual-QA script carried by that retained candidate,
-9. use the release-proof verifier to bind source commit, candidate metadata, package and completed evidence before publication,
-10. do **not** create a tag or public GitHub Release until every independent release gate passes.
+7. build a hash-bound beta QA kit,
+8. retain the ZIP, checksum, candidate metadata and QA kit only when a `main` commit is deliberately marked `[beta-candidate]`,
+9. record interactive evidence with the exact manual-QA script carried by that retained candidate,
+10. use the release-proof verifier to bind source commit, candidate metadata, package and completed evidence before publication,
+11. do **not** create a tag or public GitHub Release until every independent release gate passes.
 
-The committed `Directory.Build.props` is not changed by the workflow. The version rewrite occurs only inside the ephemeral Actions workspace.
+`scripts/beta-candidate.ps1 -Mode prepare` operates only on the current build workspace. It is deliberately safe to run when the repository is already on the expected beta suffix; it is not evidence that a public release exists.
 
 ## Workflow
 
@@ -37,13 +38,19 @@ This explicit marker prevents normal development and hourly hardening work from 
 DragonDiskForge-0.5.0-beta.1-win-x64-candidate-<run-id>
 ```
 
-The retained artifact contains:
+The retained artifact contains the package, checksum, exact candidate metadata and the complete hash-bound beta QA kit, including:
 
 ```text
 DragonDiskForge-win-x64.zip
 DragonDiskForge-win-x64.zip.sha256
 beta-candidate.json
 beta-candidate.json.sha256
+beta-qa-kit.json
+beta-qa-kit.json.sha256
+beta-qa-kit-verify.ps1
+beta-qa-session.ps1
+BETA-QA-KIT.md
+BETA-MANUAL-VALIDATION.md
 ```
 
 `beta-candidate.json` records the exact source commit, workflow run id, beta version, architecture, package SHA-256, package-manifest schema, desktop entry-point SHA-256 and packaged manual-QA-tool SHA-256. `publicRelease` is explicitly `false`.
@@ -52,19 +59,21 @@ A green beta-candidate workflow proves that the source commit can produce a corr
 
 ## Selecting one retained candidate
 
-Select a retained candidate only after all engineering changes intended for that candidate have passed the complete exact-head PR gate. The final merge commit on `main` must contain `[beta-candidate]`; the subsequent `main` workflow is then the authoritative build that retains the ZIP, checksum and candidate metadata.
+Select a retained candidate only after all engineering changes intended for that candidate have passed the complete exact-head PR gate. The final merge commit on `main` must contain `[beta-candidate]`; the subsequent `main` workflow is then the authoritative build that retains the ZIP, checksum, metadata and QA kit.
 
-The marker is a retention decision, not a release approval. Do not create empty/no-op commits solely to obtain an artifact, and do not mark ordinary hourly development commits. Pair candidate selection with a real release-process or documentation synchronization change so the selected source state is intentional and auditable.
+The marker is a retention decision, not a release approval. Do not create empty/no-op commits solely to obtain an artifact, and do not mark ordinary hourly development commits. Pair candidate selection with a real release-process, packaging, QA-tool or documentation synchronization change so the selected source state is intentional and auditable.
 
-Before starting manual QA, confirm that the retained artifact's `beta-candidate.json` names the exact selected `main` commit and that its package SHA-256 matches `DragonDiskForge-win-x64.zip.sha256`. If any code, packaging, release tooling or beta-gate behavior changes afterward, select a new retained candidate and repeat package-bound manual evidence rather than carrying observations forward.
+Before starting manual QA, confirm that the retained artifact's `beta-candidate.json` names the exact selected `main` commit and that its package SHA-256 matches `DragonDiskForge-win-x64.zip.sha256`. If any product code, packaging, release tooling or beta-gate behavior changes afterward, select a new retained candidate and repeat package-bound manual evidence rather than carrying observations forward.
 
-### Current reselection checkpoint
+### Current retained checkpoint
 
-The previous retained candidate is invalid for further beta QA because a real Windows test found that double-clicking `DragonDiskForge.App.exe` could exit without showing the application. PR #69 replaces that candidate boundary with a runtime-complete desktop package: .NET and Windows App SDK are self-contained, the supported VC143 CRT is staged app-local, required runtime payload is verified before packaging, and early managed startup failures become fail-visible through a bounded local log plus native Windows error dialog. The package helper contract was also corrected to stage the actual `dragon-diskforge.exe` and `dragon-diskforge-shell.exe` assembly names.
+The authoritative retained candidate is **Beta Candidate run #95 (`35305773840`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`. The nested package SHA-256 is `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`; the GitHub artifact SHA-256 is `f3cdf99f9d2503389d4f9ed6b000ba7772d3d10bfed74a26ccd9c7bcba4732b2`.
 
-PR #69 exact head `e4475b049f25bfdc898c30efa58e2f7ac3ee2074` passed the complete ten-workflow exact-head gate, including Build, Desktop Runtime Contract, Clean Machine Runtime, Beta Candidate, security, accessibility and beta-proof contracts, before merge. The following `main` checkpoint `43d660602d6524753f68fadabb30b6d421a940c9` then passed all nine push workflows after the runtime-complete packaging fix was present on `main`.
+This candidate was intentionally reselected after PR #82 strengthened the packaged manual-QA path so passing observations are bound to the same interactive Windows desktop session as the evidence baseline. The exact PR head `357bda52a2bfa18c49ba1bb241b9c1596ddd07c2` passed the required pull-request workflows; the selected `main` commit then passed Build #488 and Beta Candidate #95. Independent artifact read-back verified every supplied SHA-256 sidecar, package manifest schema 5, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, the desktop entry-point hash and the packaged manual-QA-tool hash.
 
-This documentation synchronization deliberately selects the **first post-PR-#69 retained candidate**. The authoritative candidate source is the resulting `main` merge commit that carries `[beta-candidate]`; no earlier artifact or SHA may be reused for the new manual-QA session. The retained candidate workflow must itself finish successfully and its metadata/checksums must bind to that exact merge commit before human testing begins.
+The authoritative machine-readable record is [`retained-beta-candidate.json`](retained-beta-candidate.json). It deliberately keeps `publicRelease=false` and `betaReady=false`.
+
+Earlier candidate checkpoints remain historical evidence only. In particular, the pre-PR-#69 candidate that failed visible startup testing must not be reused, and candidates produced before the PR #82 session-binding change must not be mixed with the current manual-QA evidence path.
 
 This reselection does not complete or waive any manual release gate. Clean-desktop visible WinUI launch/basic regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media. Until that evidence exists, the candidate remains non-public and `0.5.0-beta.1` must not be published as a GitHub Release.
 
@@ -78,7 +87,7 @@ This reselection does not complete or waive any manual release gate. Clean-deskt
 .\scripts\beta-candidate.ps1 -Mode self-test
 ```
 
-This verifies workspace-only suffix promotion, fail-closed version-prefix handling and exact source-commit validation. CI executes the self-test in both PowerShell 7 and Windows PowerShell 5.1.
+This verifies workspace beta-suffix normalization, fail-closed version-prefix handling and exact source-commit validation. CI executes the self-test in both PowerShell 7 and Windows PowerShell 5.1.
 
 ### Prepare
 
@@ -86,7 +95,7 @@ This verifies workspace-only suffix promotion, fail-closed version-prefix handli
 .\scripts\beta-candidate.ps1 -Mode prepare
 ```
 
-This rewrites the current workspace copy of `Directory.Build.props` to `0.5.0-beta.1` only after confirming the expected `0.5.0` version prefix. It is intended for disposable build workspaces. Do not commit the rewritten file during normal development.
+This normalizes the current workspace copy of `Directory.Build.props` to `0.5.0-beta.1` only after confirming the expected `0.5.0` version prefix. It is intended for disposable build workspaces. Do not use it as a release-approval mechanism.
 
 ### Metadata
 
@@ -102,9 +111,9 @@ Metadata mode re-runs the clean-package verifier before writing candidate metada
 
 ## Manual QA must use one exact candidate
 
-Choose one successful **retained** candidate artifact and keep all four files together. Do not rename only one file without updating its checksum sidecar contract.
+Choose one successful **retained** candidate artifact and keep its files together. Do not rename only one file without updating its checksum sidecar contract.
 
-The manual-QA evidence format is now **schema v3**. Schema v3 does more than verify that a trusted QA script exists inside the ZIP: initialization, every recorded observation and final verification refuse to continue unless the SHA-256 of the script that is **currently executing** exactly matches `tools/beta-manual-qa.ps1` from that candidate package.
+The manual-QA evidence format is **schema v3**. Schema v3 does more than verify that a trusted QA script exists inside the ZIP: initialization, every recorded observation and final verification refuse to continue unless the SHA-256 of the script that is **currently executing** exactly matches `tools/beta-manual-qa.ps1` from that candidate package. The current session hardening additionally requires passing observations to remain bound to the same interactive Windows desktop session recorded by the evidence baseline.
 
 That means manual QA must be launched with the script extracted from the retained candidate itself. Do not use a repository checkout, an older candidate tool or a copied script whose hash differs.
 
@@ -132,7 +141,7 @@ Record a required observation only after physically performing it, and always su
   -Note "ISO mounted and detached with no elevation prompt."
 ```
 
-A record operation fails closed if the ZIP, package checksum, desktop entry point, packaged QA tool, currently running QA tool, Windows build or process architecture no longer matches the evidence baseline. Passing observations additionally require an interactive unelevated session with UAC enabled and a non-service session id. This prevents stale or externally generated evidence from being filled in while a different candidate or a different QA tool is actually under test.
+A record operation fails closed if the ZIP, package checksum, desktop entry point, packaged QA tool, currently running QA tool, Windows build, process architecture or desktop session no longer matches the evidence baseline. Passing observations additionally require an interactive unelevated session with UAC enabled and a non-service session id. This prevents stale or externally generated evidence from being filled in while a different candidate, different QA tool or different desktop session is actually under test.
 
 Use `-Mode list` to see the remaining checks. When all observations are complete, verify the evidence against the **same** ZIP/checksum pair with the same packaged tool:
 
