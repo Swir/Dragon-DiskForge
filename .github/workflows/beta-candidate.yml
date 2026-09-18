@@ -5,6 +5,13 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      retain_candidate:
+        description: Upload the exact non-public Windows x64 candidate artifact for manual QA
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -27,11 +34,6 @@ jobs:
         with:
           ref: ${{ env.SOURCE_COMMIT }}
 
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
       - name: PowerShell 7 beta candidate contract self-test
         shell: pwsh
         run: ./scripts/beta-candidate.ps1 -Mode self-test
@@ -39,6 +41,14 @@ jobs:
       - name: Windows PowerShell 5.1 beta candidate contract self-test
         shell: powershell
         run: .\scripts\beta-candidate.ps1 -Mode self-test
+
+      - name: PowerShell 7 retention policy self-test
+        shell: pwsh
+        run: ./scripts/beta-candidate-retention-policy.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 retention policy self-test
+        shell: powershell
+        run: .\scripts\beta-candidate-retention-policy.ps1 -Mode self-test
 
       - name: PowerShell 7 beta QA kit contract self-test
         shell: pwsh
@@ -63,6 +73,23 @@ jobs:
       - name: Windows PowerShell 5.1 portable evidence archive kit self-test
         shell: powershell
         run: .\scripts\beta-qa-archive-kit.ps1 -Mode self-test
+
+      - name: Decide candidate retention
+        id: retention-policy
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          RETAIN_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.retain_candidate || false }}
+        run: |
+          $requested = [System.Convert]::ToBoolean("$env:RETAIN_REQUESTED")
+          $decision = ./scripts/beta-candidate-retention-policy.ps1 -Mode evaluate -EventName $env:EVENT_NAME -RefName $env:REF_NAME -CommitMessage $env:COMMIT_MESSAGE -RetainRequested $requested
+          if ($decision -notin @('true', 'false')) {
+            throw "Unexpected retention policy result: '$decision'."
+          }
+          "retain=$decision" >> $env:GITHUB_OUTPUT
+          Write-Host "Retain candidate: $decision"
 
       - name: Promote workspace metadata to beta suffix
         shell: pwsh
@@ -126,7 +153,7 @@ jobs:
         run: .\artifacts\windows\beta-qa-archive-kit-verify.ps1 -ManifestPath .\artifacts\windows\beta-qa-archive-kit.json
 
       - name: Publish explicitly selected non-public beta candidate
-        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[beta-candidate]')
+        if: steps.retention-policy.outputs.retain == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: DragonDiskForge-0.5.0-beta.1-win-x64-candidate-${{ github.run_id }}
@@ -165,8 +192,8 @@ jobs:
           retention-days: 14
 
       - name: Explain verification-only runs
-        if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[beta-candidate]')
+        if: steps.retention-policy.outputs.retain != 'true'
         shell: pwsh
         run: |
           Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit, desktop-witness companion and portable evidence-archive kit build/verification passed."
-          Write-Host "No retained 160+ MiB artifact was uploaded because this was not an explicitly selected [beta-candidate] main commit."
+          Write-Host "No retained 160+ MiB artifact was uploaded because this run was not explicitly selected by the fail-closed retention policy."
