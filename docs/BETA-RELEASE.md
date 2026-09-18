@@ -46,7 +46,7 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] independent CI verification reopens the ZIP and validates checksum/manifest/version/hash/icon/content policy before artifact upload
 - [x] canonical Dragon icon is included in the clean package root
 - [x] candidate package contains the fail-closed `tools/beta-manual-qa.ps1` evidence tool and binds its SHA-256 in package manifest schema 5
-- [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1, independently re-verifies the packaged tool hash and rejects evidence produced by a different running QA script
+- [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1, independently re-verifies the packaged tool hash, rejects evidence produced by a different running QA script and rejects underspecified passing observation notes
 - [x] retained independently downloadable `0.5.0-beta.1` Windows x64 candidate from green `main`
 - [x] retained evidence schema v2 binds the packaged desktop witness companion manifest, verifier, helper and guide by SHA-256
 - [ ] package launches on a clean supported Windows machine
@@ -76,13 +76,13 @@ Independent retained-artifact read-back confirms GitHub artifact SHA-256 `04f05b
 - [x] native ISO/VHD/VHDX mount integration green
 - [x] full WinUI Release x64 build green
 - [x] versioned clean ZIP candidate build/checksum/verification gate green
-- [x] package-bound interactive QA evidence tooling exists and fails closed on pending, elevated, tampered, mismatched-package or mismatched-running-tool evidence
+- [x] package-bound interactive QA evidence tooling exists and fails closed on pending, elevated, tampered, mismatched-package, mismatched-running-tool or underspecified passing-observation evidence
 - [x] packaged desktop witness companion is independently hash-bound without claiming human completion
 - [ ] normal-user UAC checklist completed on a desktop machine
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
 
-The remaining interactive checks must be recorded against the exact retained `0.5.0-beta.1` ZIP. Manual-QA schema v3 requires the ZIP/checksum pair again for **every** recorded observation, re-verifies the package, executable and packaged QA-tool identities before saving, and refuses to initialize, record or verify unless the SHA-256 of the script that is currently executing exactly matches `tools/beta-manual-qa.ps1` from that candidate. Evidence initialization and every observation store that running-tool SHA alongside the package SHA-256. The contract also records the Windows build, process architecture, interactive/elevation state, session id and UAC availability, and fails closed if a later passing observation no longer matches the clean-desktop baseline.
+The remaining interactive checks must be recorded against the exact retained `0.5.0-beta.1` ZIP. Manual-QA schema v3 requires the ZIP/checksum pair again for **every** recorded observation, re-verifies the package, executable and packaged QA-tool identities before saving, and refuses to initialize, record or verify unless the SHA-256 of the script that is currently executing exactly matches `tools/beta-manual-qa.ps1` from that candidate. Evidence initialization and every observation store that running-tool SHA alongside the package SHA-256. Every pass or fail record also requires a trimmed 12–1000 character observation note; final verification fails closed when a required passing observation lacks that minimum audit context. The contract records the Windows build, process architecture, interactive/elevation state, session id and UAC availability, and fails closed if a later passing observation no longer matches the clean-desktop baseline.
 
 Passing records still require explicit human confirmation because hosted CI cannot honestly perform or observe the UAC approval/cancellation flows and real cross-process Explorer drag gestures. Schema-v1 and schema-v2 manual-QA evidence are intentionally not migrated to v3: those observations must be repeated using the exact packaged v3 tool so the stronger running-tool binding is genuine rather than inferred after the fact. The separate retained-candidate evidence schema v2 described above is release provenance, not a substitute for manual-QA evidence.
 
