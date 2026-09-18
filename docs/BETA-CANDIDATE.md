@@ -15,7 +15,7 @@ The beta candidate pipeline solves that boundary explicitly:
 5. independently verify package version, hashes, icon, package hygiene, CLI, shell helper and packaged manual-QA tool,
 6. bind candidate metadata to the exact source commit and ZIP SHA-256,
 7. build the hash-bound core beta QA kit plus the desktop-witness and portable evidence-archive companions,
-8. retain the ZIP, checksum, candidate metadata and all hash-bound QA companions only when a `main` commit is deliberately marked `[beta-candidate]`,
+8. retain the ZIP, checksum, candidate metadata and all hash-bound QA companions only when the fail-closed retention policy explicitly selects an exact `main` run,
 9. record interactive evidence with the exact manual-QA script carried by that retained candidate,
 10. use the release-proof verifier to bind source commit, candidate metadata, package and completed evidence before publication,
 11. do **not** create a tag or public GitHub Release until every independent release gate passes.
@@ -24,15 +24,21 @@ The beta candidate pipeline solves that boundary explicitly:
 
 ## Workflow
 
-`.github/workflows/beta-candidate.yml` runs on pull requests and on `main` pushes. Every run builds and verifies the exact `0.5.0-beta.1` package contract, but routine runs are verification-only and intentionally do not retain another large artifact.
+`.github/workflows/beta-candidate.yml` runs on pull requests and on `main` pushes, and it can also be invoked manually. Every run builds and verifies the exact `0.5.0-beta.1` package contract, but routine runs are verification-only and intentionally do not retain another large artifact.
 
-A package is retained only for a deliberately selected `main` commit whose commit message contains:
+The fail-closed retention policy permits retention only for an exact `main` run selected by one of two deliberate mechanisms:
+
+1. a `main` push whose commit message contains:
 
 ```text
 [beta-candidate]
 ```
 
-This explicit marker prevents normal development and hourly hardening work from filling GitHub Actions artifact storage with redundant release candidates. Selected candidates are retained for 14 days and use a name like:
+2. a manual `workflow_dispatch` on `main` with `retain_candidate=true`.
+
+Pull requests, non-`main` branches, ordinary pushes and manual verification-only dispatches never retain a candidate. `scripts/beta-candidate-retention-policy.ps1` self-tests this decision matrix under PowerShell 7 and Windows PowerShell 5.1.
+
+Selected candidates are retained for 14 days and use a name like:
 
 ```text
 DragonDiskForge-0.5.0-beta.1-win-x64-candidate-<run-id>
@@ -69,25 +75,26 @@ A green beta-candidate workflow proves that the source commit can produce a corr
 
 ## Selecting one retained candidate
 
-Select a retained candidate only after all engineering changes intended for that candidate have passed the complete exact-head PR gate. The final merge commit on `main` must contain `[beta-candidate]`; the subsequent `main` workflow is then the authoritative build that retains the ZIP, checksum, metadata and QA kit.
+Select a retained candidate only after all engineering changes intended for that candidate have passed the complete exact-head gate. The preferred automatic route is a meaningful final `main` commit carrying `[beta-candidate]`. When the exact desired `main` commit is already present and green, the manual `workflow_dispatch` route may retain that same commit without manufacturing a no-op source change.
 
-The marker is a retention decision, not a release approval. Do not create empty/no-op commits solely to obtain an artifact, and do not mark ordinary hourly development commits. Pair candidate selection with a real release-process, packaging, QA-tool or documentation synchronization change so the selected source state is intentional and auditable.
+The marker or manual dispatch is a retention decision, not a release approval. Do not create empty/no-op commits solely to obtain an artifact, and do not mark ordinary hourly development commits. Pair candidate selection with a real release-process, packaging, QA-tool or documentation synchronization decision so the selected source state is intentional and auditable.
 
 Before starting manual QA, confirm that the retained artifact's `beta-candidate.json` names the exact selected `main` commit and that its package SHA-256 matches `DragonDiskForge-win-x64.zip.sha256`. If any product code, packaging, release tooling or beta-gate behavior changes afterward, select a new retained candidate and repeat package-bound manual evidence rather than carrying observations forward.
 
 ### Current retained checkpoint
 
-The authoritative retained candidate is **Beta Candidate run #113 (`35327348417`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35327348417`, built from `main` commit `48054cc5036ca3809915b3f8392599c315bf2ec7`. The nested package SHA-256 is `8baeddfed293167e54d827ed1c11e511a3d69c3a80af2a567dfe66e4b78200e7`; the GitHub artifact SHA-256 is `014d8971c4434c03ed0577848f968fa1bd1f00294f93796d0e9c18bf206645fe`.
+The authoritative retained candidate is **Beta Candidate run #123 (`35347521100`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35347521100`, built from `main` commit `cc74093fc776afef058423ab9ed9acba32ad0cdd`. The nested package SHA-256 is `d97fc15e2195f7872d232f5ec44c67f5e4ecdac1240be2d5ca905051fa53451a`; the GitHub artifact SHA-256 is `04f05b3bdd3b554717cb8686323df480a4aabab30aeb33bf8e4fa59855da9f8b`.
 
-This candidate was intentionally selected by the PR #89 merge after the portable evidence-archive companion was added to the exact-package QA kit. The final PR head passed all required pull-request workflows, and the selected `main` commit then passed Build #506 plus Beta Candidate #113. Independent artifact read-back verified the outer artifact digest, every supplied SHA-256 sidecar, package manifest schema 5, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, the desktop entry-point hash and the packaged manual-QA-tool hash.
+This candidate was intentionally selected by the PR #93 merge that added the explicit fail-closed retention policy. The PR head passed the full required gate before merge, the exact `main` merge completed its post-merge workflows without a recorded failure, and Beta Candidate #123 retained the candidate. Independent artifact read-back verified the outer artifact digest, every supplied SHA-256 sidecar, package manifest schema 5, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, the desktop entry-point hash and the packaged manual-QA-tool hash.
 
-Canonical retained evidence remains schema v2 for compatibility, is witness-bound to the packaged desktop witness companion, and now carries separately verified archive-binding fields for the portable evidence-archive manifest, verifier, helper and guide. The dedicated retained archive-binding contract fails closed if those hashes, the candidate identity, or the synchronized documentation drift. None of these bindings claims a human gate.
+Canonical retained evidence remains schema v2 for compatibility, is witness-bound to the packaged desktop witness companion, and carries separately verified archive-binding fields for the portable evidence-archive manifest, verifier, helper and guide. The dedicated retained archive-binding contract fails closed if those hashes, the candidate identity, or the synchronized documentation drift. None of these bindings claims a human gate.
 
 The authoritative machine-readable record is [`retained-beta-candidate.json`](retained-beta-candidate.json). It deliberately keeps `publicRelease=false` and `betaReady=false`.
 
-Earlier candidate checkpoints remain historical evidence only. In particular, candidates before the PR #82 same-session binding, PR #87 witness binding or PR #89 portable archive kit must not be mixed with the current manual-QA evidence path.
+Earlier candidate checkpoints remain historical evidence only. In particular, candidates before the PR #82 same-session binding, PR #87 witness binding, PR #89 portable archive kit or PR #93 explicit retention policy must not be mixed with the current manual-QA evidence path.
 
 This reselection does not complete or waive any manual release gate. Clean-desktop visible WinUI launch/basic regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media. Until that evidence exists, the candidate remains non-public and `0.5.0-beta.1` must not be published as a GitHub Release.
+
 ## Candidate contract script
 
 `scripts/beta-candidate.ps1` has three modes.

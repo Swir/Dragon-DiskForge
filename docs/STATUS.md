@@ -17,10 +17,10 @@
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. Public release remains gated by clean-desktop interactive regression, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release publication.
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #113 (`35327348417`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35327348417`, built from `main` source commit `48054cc5036ca3809915b3f8392599c315bf2ec7`; nested package SHA-256 `8baeddfed293167e54d827ed1c11e511a3d69c3a80af2a567dfe66e4b78200e7`. Evidence is witness-bound (schema v2) and archive-bound to the packaged desktop witness companion and portable evidence-archive companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #123 (`35347521100`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35347521100`, built from `main` source commit `cc74093fc776afef058423ab9ed9acba32ad0cdd`; nested package SHA-256 `d97fc15e2195f7872d232f5ec44c67f5e4ecdac1240be2d5ca905051fa53451a`. Evidence is witness-bound (schema v2) and archive-bound to the packaged desktop witness companion and portable evidence-archive companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
-The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source is the latest deliberately retained `[beta-candidate]` `main` checkpoint; schema-v2 evidence additionally binds the packaged desktop witness companion. The synchronization commits that record this evidence do not alter packaged product code.
+The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source is the latest deliberately retained `main` checkpoint selected through the fail-closed retention policy; schema-v2 evidence additionally binds the packaged desktop witness companion and portable evidence-archive companion. The synchronization commits that record this evidence do not alter packaged product code.
 
 ## Overall project progress
 
@@ -136,6 +136,7 @@ See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACC
 - PR #78 — retained-candidate evidence hardened and bound to its then-current retained run
 - PR #82 / exact PR head `357bda52a2bfa18c49ba1bb241b9c1596ddd07c2` + `main` Build #488 + Beta Candidate #95 — session-bound beta-QA evidence hardening, SVG progress presentation cleanup and fresh retained candidate selection
 - PR #87 / exact PR head `96f20d422d6d1104da30ef28c40e815ca0ea7830` + Beta Candidate #109 on merge `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422` — retained-candidate schema-v2 witness binding and fresh witness-enabled candidate
+- PR #93 / exact PR head `88221ccac1e3e0d702423d7baf337cc418ea0070` + fully green merge `cc74093fc776afef058423ab9ed9acba32ad0cdd` + Beta Candidate #123 — explicit fail-closed retention policy and fresh archive/witness-bound Windows x64 candidate
 
 ## Beta readiness
 
