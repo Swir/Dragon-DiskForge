@@ -76,23 +76,24 @@ function Get-SingleCandidateBlock {
     return $matches[0].Groups[1].Value
 }
 
+function Get-DocumentationSpecs {
+    return @(
+        @{ Path = 'README.md'; EvidenceLink = 'docs/retained-beta-candidate.json' },
+        @{ Path = 'docs/ROADMAP.md'; EvidenceLink = 'retained-beta-candidate.json' },
+        @{ Path = 'docs/STATUS.md'; EvidenceLink = 'retained-beta-candidate.json' },
+        @{ Path = 'docs/MILESTONES.md'; EvidenceLink = 'retained-beta-candidate.json' },
+        @{ Path = 'docs/BETA-RELEASE.md'; EvidenceLink = 'retained-beta-candidate.json' }
+    )
+}
+
 function Test-DocumentationSet {
     param(
         [Parameter(Mandatory = $true)][string]$Root,
         [Parameter(Mandatory = $true)]$Evidence
     )
 
-    $specs = @(
-        @{ Path = 'README.md'; EvidenceLink = 'docs/retained-beta-candidate.json' },
-        @{ Path = 'docs/ROADMAP.md'; EvidenceLink = 'retained-beta-candidate.json' },
-        @{ Path = 'docs/STATUS.md'; EvidenceLink = 'retained-beta-candidate.json' },
-        @{ Path = 'docs/MILESTONES.md'; EvidenceLink = 'retained-beta-candidate.json' },
-        @{ Path = 'docs/BETA-RELEASE.md'; EvidenceLink = 'retained-beta-candidate.json' },
-        @{ Path = 'CHANGELOG.md'; EvidenceLink = 'docs/retained-beta-candidate.json' }
-    )
-
     $tokens = Get-CanonicalTokens -Evidence $Evidence
-    foreach ($spec in $specs) {
+    foreach ($spec in (Get-DocumentationSpecs)) {
         $path = Join-Path $Root $spec.Path
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Required beta status document is missing: $($spec.Path)" }
 
@@ -152,16 +153,8 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
         $parsed = Read-RetainedCandidateEvidence -Path $evidencePath
 
-        $specs = @(
-            @{ Path = 'README.md'; Link = 'docs/retained-beta-candidate.json' },
-            @{ Path = 'docs/ROADMAP.md'; Link = 'retained-beta-candidate.json' },
-            @{ Path = 'docs/STATUS.md'; Link = 'retained-beta-candidate.json' },
-            @{ Path = 'docs/MILESTONES.md'; Link = 'retained-beta-candidate.json' },
-            @{ Path = 'docs/BETA-RELEASE.md'; Link = 'retained-beta-candidate.json' },
-            @{ Path = 'CHANGELOG.md'; Link = 'docs/retained-beta-candidate.json' }
-        )
-        foreach ($spec in $specs) {
-            Write-Utf8NoBom -Path (Join-Path $root $spec.Path) -Text (New-SelfTestBlock -Evidence $parsed -EvidenceLink $spec.Link)
+        foreach ($spec in (Get-DocumentationSpecs)) {
+            Write-Utf8NoBom -Path (Join-Path $root $spec.Path) -Text (New-SelfTestBlock -Evidence $parsed -EvidenceLink $spec.EvidenceLink)
         }
 
         Test-DocumentationSet -Root $root -Evidence $parsed
