@@ -39,8 +39,6 @@ Current retained candidate: Beta Candidate run #79 (`35291908987`), artifact `Dr
 
 **Weighted project progress:** **83.0%** toward 1.0 · **Completed roadmap stages:** **7/10** · **Release readiness:** tracked separately in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
-`█████████████████░░░ 83%`
-
 **Overall completion:** **83%**
 
 - `0.1 Foundation + Dragon UI` — **100%** ✅
