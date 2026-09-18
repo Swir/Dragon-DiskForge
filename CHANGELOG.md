@@ -53,6 +53,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - session-baseline binding for every passing interactive beta-QA observation, preventing evidence from mixing Windows desktop sessions while preserving exact package/tool/build/architecture/UAC bindings
 - hash-bound packaged desktop witness companion with standalone verifier and guide, allowing objective desktop evidence to travel with the retained candidate without claiming a human gate
 - retained-candidate evidence schema v2 binding the candidate package, beta QA kit and desktop witness companion hashes while preserving fail-closed beta readiness
+- additive retained-candidate archive binding for the portable evidence-archive manifest, verifier, helper and guide, enforced by a dedicated fail-closed contract without changing beta readiness
 - canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - bounded desktop image-preview admission with a 64 MiB default byte cap and metadata-only fallback for oversized images
 - bounded image-signature admission for desktop rendering; spoofed or truncated image-extension files remain metadata-only
@@ -71,7 +72,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
 - **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention, session-bound manual-QA evidence, witness-bound release provenance and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
 - current development metadata is **0.5.0-beta.1**; this is candidate metadata and does not imply a public release
-- Beta Candidate run #109 on `main` commit `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `6e99afebcaea09b38d3a110abc0ee1509a5558b4f87262e9a51923348f8000e7`, nested package SHA-256 `68969179afe42098a753bd2ccddf0fe9b1ca408fd1401281dbc9cd0aed76930e`; canonical evidence is schema v2 and witness-bound
+- Beta Candidate run #113 on `main` commit `48054cc5036ca3809915b3f8392599c315bf2ec7` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `014d8971c4434c03ed0577848f968fa1bd1f00294f93796d0e9c18bf206645fe`, nested package SHA-256 `8baeddfed293167e54d827ed1c11e511a3d69c3a80af2a567dfe66e4b78200e7`; canonical evidence remains schema v2, witness-bound and additionally archive-bound to the portable evidence-archive companion
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
