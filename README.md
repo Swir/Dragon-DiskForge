@@ -30,7 +30,7 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #95 (`35305773840`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` source commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`; nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #109 (`35321990287`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35321990287`, built from `main` source commit `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422`; nested package SHA-256 `68969179afe42098a753bd2ccddf0fe9b1ca408fd1401281dbc9cd0aed76930e`. Evidence is witness-bound (schema v2) to the packaged desktop witness companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
 ## Project progress — 83% toward 1.0

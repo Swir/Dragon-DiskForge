@@ -17,10 +17,10 @@
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. Public release remains gated by clean-desktop interactive regression, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release publication.
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #95 (`35305773840`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` source commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`; nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #109 (`35321990287`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35321990287`, built from `main` source commit `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422`; nested package SHA-256 `68969179afe42098a753bd2ccddf0fe9b1ca408fd1401281dbc9cd0aed76930e`. Evidence is witness-bound (schema v2) to the packaged desktop witness companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
-The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source is the latest deliberately retained `[beta-candidate]` `main` checkpoint; the synchronization commits that record this evidence do not alter packaged product code.
+The retained artifact is package-manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained` and `VisualCpp=app-local`. Its source is the latest deliberately retained `[beta-candidate]` `main` checkpoint; schema-v2 evidence additionally binds the packaged desktop witness companion. The synchronization commits that record this evidence do not alter packaged product code.
 
 ## Overall project progress
 
@@ -112,7 +112,7 @@ See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACC
 
 ### 0.6
 - PR #41 / implementation run #292 — dual SHA-256/SHA-512 verification
-- PR #42 / implementation run #296 and final run #298 — safe output transaction boundary
+- PR #42 / implementation run #296 and final run #298 — safe output transaction foundation
 - PR #43 / implementation run #300 — RAW creation + guest-to-RAW conversion
 - PR #44 / implementation run #304 — transactional split/join + bounded gzip transport pipelines
 
@@ -135,6 +135,7 @@ See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACC
 - PR #73 / PR-head Build #456 + main Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening and beta source promotion
 - PR #78 — retained-candidate evidence hardened and bound to its then-current retained run
 - PR #82 / exact PR head `357bda52a2bfa18c49ba1bb241b9c1596ddd07c2` + `main` Build #488 + Beta Candidate #95 — session-bound beta-QA evidence hardening, SVG progress presentation cleanup and fresh retained candidate selection
+- PR #87 / exact PR head `96f20d422d6d1104da30ef28c40e815ca0ea7830` + Beta Candidate #109 on merge `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422` — retained-candidate schema-v2 witness binding and fresh witness-enabled candidate
 
 ## Beta readiness
 

@@ -48,6 +48,7 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] candidate package contains the fail-closed `tools/beta-manual-qa.ps1` evidence tool and binds its SHA-256 in package manifest schema 5
 - [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1, independently re-verifies the packaged tool hash and rejects evidence produced by a different running QA script
 - [x] retained independently downloadable `0.5.0-beta.1` Windows x64 candidate from green `main`
+- [x] retained evidence schema v2 binds the packaged desktop witness companion manifest, verifier, helper and guide by SHA-256
 - [ ] package launches on a clean supported Windows machine
 - [x] package is self-contained and does not require a developer SDK/Visual Studio for the verified packaged runtime paths
 - [x] final beta version suffix embedded in application assemblies
@@ -55,10 +56,10 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [ ] final public package SHA-256 published with the Release
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #95 (`35305773840`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` source commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`; nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #109 (`35321990287`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35321990287`, built from `main` source commit `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422`; nested package SHA-256 `68969179afe42098a753bd2ccddf0fe9b1ca408fd1401281dbc9cd0aed76930e`. Evidence is witness-bound (schema v2) to the packaged desktop witness companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
-Independent retained-artifact read-back confirms GitHub artifact SHA-256 `f3cdf99f9d2503389d4f9ed6b000ba7772d3d10bfed74a26ccd9c7bcba4732b2`, package manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA entry points. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch gate.
+Independent retained-artifact read-back confirms GitHub artifact SHA-256 `6e99afebcaea09b38d3a110abc0ee1509a5558b4f87262e9a51923348f8000e7`, package manifest schema 5, x64, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA entry points. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 `17a0d477da1c98372cfa9d7882fa2e5ec1d15c5fba65580b2f51e750be95b13c`, verifier `773412a1ca8a432e3caff928f961feaf1f3df55a8db3c1f3d9a3efc2868e5597`, desktop witness helper `5cfd082dafc86d539524970e5fbaafaa13e72ba19a67bd434debb2182c7945fc` and guide `aa7ed02a023aea854e9ea6f791f75cb63480cf005e1fa52412a9f0f43b45058b`. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch gate.
 
 ### Regression and manual QA
 - [x] Core smoke tests green
@@ -76,13 +77,14 @@ Independent retained-artifact read-back confirms GitHub artifact SHA-256 `f3cdf9
 - [x] full WinUI Release x64 build green
 - [x] versioned clean ZIP candidate build/checksum/verification gate green
 - [x] package-bound interactive QA evidence tooling exists and fails closed on pending, elevated, tampered, mismatched-package or mismatched-running-tool evidence
+- [x] packaged desktop witness companion is independently hash-bound without claiming human completion
 - [ ] normal-user UAC checklist completed on a desktop machine
 - [ ] cross-process drag-out checklist completed on a desktop machine
 - [ ] basic clean-machine launch/open/mount/explore/verify/analyze regression completed
 
 The remaining interactive checks must be recorded against the exact retained `0.5.0-beta.1` ZIP. Manual-QA schema v3 requires the ZIP/checksum pair again for **every** recorded observation, re-verifies the package, executable and packaged QA-tool identities before saving, and refuses to initialize, record or verify unless the SHA-256 of the script that is currently executing exactly matches `tools/beta-manual-qa.ps1` from that candidate. Evidence initialization and every observation store that running-tool SHA alongside the package SHA-256. The contract also records the Windows build, process architecture, interactive/elevation state, session id and UAC availability, and fails closed if a later passing observation no longer matches the clean-desktop baseline.
 
-Passing records still require explicit human confirmation because hosted CI cannot honestly perform or observe the UAC approval/cancellation flows and real cross-process Explorer drag gestures. Schema-v1 and schema-v2 evidence are intentionally not migrated to v3: those observations must be repeated using the exact packaged v3 tool so the stronger running-tool binding is genuine rather than inferred after the fact.
+Passing records still require explicit human confirmation because hosted CI cannot honestly perform or observe the UAC approval/cancellation flows and real cross-process Explorer drag gestures. Schema-v1 and schema-v2 manual-QA evidence are intentionally not migrated to v3: those observations must be repeated using the exact packaged v3 tool so the stronger running-tool binding is genuine rather than inferred after the fact. The separate retained-candidate evidence schema v2 described above is release provenance, not a substitute for manual-QA evidence.
 
 ### GitHub Release
 - [ ] `0.5.0-beta.1` tag
@@ -95,7 +97,7 @@ Passing records still require explicit human confirmation because hosted CI cann
 
 ## Current beta readiness
 
-**NOT READY.** The automated engineering scope is complete for the beta-targeted image-intelligence slice and current CI proves the provider/intelligence regression path, clean-package verification, truthful QCOW2/VMDK guest-byte readers, security boundaries, accessibility hardening and package-only clean-machine runtime paths. The exact retained candidate above is independently bound to its source commit and package checksum. Remaining blockers are independent interactive/release gates: clean-machine interactive launch/open/mount/explore/verify/analyze regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/GitHub pre-release publication.
+**NOT READY.** The automated engineering scope is complete for the beta-targeted image-intelligence slice and current CI proves the provider/intelligence regression path, clean-package verification, truthful QCOW2/VMDK guest-byte readers, security boundaries, accessibility hardening and package-only clean-machine runtime paths. The exact retained candidate above is independently bound to its source commit, package checksum and packaged witness companion. Remaining blockers are independent interactive/release gates: clean-machine interactive launch/open/mount/explore/verify/analyze regression, normal-user UAC validation, real cross-process drag-out validation and final public package/checksum/GitHub pre-release publication.
 
 ## Rule
 

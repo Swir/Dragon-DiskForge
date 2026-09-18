@@ -22,6 +22,17 @@ function Resolve-RepositoryRoot {
     return (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 }
 
+function Assert-HexSha256 {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    if ($Value -notmatch '^[0-9a-fA-F]{64}$') {
+        throw "$Label must be a 64-character SHA-256 value."
+    }
+}
+
 function Read-RetainedCandidateEvidence {
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -30,7 +41,10 @@ function Read-RetainedCandidateEvidence {
     }
 
     $evidence = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-    if ([int]$evidence.schemaVersion -ne 1) { throw "Unsupported retained beta candidate evidence schema '$($evidence.schemaVersion)'." }
+    $schemaVersion = [int]$evidence.schemaVersion
+    if ($schemaVersion -ne 1 -and $schemaVersion -ne 2) {
+        throw "Unsupported retained beta candidate evidence schema '$schemaVersion'."
+    }
     if ([string]$evidence.kind -ne "DragonDiskForgeRetainedBetaCandidateEvidence") { throw "Unexpected retained beta candidate evidence kind." }
     if ([string]$evidence.product -ne "Dragon DiskForge") { throw "Unexpected retained beta candidate product." }
     if ([string]$evidence.version -ne "0.5.0-beta.1") { throw "Unexpected retained beta candidate version '$($evidence.version)'." }
@@ -38,10 +52,32 @@ function Read-RetainedCandidateEvidence {
     if ([string]$evidence.sourceCommit -notmatch '^[0-9a-fA-F]{40}$') { throw "Retained candidate sourceCommit must be an exact Git SHA." }
     if ([string]$evidence.workflowRunId -notmatch '^[1-9][0-9]*$') { throw "Retained candidate workflowRunId must be a positive integer string." }
     if ([int64]$evidence.workflowRunNumber -le 0) { throw "Retained candidate workflowRunNumber must be positive." }
-    if ([string]$evidence.packageSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw "Retained candidate packageSha256 must be SHA-256." }
+    if ([string]$evidence.artifactId -notmatch '^[1-9][0-9]*$') { throw "Retained candidate artifactId must be a positive integer string." }
+    Assert-HexSha256 -Value ([string]$evidence.artifactDigestSha256) -Label "artifactDigestSha256"
+    Assert-HexSha256 -Value ([string]$evidence.packageSha256) -Label "packageSha256"
+    Assert-HexSha256 -Value ([string]$evidence.candidateMetadataSha256) -Label "candidateMetadataSha256"
+    Assert-HexSha256 -Value ([string]$evidence.qaKitManifestSha256) -Label "qaKitManifestSha256"
+    Assert-HexSha256 -Value ([string]$evidence.entryPointSha256) -Label "entryPointSha256"
+    Assert-HexSha256 -Value ([string]$evidence.betaManualQaEntryPointSha256) -Label "betaManualQaEntryPointSha256"
+
     if ([string]$evidence.artifactName -ne "DragonDiskForge-$($evidence.version)-win-x64-candidate-$($evidence.workflowRunId)") {
         throw "Retained candidate artifactName does not match version/run identity."
     }
+    if ([string]$evidence.packageFile -ne "DragonDiskForge-win-x64.zip") { throw "Unexpected retained package filename." }
+    if ([int]$evidence.packageManifestSchema -ne 5) { throw "Retained package evidence must bind package manifest schema 5." }
+    if ([int]$evidence.qaKitSchema -ne 2) { throw "Retained package evidence must bind beta QA kit schema 2." }
+
+    if ($schemaVersion -eq 2) {
+        if ([int]$evidence.witnessKitSchema -ne 1) { throw "Retained schema v2 must bind beta QA witness kit schema 1." }
+        Assert-HexSha256 -Value ([string]$evidence.witnessKitManifestSha256) -Label "witnessKitManifestSha256"
+        Assert-HexSha256 -Value ([string]$evidence.witnessVerifierSha256) -Label "witnessVerifierSha256"
+        Assert-HexSha256 -Value ([string]$evidence.desktopWitnessHelperSha256) -Label "desktopWitnessHelperSha256"
+        Assert-HexSha256 -Value ([string]$evidence.desktopWitnessGuideSha256) -Label "desktopWitnessGuideSha256"
+    }
+
+    if ([string]$evidence.runtimeDeployment.dotNet -ne "self-contained") { throw ".NET runtime deployment must be self-contained." }
+    if ([string]$evidence.runtimeDeployment.windowsAppSdk -ne "self-contained") { throw "Windows App SDK runtime deployment must be self-contained." }
+    if ([string]$evidence.runtimeDeployment.visualCpp -ne "app-local") { throw "Visual C++ runtime deployment must be app-local." }
     if ([bool]$evidence.publicRelease) { throw "Retained candidate evidence must not claim a public release." }
     if ([bool]$evidence.betaReady) { throw "Retained candidate evidence must not claim beta readiness while manual gates remain open." }
 
@@ -111,6 +147,9 @@ function Test-DocumentationSet {
         if ($block -notmatch '(?i)not\s+(a\s+)?public\s+release|non-public') {
             throw "$($spec.Path) retained-candidate block must state that the artifact is not a public release."
         }
+        if ([int]$Evidence.schemaVersion -eq 2 -and $block -notmatch '(?i)witness-bound|witness companion') {
+            throw "$($spec.Path) retained-candidate block must state that schema-v2 evidence is witness-bound."
+        }
     }
 }
 
@@ -124,49 +163,89 @@ function Write-Utf8NoBom {
 
 function New-SelfTestBlock {
     param([Parameter(Mandatory = $true)]$Evidence, [Parameter(Mandatory = $true)][string]$EvidenceLink)
+    $witnessText = if ([int]$Evidence.schemaVersion -eq 2) { ' Evidence is witness-bound to the packaged desktop witness companion.' } else { '' }
     return @"
 $StartMarker
-Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) ($($Evidence.workflowRunId)), artifact $($Evidence.artifactName), source commit $($Evidence.sourceCommit), package SHA-256 $($Evidence.packageSha256). This is a non-public engineering candidate, not a public release. Authoritative evidence: [$EvidenceLink]($EvidenceLink).
+Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) ($($Evidence.workflowRunId)), artifact $($Evidence.artifactName), source commit $($Evidence.sourceCommit), package SHA-256 $($Evidence.packageSha256).$witnessText This is a non-public engineering candidate, not a public release. Authoritative evidence: [$EvidenceLink]($EvidenceLink).
 $EndMarker
 "@
+}
+
+function New-SelfTestEvidence {
+    param([int]$SchemaVersion)
+
+    $evidence = [ordered]@{
+        schemaVersion = $SchemaVersion
+        kind = 'DragonDiskForgeRetainedBetaCandidateEvidence'
+        product = 'Dragon DiskForge'
+        version = '0.5.0-beta.1'
+        architecture = 'x64'
+        sourceCommit = ('a' * 40)
+        workflowRunId = '123456'
+        workflowRunNumber = 79
+        artifactId = '654321'
+        artifactName = 'DragonDiskForge-0.5.0-beta.1-win-x64-candidate-123456'
+        artifactDigestSha256 = ('1' * 64)
+        artifactCreatedAtUtc = '2026-09-18T00:00:00Z'
+        artifactExpiresAtUtc = '2026-10-02T00:00:00Z'
+        packageFile = 'DragonDiskForge-win-x64.zip'
+        packageSha256 = ('b' * 64)
+        candidateMetadataSha256 = ('c' * 64)
+        qaKitManifestSha256 = ('d' * 64)
+        packageManifestSchema = 5
+        qaKitSchema = 2
+        entryPointSha256 = ('e' * 64)
+        betaManualQaEntryPointSha256 = ('f' * 64)
+        runtimeDeployment = [ordered]@{
+            dotNet = 'self-contained'
+            windowsAppSdk = 'self-contained'
+            visualCpp = 'app-local'
+        }
+        publicRelease = $false
+        betaReady = $false
+    }
+    if ($SchemaVersion -eq 2) {
+        $evidence.witnessKitSchema = 1
+        $evidence.witnessKitManifestSha256 = ('2' * 64)
+        $evidence.witnessVerifierSha256 = ('3' * 64)
+        $evidence.desktopWitnessHelperSha256 = ('4' * 64)
+        $evidence.desktopWitnessGuideSha256 = ('5' * 64)
+    }
+    return $evidence
 }
 
 function Invoke-SelfTest {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ("DragonDiskForge-beta-docs-consistency-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path (Join-Path $root 'docs') -Force | Out-Null
     try {
-        $evidence = [ordered]@{
-            schemaVersion = 1
-            kind = 'DragonDiskForgeRetainedBetaCandidateEvidence'
-            product = 'Dragon DiskForge'
-            version = '0.5.0-beta.1'
-            architecture = 'x64'
-            sourceCommit = ('a' * 40)
-            workflowRunId = '123456'
-            workflowRunNumber = 79
-            artifactName = 'DragonDiskForge-0.5.0-beta.1-win-x64-candidate-123456'
-            packageSha256 = ('b' * 64)
-            publicRelease = $false
-            betaReady = $false
-        }
-        $evidencePath = Join-Path $root 'docs/retained-beta-candidate.json'
-        Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
-        $parsed = Read-RetainedCandidateEvidence -Path $evidencePath
+        foreach ($schema in @(1, 2)) {
+            $evidence = New-SelfTestEvidence -SchemaVersion $schema
+            $evidencePath = Join-Path $root 'docs/retained-beta-candidate.json'
+            Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 8) + [Environment]::NewLine)
+            $parsed = Read-RetainedCandidateEvidence -Path $evidencePath
 
-        foreach ($spec in (Get-DocumentationSpecs)) {
-            Write-Utf8NoBom -Path (Join-Path $root $spec.Path) -Text (New-SelfTestBlock -Evidence $parsed -EvidenceLink $spec.EvidenceLink)
+            foreach ($spec in (Get-DocumentationSpecs)) {
+                Write-Utf8NoBom -Path (Join-Path $root $spec.Path) -Text (New-SelfTestBlock -Evidence $parsed -EvidenceLink $spec.EvidenceLink)
+            }
+            Test-DocumentationSet -Root $root -Evidence $parsed
         }
 
-        Test-DocumentationSet -Root $root -Evidence $parsed
-
+        $parsedV2 = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json')
         $badPath = Join-Path $root 'docs/STATUS.md'
-        $badText = (Get-Content -LiteralPath $badPath -Raw).Replace(('b' * 64), ('c' * 64))
+        $badText = (Get-Content -LiteralPath $badPath -Raw).Replace(([string]$parsedV2.packageSha256), ('9' * 64))
         Write-Utf8NoBom -Path $badPath -Text $badText
         $rejected = $false
-        try { Test-DocumentationSet -Root $root -Evidence $parsed } catch { $rejected = $true }
+        try { Test-DocumentationSet -Root $root -Evidence $parsedV2 } catch { $rejected = $true }
         if (-not $rejected) { throw "Self-test failed: stale package SHA-256 in documentation was accepted." }
 
-        Write-Host "Dragon DiskForge beta documentation consistency self-test passed."
+        $badWitness = New-SelfTestEvidence -SchemaVersion 2
+        $badWitness.desktopWitnessHelperSha256 = '00'
+        Write-Utf8NoBom -Path (Join-Path $root 'docs/retained-beta-candidate.json') -Text (($badWitness | ConvertTo-Json -Depth 8) + [Environment]::NewLine)
+        $rejected = $false
+        try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
+        if (-not $rejected) { throw "Self-test failed: invalid witness SHA-256 was accepted." }
+
+        Write-Host "Dragon DiskForge beta documentation consistency self-test passed for retained evidence schemas v1 and v2."
     }
     finally {
         Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
@@ -182,4 +261,4 @@ $root = Resolve-RepositoryRoot -RequestedRoot $RepositoryRoot
 $evidenceFile = if ([System.IO.Path]::IsPathRooted($EvidencePath)) { $EvidencePath } else { Join-Path $root $EvidencePath }
 $evidence = Read-RetainedCandidateEvidence -Path $evidenceFile
 Test-DocumentationSet -Root $root -Evidence $evidence
-Write-Host ("Beta documentation is synchronized to retained candidate run #{0} ({1}), source {2}, package SHA-256 {3}." -f $evidence.workflowRunNumber, $evidence.workflowRunId, $evidence.sourceCommit, $evidence.packageSha256)
+Write-Host ("Beta documentation is synchronized to retained candidate schema {0}, run #{1} ({2}), source {3}, package SHA-256 {4}." -f $evidence.schemaVersion, $evidence.workflowRunNumber, $evidence.workflowRunId, $evidence.sourceCommit, $evidence.packageSha256)

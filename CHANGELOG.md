@@ -51,6 +51,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - dedicated **Dragon DiskForge Beta Manual QA Contract** workflow that self-tests the evidence contract under PowerShell 7 and Windows PowerShell 5.1
 - external `scripts/beta-qa-session.ps1` exact-candidate preparation helper that verifies retained-package identity/runtime completeness, enforces an interactive unelevated UAC-enabled session, initializes evidence through the candidate's own hash-bound QA tool, performs a non-authoritative liveness preflight and opens an isolated Explorer drop target without auto-passing any human gate
 - session-baseline binding for every passing interactive beta-QA observation, preventing evidence from mixing Windows desktop sessions while preserving exact package/tool/build/architecture/UAC bindings
+- hash-bound packaged desktop witness companion with standalone verifier and guide, allowing objective desktop evidence to travel with the retained candidate without claiming a human gate
+- retained-candidate evidence schema v2 binding the candidate package, beta QA kit and desktop witness companion hashes while preserving fail-closed beta readiness
 - canonical `ExplorerPathSafetyValidator` shared by drag-out and mounted browse/search/preview/open/copy-out paths, with real Windows junction regression coverage
 - bounded desktop image-preview admission with a 64 MiB default byte cap and metadata-only fallback for oversized images
 - bounded image-signature admission for desktop rendering; spoofed or truncated image-extension files remain metadata-only
@@ -67,13 +69,13 @@ The project follows semantic versioning while it evolves toward 1.0.
 - **0.6 Create + Convert + Verify** remains **100% automated engineering complete**
 - **0.7 Physical Media Tools** remains **in progress at 6/7 (~86%)** because real disposable-media validation is still required
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
-- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention, session-bound manual-QA evidence and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
+- **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention, session-bound manual-QA evidence, witness-bound release provenance and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
 - current development metadata is **0.5.0-beta.1**; this is candidate metadata and does not imply a public release
-- Beta Candidate run #95 on `main` commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `f3cdf99f9d2503389d4f9ed6b000ba7772d3d10bfed74a26ccd9c7bcba4732b2`, nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`
+- Beta Candidate run #109 on `main` commit `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `6e99afebcaea09b38d3a110abc0ee1509a5558b4f87262e9a51923348f8000e7`, nested package SHA-256 `68969179afe42098a753bd2ccddf0fe9b1ca408fd1401281dbc9cd0aed76930e`; canonical evidence is schema v2 and witness-bound
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
-- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility, and self-tests the exact-package manual-QA evidence contract, session-preparation helper and release contracts under PowerShell 7 and Windows PowerShell 5.1
+- CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility, and self-tests the exact-package manual-QA evidence contract, session-preparation helper, desktop witness companion and release contracts under PowerShell 7 and Windows PowerShell 5.1
 
 ### Safety
 - inspection/provider/intelligence/image-media CLI paths remain read-only-first
@@ -96,6 +98,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - no physical-media writer is exposed in the product UI or public CLI
 - accessibility keyboard changes do not add hidden destructive shortcuts or broaden provider/media capabilities
 - beta manual-QA evidence cannot pass without explicit human confirmation from an interactive unelevated Windows session, exact release-package hash binding and the same recorded desktop session
+- desktop witness evidence is supporting provenance only and cannot claim the human UAC/Explorer gates
 - no completion claim is made for the remaining 0.9 UAC/Explorer gates until a real desktop validation succeeds
 - no completion claim is made for 0.7 until a real dedicated disposable-media validation succeeds
 - performance fixtures are generated locally and removed after testing rather than committed as large binary test images
@@ -144,6 +147,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #55 / implementation run #389 + Beta Manual QA Contract #1 + Disposable Media Guard #61 + Security Boundary #23 + Clean Machine Runtime #16 + Accessibility Contract #9 — exact-package interactive beta-QA evidence contract, packaged/hash-bound tooling and fail-closed manual release evidence foundation
 - PR #73 / PR-head Build #456 + fully green `main` Build #457 + Beta Candidate #64 — native mount commit-boundary cancellation hardening, `0.5.0-beta.1` source promotion and retained exact Windows x64 candidate
 - PR #82 / exact PR head `357bda52a2bfa18c49ba1bb241b9c1596ddd07c2` + fully green `main` Build #488 + Beta Candidate #95 — session-bound beta-QA evidence hardening, SVG-only progress presentation cleanup and refreshed exact Windows x64 retained candidate
+- PR #87 / exact PR head `96f20d422d6d1104da30ef28c40e815ca0ea7830` + green post-merge Beta Candidate #109 on `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422` — witness-bound retained-candidate schema v2 and fresh witness-enabled Windows x64 candidate
 
 ### Planned
 - complete the remaining `0.5.0-beta.1` interactive clean-desktop/UAC/cross-process drag-out gates against the retained exact candidate, then publish the final public ZIP/checksum/pre-release only if those observations pass

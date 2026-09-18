@@ -179,6 +179,8 @@ PR #53 exact implementation head `64519394512d030d90e5650e7aabd91b6f82a2f1` pass
 
 PR #54 exact implementation head `69490fe118614e9fb6bc39433756ccd0c50d5dd9` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is repeatable automated semantics/compile evidence; it does not claim formal certification or a human Narrator/NVDA/JAWS session.
 
+The retained candidate evidence path now supports witness-bound schema v2. The currently retained candidate binds the package, beta QA kit and packaged desktop witness companion without claiming either remaining human gate.
+
 See `docs/SECURITY-BOUNDARIES.md`, `docs/CLEAN-MACHINE-RUNTIME.md` and `docs/ACCESSIBILITY.md`.
 
 ### Remaining
@@ -194,7 +196,7 @@ Production release requires all final capability, package, documentation, checks
 The first planned public beta remains **`0.5.0-beta.1`**. Source/package metadata is promoted and automated engineering, clean-package, security-boundary, accessibility-hardening, clean-machine runtime and candidate-retention gates are green. Interactive WinUI clean-desktop launch/open/mount/explore/verify/analyze, normal-user UAC, real cross-process Explorer drag-out and public Release/checksum publication remain open.
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #95 (`35305773840`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35305773840`, built from `main` source commit `89ab37f6c221ab19d44bc4c3b83f38241bb4d9d3`; nested package SHA-256 `5aca974660703ab423237a7e34e29f7210ff0e9eaa85bab526ac972d2a1591da`. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #109 (`35321990287`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35321990287`, built from `main` source commit `a7ef4d7dd76bc3e4f10078b0496dca9fa9986422`; nested package SHA-256 `68969179afe42098a753bd2ccddf0fe9b1ca408fd1401281dbc9cd0aed76930e`. Evidence is witness-bound (schema v2) to the packaged desktop witness companion and does not claim any human gate. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`retained-beta-candidate.json`](retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
 A capability becomes user-visible only after its real backing path and tests exist.
