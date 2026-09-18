@@ -38,6 +38,14 @@ jobs:
         shell: powershell
         run: .\scripts\beta-retained-readback-contract.ps1 -Mode self-test
 
+      - name: PowerShell 7 retained-candidate currency self-test
+        shell: pwsh
+        run: ./scripts/beta-retained-currency.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 retained-candidate currency self-test
+        shell: powershell
+        run: .\scripts\beta-retained-currency.ps1 -Mode self-test
+
       - name: Verify current beta documentation
         shell: pwsh
         run: ./scripts/beta-docs-consistency.ps1 -Mode verify
@@ -45,3 +53,7 @@ jobs:
       - name: Verify retained beta read-back hashes
         shell: pwsh
         run: ./scripts/beta-retained-readback-contract.ps1 -Mode verify
+
+      - name: Inspect retained-candidate manual-QA currency
+        shell: pwsh
+        run: ./scripts/beta-retained-currency.ps1 -Mode verify -AllowStale
