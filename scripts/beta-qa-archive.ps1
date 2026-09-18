@@ -164,7 +164,7 @@ function Assert-WitnessForSnapshot {
         throw "Desktop witness is bound to a different Explorer drop target."
     }
     if ($null -ne $witness.observation) {
-        Assert-Sha256Value -Value ([string]$witness.observation.treeSha256 -Label "Desktop witness destination tree SHA-256")
+        Assert-Sha256Value -Value ([string]$witness.observation.treeSha256) -Label "Desktop witness destination tree SHA-256"
         if ([int]$witness.observation.itemCount -le 0 -or [long]$witness.observation.hashedBytes -lt 0) {
             throw "Desktop witness observation is not a valid positive bounded destination snapshot."
         }
@@ -366,7 +366,7 @@ function Invoke-VerifyArchive {
             if (([string]$witness.evidenceIdentitySha256).ToLowerInvariant() -ne $identity) { throw "Archived desktop witness disagrees with immutable manual-QA evidence identity." }
             if ([bool]$manifest.witness.observationCaptured -ne ($null -ne $witness.observation)) { throw "Archive witness observation state disagrees with the witness payload." }
             if ($null -ne $witness.observation) {
-                Assert-Sha256Value -Value ([string]$witness.observation.treeSha256 -Label "Archived desktop witness destination tree SHA-256")
+                Assert-Sha256Value -Value ([string]$witness.observation.treeSha256) -Label "Archived desktop witness destination tree SHA-256"
                 if ([int]$witness.observation.itemCount -le 0 -or [long]$witness.observation.hashedBytes -lt 0) { throw "Archived desktop witness observation is invalid." }
             }
         }
