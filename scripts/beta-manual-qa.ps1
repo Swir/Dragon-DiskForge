@@ -477,6 +477,9 @@ function Assert-EvidenceObject {
         if ([int]$record.observedSessionId -le 0) {
             throw "Manual QA check '$($definition.id)' was recorded from a service/non-interactive Windows session."
         }
+        if ([int]$record.observedSessionId -ne [int]$Evidence.createdEnvironment.sessionId) {
+            throw "Manual QA check '$($definition.id)' was recorded in interactive session '$($record.observedSessionId)' instead of evidence baseline session '$($Evidence.createdEnvironment.sessionId)'."
+        }
         if ($null -eq $record.observedProcessElevated) {
             throw "Manual QA check '$($definition.id)' cannot prove whether its observation process was elevated."
         }
@@ -580,6 +583,12 @@ function Invoke-SelfTest {
     if (-not $failedEnvironmentBinding) { throw "Self-test failed: per-observation OS build mismatch did not fail closed." }
     $evidence.checks[2].observedOsBuild = $fakeEnvironment.osBuild
 
+    $evidence.checks[2].observedSessionId = 2
+    $failedSessionBinding = $false
+    try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedSessionBinding = $true }
+    if (-not $failedSessionBinding) { throw "Self-test failed: per-observation interactive-session mismatch did not fail closed." }
+    $evidence.checks[2].observedSessionId = $fakeEnvironment.sessionId
+
     $evidence.checks[3].observedProcessElevated = $true
     $failedElevated = $false
     try { Assert-EvidenceObject -Evidence $evidence -PackageIdentity $fakePackage -Version "0.5.0-beta.1" } catch { $failedElevated = $true }
@@ -657,9 +666,10 @@ switch ($Mode) {
         Write-Host "Package SHA-256: $($identity.sha256)"
         Write-Host "Running QA tool SHA-256: $runningToolHash"
         Write-Host "Windows build: $($environment.osBuild)"
+        Write-Host "Interactive session ID: $($environment.sessionId)"
         Write-Host "UAC enabled: $($environment.uacEnabled)"
         Write-Host "Evidence: $($saved.path)"
-        Write-Host "Every subsequent record operation must supply the same -PackagePath so each observation is rebound to the exact candidate and packaged QA tool."
+        Write-Host "Every subsequent record operation must supply the same -PackagePath and run in this same interactive Windows session so each observation remains bound to one candidate, packaged QA tool and desktop boundary."
         exit 0
     }
 
@@ -705,6 +715,9 @@ switch ($Mode) {
         if ([string]$environment.processArchitecture -ne [string]$evidence.createdEnvironment.processArchitecture) {
             throw "Current process architecture '$($environment.processArchitecture)' differs from evidence baseline '$($evidence.createdEnvironment.processArchitecture)'."
         }
+        if ([int]$environment.sessionId -ne [int]$evidence.createdEnvironment.sessionId) {
+            throw "Current interactive session '$($environment.sessionId)' differs from evidence baseline session '$($evidence.createdEnvironment.sessionId)'. Reinitialize evidence in the desktop session being qualified."
+        }
 
         $record = $matches[0]
         $record.status = $Result
@@ -734,6 +747,7 @@ switch ($Mode) {
         $evidence = Load-Evidence -Path $EvidencePath
         Write-Host "Evidence schema: $($evidence.schemaVersion)"
         Write-Host "Package SHA-256: $($evidence.package.sha256)"
+        Write-Host "Baseline interactive session ID: $($evidence.createdEnvironment.sessionId)"
         foreach ($record in @($evidence.checks)) {
             $binding = "unbound"
             if (-not [string]::IsNullOrWhiteSpace([string]$record.packageSha256)) { $binding = ([string]$record.packageSha256).Substring(0, 12) }
