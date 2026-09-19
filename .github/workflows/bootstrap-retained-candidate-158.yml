@@ -1,0 +1,47 @@
+name: Bootstrap retained candidate 158 documentation sync
+
+on:
+  push:
+    branches: [ hardening/retain-candidate-158 ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dragon-retained-candidate-158-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Self-test documentation synchronizer
+        shell: pwsh
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode self-test
+
+      - name: Apply retained candidate documentation sync
+        shell: pwsh
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
+
+      - name: Verify synchronized state
+        shell: pwsh
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode verify
+
+      - name: Commit synchronized documentation
+        shell: pwsh
+        run: |
+          if (git diff --quiet) {
+            throw 'Retained candidate sync produced no repository changes.'
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md CHANGELOG.md docs/ROADMAP.md docs/STATUS.md docs/MILESTONES.md docs/BETA-RELEASE.md docs/BETA-CANDIDATE.md .github/workflows/beta-retained-explorer-currency.yml
+          git commit -m 'Synchronize retained beta candidate 158 docs'
+          git push origin HEAD:hardening/retain-candidate-158
