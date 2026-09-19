@@ -65,6 +65,24 @@ function Assert-Sha256Text {
     return $Value.ToLowerInvariant()
 }
 
+function ConvertTo-RoundTripTimestamp {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Context
+    )
+
+    $parsed = [DateTimeOffset]::MinValue
+    $accepted = [DateTimeOffset]::TryParse(
+        $Value,
+        [System.Globalization.CultureInfo]::InvariantCulture,
+        [System.Globalization.DateTimeStyles]::RoundtripKind,
+        [ref]$parsed)
+    if (-not $accepted) {
+        throw "$Context is missing or is not a valid round-trip timestamp."
+    }
+    return $parsed
+}
+
 function Get-IsElevated {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
         return $null
@@ -179,17 +197,27 @@ function Get-RecordedAppProcessSnapshot {
             throw "Recorded Dragon DiskForge process path is empty; live identity cannot be proven."
         }
 
+        $processStartTimeUtc = ""
+        try {
+            $processStartTimeUtc = $process.StartTime.ToUniversalTime().ToString("O")
+        }
+        catch {
+            throw "Cannot read the recorded Dragon DiskForge process start time; live identity cannot be proven."
+        }
+
         return [pscustomobject]@{
             exists = $true
             id = $process.Id
             sessionId = $process.SessionId
             path = $processPath
+            startTimeUtc = $processStartTimeUtc
             hasExited = $false
         }
     }
     catch {
         if ($_.Exception.Message -match '^Recorded Dragon DiskForge process' -or
             $_.Exception.Message -match '^Cannot read the recorded Dragon DiskForge process path' -or
+            $_.Exception.Message -match '^Cannot read the recorded Dragon DiskForge process start time' -or
             $_.Exception.Message -match '^Recorded Dragon DiskForge process path is empty') {
             throw
         }
@@ -276,6 +304,12 @@ function Assert-LiveSessionSnapshot {
         throw "Dragon DiskForge is no longer running in the prepared Windows desktop session."
     }
 
+    $sessionCreatedUtc = ConvertTo-RoundTripTimestamp -Value ([string]$Session.createdUtc) -Context "Prepared session createdUtc"
+    $processStartUtc = ConvertTo-RoundTripTimestamp -Value ([string]$AppProcess.startTimeUtc) -Context "Live application process start time"
+    if ($processStartUtc -gt $sessionCreatedUtc) {
+        throw "Live application process started after the prepared beta-QA session was created; process-id reuse or rebinding is suspected."
+    }
+
     $liveProcessPath = Get-NormalizedFullPath -Path ([string]$AppProcess.path)
     if (-not [string]::Equals($liveProcessPath, $appPath, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Live process id is not bound to the recorded Dragon DiskForge executable path."
@@ -286,6 +320,7 @@ function Assert-LiveSessionSnapshot {
         appProcessId = [int]$AppProcess.id
         appPath = $appPath
         appSha256 = $actualAppHash
+        appProcessStartTimeUtc = $processStartUtc.ToUniversalTime().ToString("O")
         sessionId = [int]$CurrentEnvironment.sessionId
         dropTarget = $dropTarget
     }
@@ -309,6 +344,7 @@ function Invoke-Verify {
     Write-Host "Workspace: $($verified.workspace)"
     Write-Host "Session id: $($verified.sessionId)"
     Write-Host "Dragon DiskForge process id: $($verified.appProcessId)"
+    Write-Host "Dragon DiskForge process start UTC: $($verified.appProcessStartTimeUtc)"
     Write-Host "Entry-point SHA-256: $($verified.appSha256)"
     Write-Host "This continuity check does not mark any human beta gate as passed."
 }
@@ -335,6 +371,7 @@ function New-SelfTestFixture {
     }
     $session = [pscustomobject]@{
         schemaVersion = 1
+        createdUtc = "2026-09-19T02:30:10.0000000+00:00"
         package = [pscustomobject]@{
             entryPointSha256 = $appHash
         }
@@ -352,6 +389,7 @@ function New-SelfTestFixture {
         id = 4242
         sessionId = 7
         path = [System.IO.Path]::GetFullPath($appPath)
+        startTimeUtc = "2026-09-19T02:30:00.0000000+00:00"
         hasExited = $false
     }
 
@@ -390,7 +428,7 @@ function Invoke-SelfTest {
     try {
         $fixture = New-SelfTestFixture -Root $tempRoot
         $valid = Assert-LiveSessionSnapshot -Session $fixture.session -Workspace $fixture.workspace -CurrentEnvironment $fixture.environment -AppProcess $fixture.process
-        if ($valid.appProcessId -ne 4242 -or [string]::IsNullOrWhiteSpace([string]$valid.appSha256)) {
+        if ($valid.appProcessId -ne 4242 -or [string]::IsNullOrWhiteSpace([string]$valid.appSha256) -or [string]::IsNullOrWhiteSpace([string]$valid.appProcessStartTimeUtc)) {
             throw "Self-test failed: valid continuity snapshot returned incomplete identity."
         }
 
@@ -422,6 +460,18 @@ function Invoke-SelfTest {
         $wrongProcess.path = Join-Path $fixture.workspace "not-dragon.exe"
         Assert-SelfTestRejects -Context "process-path rebinding" -Action {
             Assert-LiveSessionSnapshot -Session $fixture.session -Workspace $fixture.workspace -CurrentEnvironment $fixture.environment -AppProcess $wrongProcess | Out-Null
+        }
+
+        $reusedPidProcess = $fixture.process.PSObject.Copy()
+        $reusedPidProcess.startTimeUtc = "2026-09-19T02:31:00.0000000+00:00"
+        Assert-SelfTestRejects -Context "process-id reuse after session creation" -Action {
+            Assert-LiveSessionSnapshot -Session $fixture.session -Workspace $fixture.workspace -CurrentEnvironment $fixture.environment -AppProcess $reusedPidProcess | Out-Null
+        }
+
+        $malformedStartProcess = $fixture.process.PSObject.Copy()
+        $malformedStartProcess.startTimeUtc = "not-a-timestamp"
+        Assert-SelfTestRejects -Context "malformed live process start time" -Action {
+            Assert-LiveSessionSnapshot -Session $fixture.session -Workspace $fixture.workspace -CurrentEnvironment $fixture.environment -AppProcess $malformedStartProcess | Out-Null
         }
 
         Write-Utf8NoBom -Path $fixture.appPath -Text "tampered-live-session-app"
