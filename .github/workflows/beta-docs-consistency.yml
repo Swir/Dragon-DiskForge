@@ -50,6 +50,39 @@ jobs:
         shell: pwsh
         run: ./scripts/beta-docs-consistency.ps1 -Mode verify
 
+      - name: Verify CHANGELOG retained-candidate snapshot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $startMarker = '<!-- retained-beta-candidate:start -->'
+          $endMarker = '<!-- retained-beta-candidate:end -->'
+          $evidence = Get-Content -LiteralPath 'docs/retained-beta-candidate.json' -Raw | ConvertFrom-Json
+          $text = Get-Content -LiteralPath 'CHANGELOG.md' -Raw
+          $pattern = '(?s)' + [regex]::Escape($startMarker) + '(.*?)' + [regex]::Escape($endMarker)
+          $matches = [regex]::Matches($text, $pattern)
+          if ($matches.Count -ne 1) {
+            throw "CHANGELOG.md must contain exactly one retained beta candidate block; found $($matches.Count)."
+          }
+          $block = $matches[0].Groups[1].Value
+          $tokens = @(
+            "Beta Candidate run #$([int64]$evidence.workflowRunNumber)",
+            [string]$evidence.workflowRunId,
+            [string]$evidence.artifactName,
+            ([string]$evidence.sourceCommit).ToLowerInvariant(),
+            ([string]$evidence.packageSha256).ToLowerInvariant(),
+            'docs/retained-beta-candidate.json'
+          )
+          foreach ($token in $tokens) {
+            if ($block.IndexOf($token, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+              throw "CHANGELOG.md retained-candidate block is stale or incomplete; missing '$token'."
+            }
+          }
+          if ($block -notmatch '(?i)not\s+(a\s+)?public\s+release|non-public') {
+            throw 'CHANGELOG.md retained-candidate block must state that the artifact is not a public release.'
+          }
+          Write-Host "CHANGELOG retained candidate matches run #$($evidence.workflowRunNumber) ($($evidence.workflowRunId))."
+
       - name: Verify retained beta read-back hashes
         shell: pwsh
         run: ./scripts/beta-retained-readback-contract.ps1 -Mode verify
