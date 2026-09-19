@@ -4,6 +4,7 @@ param(
     [string]$CliProject = "src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj",
     [string]$ShellProject = "src/DragonDiskForge.Shell/DragonDiskForge.Shell.csproj",
     [string]$BetaManualQaScript = "scripts/beta-manual-qa.ps1",
+    [string]$BetaUacWitnessScript = "scripts/beta-qa-uac-witness.ps1",
     [string]$OutputDirectory = "artifacts/windows",
     [string]$ExpectedVersion = ""
 )
@@ -80,6 +81,7 @@ $appProjectPath = (Resolve-Path $AppProject).Path
 $cliProjectPath = (Resolve-Path $CliProject).Path
 $shellProjectPath = (Resolve-Path $ShellProject).Path
 $betaManualQaScriptPath = (Resolve-Path $BetaManualQaScript).Path
+$betaUacWitnessScriptPath = (Resolve-Path $BetaUacWitnessScript).Path
 $output = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $OutputDirectory))
 $publishRoot = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) "artifacts/publish"))
 $appPublishDirectory = Join-Path $publishRoot "DragonDiskForge.App-win-x64"
@@ -173,6 +175,11 @@ Copy-Item $betaManualQaScriptPath $betaManualQaEntryPoint -Force
 & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaManualQaEntryPoint -Mode self-test
 if ($LASTEXITCODE -ne 0) { throw "Packaged beta manual-QA evidence tool failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
 
+$betaUacWitnessEntryPoint = Join-Path $toolsStageDirectory "beta-qa-uac-witness.ps1"
+Copy-Item $betaUacWitnessScriptPath $betaUacWitnessEntryPoint -Force
+& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaUacWitnessEntryPoint -Mode self-test
+if ($LASTEXITCODE -ne 0) { throw "Packaged beta UAC witness tool failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
+
 $icon = Join-Path $stage "DragonDiskForge.ico"
 if (-not (Test-Path $icon -PathType Leaf)) {
     $repositoryIcon = Join-Path (Get-Location) "src/DragonDiskForge.App/Assets/DragonDiskForge.ico"
@@ -196,9 +203,10 @@ $entryPointSha256 = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLo
 $cliEntryPointSha256 = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $shellEntryPointSha256 = (Get-FileHash -Path $shellEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $betaManualQaEntryPointSha256 = (Get-FileHash -Path $betaManualQaEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+$betaUacWitnessEntryPointSha256 = (Get-FileHash -Path $betaUacWitnessEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $packageFilesBeforeManifest = @(Get-ChildItem -Path $stage -Recurse -File)
 $manifest = [ordered]@{
-    schemaVersion = 5
+    schemaVersion = 6
     product = "Dragon DiskForge"
     version = $expected
     productVersion = $productVersion
@@ -208,11 +216,13 @@ $manifest = [ordered]@{
     cliEntryPoint = "cli/dragon-diskforge.exe"
     shellIntegrationEntryPoint = "tools/dragon-diskforge-shell.exe"
     betaManualQaEntryPoint = "tools/beta-manual-qa.ps1"
+    betaUacWitnessEntryPoint = "tools/beta-qa-uac-witness.ps1"
     icon = "DragonDiskForge.ico"
     entryPointSha256 = $entryPointSha256
     cliEntryPointSha256 = $cliEntryPointSha256
     shellIntegrationEntryPointSha256 = $shellEntryPointSha256
     betaManualQaEntryPointSha256 = $betaManualQaEntryPointSha256
+    betaUacWitnessEntryPointSha256 = $betaUacWitnessEntryPointSha256
     runtimeDeployment = [ordered]@{
         dotNet = "self-contained"
         windowsAppSdk = "self-contained"
