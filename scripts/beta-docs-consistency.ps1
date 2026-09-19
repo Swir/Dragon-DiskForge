@@ -64,7 +64,18 @@ function Read-RetainedCandidateEvidence {
         throw "Retained candidate artifactName does not match version/run identity."
     }
     if ([string]$evidence.packageFile -ne "DragonDiskForge-win-x64.zip") { throw "Unexpected retained package filename." }
-    if ([int]$evidence.packageManifestSchema -ne 5) { throw "Retained package evidence must bind package manifest schema 5." }
+
+    $packageManifestSchema = [int]$evidence.packageManifestSchema
+    if ($packageManifestSchema -ne 5 -and $packageManifestSchema -ne 6) {
+        throw "Retained package evidence must bind package manifest schema 5 or 6."
+    }
+    if ($packageManifestSchema -eq 6) {
+        if (-not ($evidence.PSObject.Properties.Name -contains 'betaUacWitnessEntryPointSha256')) {
+            throw "Package manifest schema 6 retained evidence must bind betaUacWitnessEntryPointSha256."
+        }
+        Assert-HexSha256 -Value ([string]$evidence.betaUacWitnessEntryPointSha256) -Label "betaUacWitnessEntryPointSha256"
+    }
+
     if ([int]$evidence.qaKitSchema -ne 2) { throw "Retained package evidence must bind beta QA kit schema 2." }
 
     if ($schemaVersion -eq 2) {
@@ -150,6 +161,9 @@ function Test-DocumentationSet {
         if ([int]$Evidence.schemaVersion -eq 2 -and $block -notmatch '(?i)witness-bound|witness companion') {
             throw "$($spec.Path) retained-candidate block must state that schema-v2 evidence is witness-bound."
         }
+        if ([int]$Evidence.packageManifestSchema -eq 6 -and $block -notmatch '(?i)package-UAC-witness-bound|UAC witness') {
+            throw "$($spec.Path) retained-candidate block must state that package schema 6 is bound to the packaged UAC witness."
+        }
     }
 }
 
@@ -164,15 +178,19 @@ function Write-Utf8NoBom {
 function New-SelfTestBlock {
     param([Parameter(Mandatory = $true)]$Evidence, [Parameter(Mandatory = $true)][string]$EvidenceLink)
     $witnessText = if ([int]$Evidence.schemaVersion -eq 2) { ' Evidence is witness-bound to the packaged desktop witness companion.' } else { '' }
+    $uacWitnessText = if ([int]$Evidence.packageManifestSchema -eq 6) { ' Evidence is package-UAC-witness-bound to the packaged normal-user UAC witness companion.' } else { '' }
     return @"
 $StartMarker
-Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) ($($Evidence.workflowRunId)), artifact $($Evidence.artifactName), source commit $($Evidence.sourceCommit), package SHA-256 $($Evidence.packageSha256).$witnessText This is a non-public engineering candidate, not a public release. Authoritative evidence: [$EvidenceLink]($EvidenceLink).
+Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) ($($Evidence.workflowRunId)), artifact $($Evidence.artifactName), source commit $($Evidence.sourceCommit), package SHA-256 $($Evidence.packageSha256).$witnessText$uacWitnessText This is a non-public engineering candidate, not a public release. Authoritative evidence: [$EvidenceLink]($EvidenceLink).
 $EndMarker
 "@
 }
 
 function New-SelfTestEvidence {
-    param([int]$SchemaVersion)
+    param(
+        [int]$SchemaVersion,
+        [int]$PackageManifestSchema = 5
+    )
 
     $evidence = [ordered]@{
         schemaVersion = $SchemaVersion
@@ -192,7 +210,7 @@ function New-SelfTestEvidence {
         packageSha256 = ('b' * 64)
         candidateMetadataSha256 = ('c' * 64)
         qaKitManifestSha256 = ('d' * 64)
-        packageManifestSchema = 5
+        packageManifestSchema = $PackageManifestSchema
         qaKitSchema = 2
         entryPointSha256 = ('e' * 64)
         betaManualQaEntryPointSha256 = ('f' * 64)
@@ -210,6 +228,9 @@ function New-SelfTestEvidence {
         $evidence.witnessVerifierSha256 = ('3' * 64)
         $evidence.desktopWitnessHelperSha256 = ('4' * 64)
         $evidence.desktopWitnessGuideSha256 = ('5' * 64)
+    }
+    if ($PackageManifestSchema -eq 6) {
+        $evidence.betaUacWitnessEntryPointSha256 = ('6' * 64)
     }
     return $evidence
 }
@@ -245,7 +266,29 @@ function Invoke-SelfTest {
         try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
         if (-not $rejected) { throw "Self-test failed: invalid witness SHA-256 was accepted." }
 
-        Write-Host "Dragon DiskForge beta documentation consistency self-test passed for retained evidence schemas v1 and v2."
+        $schema6 = New-SelfTestEvidence -SchemaVersion 2 -PackageManifestSchema 6
+        Write-Utf8NoBom -Path (Join-Path $root 'docs/retained-beta-candidate.json') -Text (($schema6 | ConvertTo-Json -Depth 8) + [Environment]::NewLine)
+        $parsedSchema6 = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json')
+        foreach ($spec in (Get-DocumentationSpecs)) {
+            Write-Utf8NoBom -Path (Join-Path $root $spec.Path) -Text (New-SelfTestBlock -Evidence $parsedSchema6 -EvidenceLink $spec.EvidenceLink)
+        }
+        Test-DocumentationSet -Root $root -Evidence $parsedSchema6
+
+        $missingUac = New-SelfTestEvidence -SchemaVersion 2 -PackageManifestSchema 6
+        $missingUac.Remove('betaUacWitnessEntryPointSha256')
+        Write-Utf8NoBom -Path (Join-Path $root 'docs/retained-beta-candidate.json') -Text (($missingUac | ConvertTo-Json -Depth 8) + [Environment]::NewLine)
+        $rejected = $false
+        try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
+        if (-not $rejected) { throw "Self-test failed: package schema 6 without a UAC witness SHA-256 was accepted." }
+
+        $badUac = New-SelfTestEvidence -SchemaVersion 2 -PackageManifestSchema 6
+        $badUac.betaUacWitnessEntryPointSha256 = '00'
+        Write-Utf8NoBom -Path (Join-Path $root 'docs/retained-beta-candidate.json') -Text (($badUac | ConvertTo-Json -Depth 8) + [Environment]::NewLine)
+        $rejected = $false
+        try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
+        if (-not $rejected) { throw "Self-test failed: invalid package UAC witness SHA-256 was accepted." }
+
+        Write-Host "Dragon DiskForge beta documentation consistency self-test passed for retained evidence schemas v1/v2 and package manifest schemas 5/6."
     }
     finally {
         Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue

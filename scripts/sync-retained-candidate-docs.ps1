@@ -65,7 +65,15 @@ function Read-RetainedEvidence {
         @{ Value = [string]$e.betaManualQaEntryPointSha256; Label = 'betaManualQaEntryPointSha256' }
     )) { $null = Assert-HexSha256 -Value $item.Value -Label $item.Label }
 
-    if ([int]$e.packageManifestSchema -ne 5) { throw 'packageManifestSchema must be 5.' }
+    $packageManifestSchema = [int]$e.packageManifestSchema
+    if ($packageManifestSchema -ne 5 -and $packageManifestSchema -ne 6) { throw 'packageManifestSchema must be 5 or 6.' }
+    if ($packageManifestSchema -eq 6) {
+        if (-not ($e.PSObject.Properties.Name -contains 'betaUacWitnessEntryPointSha256')) {
+            throw 'packageManifestSchema 6 retained evidence must bind betaUacWitnessEntryPointSha256.'
+        }
+        $null = Assert-HexSha256 -Value ([string]$e.betaUacWitnessEntryPointSha256) -Label 'betaUacWitnessEntryPointSha256'
+    }
+
     if ([int]$e.qaKitSchema -ne 2) { throw 'qaKitSchema must be 2.' }
     if ([int]$e.liveKitSchema -ne 1) { throw 'liveKitSchema must be 1.' }
     if ([int]$e.witnessKitSchema -ne 1) { throw 'witnessKitSchema must be 1.' }
@@ -86,7 +94,13 @@ function Write-Utf8NoBom {
 function New-RetainedBlock {
     param([Parameter(Mandatory = $true)]$Evidence, [Parameter(Mandatory = $true)][string]$Link, [switch]$Bullet)
     $prefix = if ($Bullet) { '- ' } else { '' }
-    $line = "${prefix}Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) (``$($Evidence.workflowRunId)``), artifact ``$($Evidence.artifactName)``, built from ``main`` source commit ``$($Evidence.sourceCommit)``; nested package SHA-256 ``$($Evidence.packageSha256)``. Evidence is witness-bound (schema v2), archive-bound, live-session-bound and Explorer-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity and package-specific real-Explorer witness companions; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [``$Link``]($Link)."
+    $binding = if ([int]$Evidence.packageManifestSchema -ge 6) {
+        'Evidence is witness-bound (schema v2), archive-bound, live-session-bound, Explorer-witness-bound and package-UAC-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity, package-specific real-Explorer witness and packaged normal-user UAC witness companions'
+    }
+    else {
+        'Evidence is witness-bound (schema v2), archive-bound, live-session-bound and Explorer-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity and package-specific real-Explorer witness companions'
+    }
+    $line = "${prefix}Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) (``$($Evidence.workflowRunId)``), artifact ``$($Evidence.artifactName)``, built from ``main`` source commit ``$($Evidence.sourceCommit)``; nested package SHA-256 ``$($Evidence.packageSha256)``. $binding; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [``$Link``]($Link)."
     return "$StartMarker`n$line`n$EndMarker"
 }
 
@@ -120,6 +134,24 @@ BETA-QA-EXPLORER-WITNESS.md.sha256
 
 function New-CandidateCheckpoint {
     param([Parameter(Mandatory = $true)]$E)
+    if ([int]$E.packageManifestSchema -ge 6) {
+        return @"
+### Current retained checkpoint
+
+The authoritative retained candidate is **Beta Candidate run #$($E.workflowRunNumber) (``$($E.workflowRunId)``)**, artifact ``$($E.artifactName)``, built from ``main`` commit ``$($E.sourceCommit)``. The nested package SHA-256 is ``$($E.packageSha256)``; the GitHub artifact SHA-256 is ``$($E.artifactDigestSha256)``.
+
+Independent artifact read-back verified every supplied SHA-256 sidecar, package manifest schema $($E.packageManifestSchema), x64 architecture, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop executable, no PDB payloads, the desktop entry-point hash ``$($E.entryPointSha256)``, the packaged manual-QA-tool hash ``$($E.betaManualQaEntryPointSha256)`` and the packaged UAC-witness-tool hash ``$($E.betaUacWitnessEntryPointSha256)``.
+
+Canonical retained evidence remains schema v2. It is witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, live-session-bound to the package-specific live continuity manifest/verifier/helper/guide, Explorer-witness-bound to the package-specific verifier/helper/guide used to capture real File Explorer process/window/path evidence, and package-UAC-witness-bound to the exact normal-user UAC helper shipped inside the retained ZIP. None of these bindings claims a human gate.
+
+The authoritative machine-readable record is [``retained-beta-candidate.json``](retained-beta-candidate.json). It deliberately keeps ``publicRelease=false`` and ``betaReady=false``.
+
+Earlier candidate checkpoints remain historical evidence only. Candidates that predate the same-session binding, witness binding, portable archive kit, explicit retention policy, retained-candidate currency guard, live-session continuity kit, process-start binding, package-bound Explorer witness companion or package-bound UAC witness must not be mixed with the current manual-QA evidence path.
+
+This reselection does not complete or waive any manual release gate. Clean-desktop visible WinUI launch/basic regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media. Until that evidence exists, the candidate remains non-public and ``0.5.0-beta.1`` must not be published as a GitHub Release.
+"@
+    }
+
     return @"
 ### Current retained checkpoint
 
@@ -139,6 +171,10 @@ This reselection does not complete or waive any manual release gate. Clean-deskt
 
 function New-ReleaseReadback {
     param([Parameter(Mandatory = $true)]$E)
+    if ([int]$E.packageManifestSchema -ge 6) {
+        return "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($E.artifactDigestSha256)``, package manifest schema $($E.packageManifestSchema), x64, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA/UAC-witness entry points. The nested package SHA-256 is ``$($E.packageSha256)``; the desktop entry point is bound as ``$($E.entryPointSha256)``, the packaged manual-QA tool as ``$($E.betaManualQaEntryPointSha256)`` and the packaged UAC witness tool as ``$($E.betaUacWitnessEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($E.witnessKitManifestSha256)``, verifier ``$($E.witnessVerifierSha256)``, desktop witness helper ``$($E.desktopWitnessHelperSha256)`` and guide ``$($E.desktopWitnessGuideSha256)``. Archive binding additionally records archive-kit manifest SHA-256 ``$($E.archiveKitManifestSha256)``, verifier ``$($E.archiveVerifierSha256)``, helper ``$($E.archiveHelperSha256)`` and guide ``$($E.archiveGuideSha256)``. Live-session binding additionally records live-kit manifest SHA-256 ``$($E.liveKitManifestSha256)``, verifier ``$($E.liveVerifierSha256)``, live-session helper ``$($E.liveSessionHelperSha256)`` and guide ``$($E.liveSessionGuideSha256)``. Explorer-witness binding additionally records verifier ``$($E.explorerVerifierSha256)``, real-Explorer witness helper ``$($E.explorerWitnessHelperSha256)`` and guide ``$($E.explorerWitnessGuideSha256)``. The retained package also binds the exact normal-user UAC witness script shipped inside the ZIP. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch, UAC or real Explorer drag-out gates."
+    }
+
     return "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($E.artifactDigestSha256)``, package manifest schema 5, x64, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA entry points. The nested package SHA-256 is ``$($E.packageSha256)``; the desktop entry point is bound as ``$($E.entryPointSha256)`` and the packaged manual-QA tool as ``$($E.betaManualQaEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($E.witnessKitManifestSha256)``, verifier ``$($E.witnessVerifierSha256)``, desktop witness helper ``$($E.desktopWitnessHelperSha256)`` and guide ``$($E.desktopWitnessGuideSha256)``. Archive binding additionally records archive-kit manifest SHA-256 ``$($E.archiveKitManifestSha256)``, verifier ``$($E.archiveVerifierSha256)``, helper ``$($E.archiveHelperSha256)`` and guide ``$($E.archiveGuideSha256)``. Live-session binding additionally records live-kit manifest SHA-256 ``$($E.liveKitManifestSha256)``, verifier ``$($E.liveVerifierSha256)``, live-session helper ``$($E.liveSessionHelperSha256)`` and guide ``$($E.liveSessionGuideSha256)``. Explorer-witness binding additionally records verifier ``$($E.explorerVerifierSha256)``, real-Explorer witness helper ``$($E.explorerWitnessHelperSha256)`` and guide ``$($E.explorerWitnessGuideSha256)``. Candidate #$($E.workflowRunNumber) carries the package-bound Explorer witness companion and remains fail-closed against stale retained Explorer tooling. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch, UAC or real Explorer drag-out gates."
 }
 
@@ -196,6 +232,13 @@ function Sync-RepositoryDocs {
         if (-not $releaseExpected.Contains($anchor)) { throw 'docs/BETA-RELEASE.md live-session checklist anchor is missing.' }
         $releaseExpected = $releaseExpected.Replace($anchor, "$anchor`n$explorerChecklist")
     }
+    if ([int]$E.packageManifestSchema -ge 6) {
+        $uacChecklist = '- [x] retained evidence binds the exact packaged normal-user UAC witness tool by SHA-256'
+        if (-not $releaseExpected.Contains($uacChecklist)) {
+            if (-not $releaseExpected.Contains($explorerChecklist)) { throw 'docs/BETA-RELEASE.md Explorer checklist anchor is missing.' }
+            $releaseExpected = $releaseExpected.Replace($explorerChecklist, "$explorerChecklist`n$uacChecklist")
+        }
+    }
     $readbackPattern = '(?s)Independent retained-artifact read-back confirms GitHub artifact SHA-256 .*?(?=\r?\n\r?\n### Regression and manual QA)'
     $rbMatches = [regex]::Matches($releaseExpected, $readbackPattern)
     if ($rbMatches.Count -ne 1) { throw "docs/BETA-RELEASE.md must contain one retained read-back paragraph; found $($rbMatches.Count)." }
@@ -230,10 +273,23 @@ function Invoke-SelfTest {
             if (-not (Test-Path -LiteralPath $destinationDir)) { New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null }
             Copy-Item -LiteralPath $source -Destination $destination
         }
-        $e = Read-RetainedEvidence -Path (Join-Path $tempRoot 'docs/retained-beta-candidate.json')
+        $evidencePath = Join-Path $tempRoot 'docs/retained-beta-candidate.json'
+        $e = Read-RetainedEvidence -Path $evidencePath
         Sync-RepositoryDocs -Root $tempRoot -E $e -Apply
         Sync-RepositoryDocs -Root $tempRoot -E $e
-        Write-Host 'Retained candidate documentation sync self-test passed.'
+
+        $schema6 = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+        $schema6.packageManifestSchema = 6
+        $schema6 | Add-Member -NotePropertyName betaUacWitnessEntryPointSha256 -NotePropertyValue ('a' * 64) -Force
+        $schema6 | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $evidencePath -Encoding UTF8
+        $e6 = Read-RetainedEvidence -Path $evidencePath
+        Sync-RepositoryDocs -Root $tempRoot -E $e6 -Apply
+        Sync-RepositoryDocs -Root $tempRoot -E $e6
+        $candidateText = Get-Content -LiteralPath (Join-Path $tempRoot 'docs/BETA-CANDIDATE.md') -Raw
+        if (-not $candidateText.Contains('package manifest schema 6') -or -not $candidateText.Contains(('a' * 64))) {
+            throw 'Schema-6 retained documentation did not bind the packaged UAC witness hash.'
+        }
+        Write-Host 'Retained candidate documentation sync self-test passed for package manifest schemas 5 and 6.'
     }
     finally { Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
