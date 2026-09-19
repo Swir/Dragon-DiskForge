@@ -1,0 +1,28 @@
+name: Dragon DiskForge Explorer Witness Contract
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: dragon-explorer-witness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  explorer-witness-contract:
+    name: Explorer destination witness contract
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-explorer-witness.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 self-test
+        shell: powershell
+        run: .\scripts\beta-qa-explorer-witness.ps1 -Mode self-test
