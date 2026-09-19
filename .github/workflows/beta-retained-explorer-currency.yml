@@ -30,6 +30,6 @@ jobs:
         shell: powershell
         run: .\scripts\beta-retained-explorer-currency.ps1 -Mode self-test
 
-      - name: Inspect retained Explorer companion currency
+      - name: Verify retained Explorer companion currency
         shell: pwsh
-        run: ./scripts/beta-retained-explorer-currency.ps1 -Mode verify -AllowStale
+        run: ./scripts/beta-retained-explorer-currency.ps1 -Mode verify
