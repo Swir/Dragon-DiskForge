@@ -75,7 +75,9 @@ The project follows semantic versioning while it evolves toward 1.0.
 - **0.8 Windows Integration + Power Tools** remains **100% complete (4/4)**
 - **0.9 Quality, Security + Beta Hardening** remains **5/7 (~71%)**; exact candidate retention, session-bound manual-QA evidence, witness/archive/live-session-bound release provenance, retained-candidate currency hardening and mount commit-boundary hardening improve release confidence but do not complete either remaining human gate
 - current development metadata is **0.5.0-beta.1**; this is candidate metadata and does not imply a public release
-- Beta Candidate run #142 on `main` commit `ab21392f27a0909e0a62886a770607a7976b3334` is the current retained non-public Windows x64 candidate; GitHub artifact SHA-256 `a2d33ba56196fa3225194c632aa10a59c77efcf0be323bd4efd5857fe0e5c43e`, nested package SHA-256 `5740057c0592ebdd09bf82ac707b089cc12fcb1596d983654b064990584ce413`; canonical evidence remains schema v2 and is witness-bound, archive-bound and live-session-bound to the exact candidate
+<!-- retained-beta-candidate:start -->
+- Current retained candidate: Beta Candidate run #146 (`35417535316`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35417535316`, built from `main` source commit `75ba8788c9bf3eac44778e7e2efadc6f8119ad31`; GitHub artifact SHA-256 `5ece7adf54b983701d03a701aa20775398fc3f76118d4bc21ff71504403a319c`, nested package SHA-256 `277b076eae83a585825058c483756972da9e326fb77537a0b95d77d1e6ef128e`. Canonical evidence is schema v2, witness-bound, archive-bound and live-session-bound; `publicRelease=false` and `betaReady=false`, so this remains a non-public engineering candidate. Authoritative evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
+<!-- retained-beta-candidate:end -->
 - clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
 - package manifest schema 5 records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
@@ -155,6 +157,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 - PR #93 / exact PR head `88221ccac1e3e0d702423d7baf337cc418ea0070` + fully green merge `cc74093fc776afef058423ab9ed9acba32ad0cdd` + Beta Candidate #123 — fail-closed exact-main retention policy and witness/archive-bound Windows x64 candidate
 - PR #96 / exact PR head `5c4e6e49b0cdd9ffed0c8e06fccab8487eb43344` + fully green `main` Build #526 (attempt 2) + Beta Candidate #133 on `c5e68e36c645d9a05a129bedffb8f139e026722c` — fail-closed retained-candidate QA-tool currency guard and fresh witness/archive-bound Windows x64 candidate
 - PR #100 / exact PR head `f1ee320ffae55108d614f52fea5cbe1cfb49c151` + fully green merge `ab21392f27a0909e0a62886a770607a7976b3334` + successful Beta Candidate #142 — hash-bound live-session continuity tooling and fresh witness/archive/live-session-bound Windows x64 candidate
+- PR #102 / exact PR head `2a09c893d2363881ea3f955402ad061445c72c4b` + fully green merge `75ba8788c9bf3eac44778e7e2efadc6f8119ad31` + Beta Candidate #146 — process-start binding for the live beta-QA session, rejecting PID reuse/rebinding after preparation, with a fresh witness/archive/live-session-bound Windows x64 candidate
+- PR #103 / merge `d0aa708eb07e62bbbdd439b4286d45383042faa5` — independently verified Candidate #146 retained evidence synchronized across release documentation without claiming a human beta gate
 
 ### Planned
 - complete the remaining `0.5.0-beta.1` interactive clean-desktop/UAC/cross-process drag-out gates against the retained exact candidate, then publish the final public ZIP/checksum/pre-release only if those observations pass
