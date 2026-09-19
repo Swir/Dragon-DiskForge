@@ -22,6 +22,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Seed Explorer candidate inventory
+        shell: pwsh
+        run: |
+          $path = 'docs/BETA-CANDIDATE.md'
+          $text = Get-Content -LiteralPath $path -Raw
+          if (-not $text.Contains('beta-qa-explorer-kit.json')) {
+            $anchor = 'BETA-QA-EVIDENCE-ARCHIVE.md.sha256'
+            if (-not $text.Contains($anchor)) { throw 'Explorer inventory anchor is missing.' }
+            $addition = @(
+              'beta-qa-explorer-kit.json',
+              'beta-qa-explorer-kit.json.sha256',
+              'beta-qa-explorer-kit.ps1',
+              'beta-qa-explorer-kit.ps1.sha256',
+              'beta-qa-explorer-witness.ps1',
+              'beta-qa-explorer-witness.ps1.sha256',
+              'BETA-QA-EXPLORER-WITNESS.md',
+              'BETA-QA-EXPLORER-WITNESS.md.sha256'
+            ) -join [Environment]::NewLine
+            $text = $text.Replace($anchor, $anchor + [Environment]::NewLine + $addition)
+            [System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))
+          }
+
       - name: Self-test documentation synchronizer
         shell: pwsh
         run: ./scripts/sync-retained-candidate-docs.ps1 -Mode self-test
