@@ -1,0 +1,35 @@
+name: Dragon DiskForge Retained Explorer Currency
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dragon-retained-explorer-currency-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Retained Explorer companion currency
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 self-test
+        shell: pwsh
+        run: ./scripts/beta-retained-explorer-currency.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 self-test
+        shell: powershell
+        run: .\scripts\beta-retained-explorer-currency.ps1 -Mode self-test
+
+      - name: Inspect retained Explorer companion currency
+        shell: pwsh
+        run: ./scripts/beta-retained-explorer-currency.ps1 -Mode verify -AllowStale
