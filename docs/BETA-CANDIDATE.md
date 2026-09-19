@@ -14,9 +14,9 @@ The beta candidate pipeline solves that boundary explicitly:
 4. build the normal clean package using the same packaging script as engineering CI,
 5. independently verify package version, hashes, icon, package hygiene, CLI, shell helper and packaged manual-QA tool,
 6. bind candidate metadata to the exact source commit and ZIP SHA-256,
-7. build the hash-bound core beta QA kit plus the desktop-witness and portable evidence-archive companions,
+7. build the hash-bound core beta QA kit plus the live-session, desktop-witness and portable evidence-archive companions,
 8. retain the ZIP, checksum, candidate metadata and all hash-bound QA companions only when the fail-closed retention policy explicitly selects an exact `main` run,
-9. record interactive evidence with the exact manual-QA script carried by that retained candidate,
+9. record interactive evidence with the exact manual-QA script carried by that retained candidate while the live-session companion verifies session continuity without auto-passing any human gate,
 10. use the release-proof verifier to bind source commit, candidate metadata, package and completed evidence before publication,
 11. do **not** create a tag or public GitHub Release until every independent release gate passes.
 
@@ -54,19 +54,37 @@ beta-candidate.json.sha256
 beta-qa-kit.json
 beta-qa-kit.json.sha256
 beta-qa-kit-verify.ps1
+beta-qa-kit-verify.ps1.sha256
 beta-qa-session.ps1
+beta-qa-session.ps1.sha256
 BETA-QA-KIT.md
+BETA-QA-KIT.md.sha256
 BETA-MANUAL-VALIDATION.md
+BETA-MANUAL-VALIDATION.md.sha256
+beta-qa-live-kit.json
+beta-qa-live-kit.json.sha256
+beta-qa-live-kit-verify.ps1
+beta-qa-live-kit-verify.ps1.sha256
+beta-qa-live-session.ps1
+beta-qa-live-session.ps1.sha256
+BETA-QA-LIVE-SESSION.md
+BETA-QA-LIVE-SESSION.md.sha256
 beta-qa-witness-kit.json
 beta-qa-witness-kit.json.sha256
 beta-qa-witness-kit-verify.ps1
+beta-qa-witness-kit-verify.ps1.sha256
 beta-qa-desktop-witness.ps1
+beta-qa-desktop-witness.ps1.sha256
 BETA-QA-DESKTOP-WITNESS.md
+BETA-QA-DESKTOP-WITNESS.md.sha256
 beta-qa-archive-kit.json
 beta-qa-archive-kit.json.sha256
 beta-qa-archive-kit-verify.ps1
+beta-qa-archive-kit-verify.ps1.sha256
 beta-qa-archive.ps1
+beta-qa-archive.ps1.sha256
 BETA-QA-EVIDENCE-ARCHIVE.md
+BETA-QA-EVIDENCE-ARCHIVE.md.sha256
 ```
 
 `beta-candidate.json` records the exact source commit, workflow run id, beta version, architecture, package SHA-256, package-manifest schema, desktop entry-point SHA-256 and packaged manual-QA-tool SHA-256. `publicRelease` is explicitly `false`.
@@ -83,15 +101,15 @@ Before starting manual QA, confirm that the retained artifact's `beta-candidate.
 
 ### Current retained checkpoint
 
-The authoritative retained candidate is **Beta Candidate run #133 (`35376470144`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35376470144`, built from `main` commit `c5e68e36c645d9a05a129bedffb8f139e026722c`. The nested package SHA-256 is `abe37ea41adfe8e6461907454e2951ecea76fcdc4986f8c6c9867c86e356573b`; the GitHub artifact SHA-256 is `8ab9fa539d3ce66e4cd463efb123d8f19ee4ecfef78a56e564dbbf06af64ae64`.
+The authoritative retained candidate is **Beta Candidate run #142 (`35407568129`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35407568129`, built from `main` commit `ab21392f27a0909e0a62886a770607a7976b3334`. The nested package SHA-256 is `5740057c0592ebdd09bf82ac707b089cc12fcb1596d983654b064990584ce413`; the GitHub artifact SHA-256 is `a2d33ba56196fa3225194c632aa10a59c77efcf0be323bd4efd5857fe0e5c43e`.
 
-This candidate was intentionally selected by the PR #96 merge that added the fail-closed retained-candidate QA-tool currency guard. The exact PR head passed its required workflows before merge; the exact `main` merge then completed Build #526 successfully on attempt 2, and Beta Candidate #133 retained the candidate. Independent artifact read-back verified the outer artifact digest, every supplied SHA-256 sidecar, package manifest schema 5, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, the desktop entry-point hash `8808837eda8f38d6fff169c10db56ccae2863fa1e5b7cae935b80d83e30bac54` and the packaged manual-QA-tool hash `525f632943ece5e2ae72ca350015bab49d2a8149a54aa98e9a8e1fd1788a6d94`.
+This candidate was intentionally selected by the PR #100 merge that retained the hash-bound live-session continuity tooling. The exact PR head `f1ee320ffae55108d614f52fea5cbe1cfb49c151` passed its required workflows before merge, and Beta Candidate #142 completed successfully on the exact `main` merge. Independent artifact read-back verified the outer artifact digest, all 19 supplied SHA-256 sidecars, package manifest schema 5, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop executable, no PDB payloads, the desktop entry-point hash `1e05ce342f4492d605ef5f4ef3efc7e503db4dd792fa4fe40c7054c70388374a` and the packaged manual-QA-tool hash `525f632943ece5e2ae72ca350015bab49d2a8149a54aa98e9a8e1fd1788a6d94`.
 
-Canonical retained evidence remains schema v2 for compatibility, is witness-bound to the packaged desktop witness companion, and carries separately verified archive-binding fields for the portable evidence-archive manifest, verifier, helper and guide. The dedicated retained archive-binding contract fails closed if those hashes, the candidate identity, or the synchronized documentation drift. None of these bindings claims a human gate.
+Canonical retained evidence remains schema v2 for compatibility. It is witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, and live-session-bound to the package-specific live continuity manifest/verifier/helper/guide. The dedicated retained archive-binding and live-binding contracts fail closed if those hashes, candidate identity, synchronized documentation or readiness state drift. None of these bindings claims a human gate.
 
 The authoritative machine-readable record is [`retained-beta-candidate.json`](retained-beta-candidate.json). It deliberately keeps `publicRelease=false` and `betaReady=false`.
 
-Earlier candidate checkpoints remain historical evidence only. In particular, candidates before the PR #82 same-session binding, PR #87 witness binding, PR #89 portable archive kit, PR #93 explicit retention policy or PR #96 retained-candidate currency guard must not be mixed with the current manual-QA evidence path.
+Earlier candidate checkpoints remain historical evidence only. In particular, candidates before the PR #82 same-session binding, PR #87 witness binding, PR #89 portable archive kit, PR #93 explicit retention policy, PR #96 retained-candidate currency guard or PR #100 live-session continuity kit must not be mixed with the current manual-QA evidence path.
 
 This reselection does not complete or waive any manual release gate. Clean-desktop visible WinUI launch/basic regression, normal-user UAC behavior and real cross-process Explorer/Desktop drag-out still require human observations against the exact retained package, and the separate 0.7 physical-writer gate still requires dedicated disposable media. Until that evidence exists, the candidate remains non-public and `0.5.0-beta.1` must not be published as a GitHub Release.
 
@@ -133,7 +151,7 @@ Choose one successful **retained** candidate artifact and keep its files togethe
 
 The manual-QA evidence format is **schema v3**. Schema v3 does more than verify that a trusted QA script exists inside the ZIP: initialization, every recorded observation and final verification refuse to continue unless the SHA-256 of the script that is **currently executing** exactly matches `tools/beta-manual-qa.ps1` from that candidate package. The current session hardening additionally requires passing observations to remain bound to the same interactive Windows desktop session recorded by the evidence baseline.
 
-That means manual QA must be launched with the script extracted from the retained candidate itself. Do not use a repository checkout, an older candidate tool or a copied script whose hash differs.
+That means manual QA must be launched with the script extracted from the retained candidate itself. Do not use a repository checkout, an older candidate tool or a copied script whose hash differs. The retained candidate's `beta-qa-live-session.ps1` companion may be used to prepare and continuously verify the exact package/session context, but it cannot record or auto-pass any human observation.
 
 On a clean supported Windows desktop, extract the candidate ZIP and initialize evidence from a normal unelevated interactive PowerShell session using the packaged tool:
 
