@@ -59,11 +59,12 @@ jobs:
       - name: Commit synchronized documentation
         shell: pwsh
         run: |
-          if (git diff --quiet) {
-            throw 'Retained candidate sync produced no repository changes.'
-          }
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add README.md CHANGELOG.md docs/ROADMAP.md docs/STATUS.md docs/MILESTONES.md docs/BETA-RELEASE.md docs/BETA-CANDIDATE.md .github/workflows/beta-retained-explorer-currency.yml
+          git add README.md CHANGELOG.md docs/ROADMAP.md docs/STATUS.md docs/MILESTONES.md docs/BETA-RELEASE.md docs/BETA-CANDIDATE.md
+          if (git diff --cached --quiet) {
+            Write-Host 'Retained candidate documentation already synchronized.'
+            exit 0
+          }
           git commit -m 'Synchronize retained beta candidate 158 docs'
           git push origin HEAD:hardening/retain-candidate-158
