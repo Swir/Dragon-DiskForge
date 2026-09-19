@@ -47,6 +47,8 @@ function Read-CanonicalEvidence {
 
     Assert-HexSha256 -Value ([string]$evidence.artifactDigestSha256) -Label 'artifactDigestSha256'
     Assert-HexSha256 -Value ([string]$evidence.witnessKitManifestSha256) -Label 'witnessKitManifestSha256'
+    if ([int]$evidence.liveKitSchema -ne 1) { throw 'Retained beta read-back requires live kit schema 1.' }
+    Assert-HexSha256 -Value ([string]$evidence.liveKitManifestSha256) -Label 'liveKitManifestSha256'
     if ([bool]$evidence.publicRelease) { throw 'Retained evidence must not claim a public release.' }
     if ([bool]$evidence.betaReady) { throw 'Retained evidence must not claim beta readiness while manual gates remain open.' }
 
@@ -64,22 +66,27 @@ function Test-BetaReleaseReadback {
     }
 
     $text = Get-Content -LiteralPath $BetaReleasePath -Raw
-    $pattern = '(?s)Independent retained-artifact read-back confirms GitHub artifact SHA-256 `(?<artifact>[0-9a-fA-F]{64})`.*?Schema-v2 retained evidence also binds witness-kit manifest SHA-256 `(?<witness>[0-9a-fA-F]{64})`'
+    $pattern = '(?s)Independent retained-artifact read-back confirms GitHub artifact SHA-256 `(?<artifact>[0-9a-fA-F]{64})`.*?Schema-v2 retained evidence also binds witness-kit manifest SHA-256 `(?<witness>[0-9a-fA-F]{64})`.*?Live-session binding additionally records live-kit manifest SHA-256 `(?<live>[0-9a-fA-F]{64})`'
     $matches = [regex]::Matches($text, $pattern)
     if ($matches.Count -ne 1) {
-        throw "docs/BETA-RELEASE.md must contain exactly one canonical retained-artifact read-back paragraph; found $($matches.Count)."
+        throw "docs/BETA-RELEASE.md must contain exactly one canonical retained-artifact read-back paragraph with witness and live-session bindings; found $($matches.Count)."
     }
 
     $artifact = $matches[0].Groups['artifact'].Value.ToLowerInvariant()
     $witness = $matches[0].Groups['witness'].Value.ToLowerInvariant()
+    $live = $matches[0].Groups['live'].Value.ToLowerInvariant()
     $expectedArtifact = ([string]$Evidence.artifactDigestSha256).ToLowerInvariant()
     $expectedWitness = ([string]$Evidence.witnessKitManifestSha256).ToLowerInvariant()
+    $expectedLive = ([string]$Evidence.liveKitManifestSha256).ToLowerInvariant()
 
     if ($artifact -ne $expectedArtifact) {
         throw "docs/BETA-RELEASE.md retained-artifact digest is stale: expected $expectedArtifact, found $artifact."
     }
     if ($witness -ne $expectedWitness) {
         throw "docs/BETA-RELEASE.md witness-kit manifest digest is stale: expected $expectedWitness, found $witness."
+    }
+    if ($live -ne $expectedLive) {
+        throw "docs/BETA-RELEASE.md live-kit manifest digest is stale: expected $expectedLive, found $live."
     }
 }
 
@@ -105,6 +112,8 @@ function Invoke-SelfTest {
             kind = 'DragonDiskForgeRetainedBetaCandidateEvidence'
             artifactDigestSha256 = ('1' * 64)
             witnessKitManifestSha256 = ('2' * 64)
+            liveKitSchema = 1
+            liveKitManifestSha256 = ('3' * 64)
             publicRelease = $false
             betaReady = $false
         }
@@ -113,7 +122,7 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         $parsed = Read-CanonicalEvidence -Path $evidencePath
 
-        $good = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed.artifactDigestSha256)``, package manifest schema 5. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed.witnessKitManifestSha256)``, verifier evidence."
+        $good = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed.artifactDigestSha256)``, package manifest schema 5. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed.liveKitManifestSha256)``, verifier evidence."
         Write-Utf8NoBom -Path $releasePath -Text ($good + [Environment]::NewLine)
         Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed
 
@@ -128,6 +137,12 @@ function Invoke-SelfTest {
         $rejected = $false
         try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } catch { $rejected = $true }
         if (-not $rejected) { throw 'Self-test failed: stale witness-kit digest was accepted.' }
+
+        $badLive = $good.Replace([string]$parsed.liveKitManifestSha256, ('7' * 64))
+        Write-Utf8NoBom -Path $releasePath -Text ($badLive + [Environment]::NewLine)
+        $rejected = $false
+        try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } catch { $rejected = $true }
+        if (-not $rejected) { throw 'Self-test failed: stale live-kit digest was accepted.' }
 
         Write-Utf8NoBom -Path $releasePath -Text "No retained read-back paragraph.`n"
         $rejected = $false
@@ -150,4 +165,4 @@ $root = Resolve-RepositoryRoot -RequestedRoot $RepositoryRoot
 $evidenceFile = if ([System.IO.Path]::IsPathRooted($EvidencePath)) { $EvidencePath } else { Join-Path $root $EvidencePath }
 $evidence = Read-CanonicalEvidence -Path $evidenceFile
 Test-BetaReleaseReadback -BetaReleasePath (Join-Path $root 'docs/BETA-RELEASE.md') -Evidence $evidence
-Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256)
+Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}; live manifest {2}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256)
