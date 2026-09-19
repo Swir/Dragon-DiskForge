@@ -78,6 +78,8 @@ function Read-RetainedEvidence {
 
 function Write-Utf8NoBom {
     param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$Text)
+    $dir = Split-Path -Parent $Path
+    if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     [System.IO.File]::WriteAllText($Path, $Text, $Utf8NoBom)
 }
 
@@ -97,10 +99,10 @@ function Replace-SingleMarkedBlock {
 }
 
 function Add-ExplorerArtifactList {
-    param([string]$Text)
+    param([Parameter(Mandatory = $true)][string]$Text)
     if ($Text.Contains('beta-qa-explorer-kit.json')) { return $Text }
-    $needle = "BETA-QA-EVIDENCE-ARCHIVE.md.sha256`n```"
-    $insert = @"
+    $needle = 'BETA-QA-EVIDENCE-ARCHIVE.md.sha256' + "`n" + '```'
+    $insert = @'
 BETA-QA-EVIDENCE-ARCHIVE.md.sha256
 beta-qa-explorer-kit.json
 beta-qa-explorer-kit.json.sha256
@@ -111,9 +113,9 @@ beta-qa-explorer-witness.ps1.sha256
 BETA-QA-EXPLORER-WITNESS.md
 BETA-QA-EXPLORER-WITNESS.md.sha256
 ```
-"@
+'@
     if (-not $Text.Contains($needle)) { throw 'BETA-CANDIDATE artifact list anchor is missing.' }
-    return $Text.Replace($needle, $insert.TrimEnd("`r", "`n"))
+    return $Text.Replace($needle, $insert.TrimEnd())
 }
 
 function New-CandidateCheckpoint {
@@ -141,7 +143,7 @@ function New-ReleaseReadback {
 }
 
 function Add-HistoryLine {
-    param([string]$Text)
+    param([Parameter(Mandatory = $true)][string]$Text)
     if ($Text.Contains('Beta Candidate #158')) { return $Text }
     $pattern = '(?m)^- PR #102 .*Beta Candidate #146.*$'
     $match = [regex]::Match($Text, $pattern)
@@ -168,36 +170,37 @@ function Sync-RepositoryDocs {
         $text = Get-Content -LiteralPath $path -Raw
         $expectedBlock = New-RetainedBlock -Evidence $E -Link $spec.Link -Bullet:$spec.Bullet
         $updated = Replace-SingleMarkedBlock -Text $text -Replacement $expectedBlock -Label $spec.Path
-        if ($spec.Path -in @('docs/ROADMAP.md', 'docs/STATUS.md', 'docs/MILESTONES.md', 'CHANGELOG.md')) {
-            $updated = Add-HistoryLine -Text $updated
-        }
+        if ($spec.Path -in @('docs/ROADMAP.md', 'docs/STATUS.md', 'docs/MILESTONES.md', 'CHANGELOG.md')) { $updated = Add-HistoryLine -Text $updated }
         if ($Apply) { Write-Utf8NoBom -Path $path -Text $updated }
         elseif (-not [string]::Equals($text, $updated, [System.StringComparison]::Ordinal)) { throw "$($spec.Path) retained-candidate documentation is stale." }
     }
 
     $candidatePath = Join-Path $Root 'docs/BETA-CANDIDATE.md'
     $candidate = Get-Content -LiteralPath $candidatePath -Raw
-    $candidate = $candidate.Replace('build the hash-bound core beta QA kit plus the live-session, desktop-witness and portable evidence-archive companions,', 'build the hash-bound core beta QA kit plus the live-session, desktop-witness, portable evidence-archive and real-Explorer witness companions,')
-    $candidate = Add-ExplorerArtifactList -Text $candidate
+    $candidateExpected = $candidate.Replace('build the hash-bound core beta QA kit plus the live-session, desktop-witness and portable evidence-archive companions,', 'build the hash-bound core beta QA kit plus the live-session, desktop-witness, portable evidence-archive and real-Explorer witness companions,')
+    $candidateExpected = Add-ExplorerArtifactList -Text $candidateExpected
     $checkpointPattern = '(?s)### Current retained checkpoint\r?\n.*?(?=\r?\n## Candidate contract script)'
-    $matches = [regex]::Matches($candidate, $checkpointPattern)
+    $matches = [regex]::Matches($candidateExpected, $checkpointPattern)
     if ($matches.Count -ne 1) { throw "docs/BETA-CANDIDATE.md must contain one current retained checkpoint section; found $($matches.Count)." }
-    $candidateExpected = [regex]::Replace($candidate, $checkpointPattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) (New-CandidateCheckpoint -E $E).TrimEnd("`r", "`n") }, 1)
+    $checkpoint = (New-CandidateCheckpoint -E $E).TrimEnd("`r", "`n")
+    $candidateExpected = [regex]::Replace($candidateExpected, $checkpointPattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $checkpoint }, 1)
     if ($Apply) { Write-Utf8NoBom -Path $candidatePath -Text $candidateExpected }
     elseif (-not [string]::Equals($candidate, $candidateExpected, [System.StringComparison]::Ordinal)) { throw 'docs/BETA-CANDIDATE.md current checkpoint is stale.' }
 
     $releasePath = Join-Path $Root 'docs/BETA-RELEASE.md'
     $release = Get-Content -LiteralPath $releasePath -Raw
+    $releaseExpected = $release
     $explorerChecklist = '- [x] retained evidence additionally binds the package-specific real-Explorer witness verifier, helper and guide by SHA-256'
-    if (-not $release.Contains($explorerChecklist)) {
+    if (-not $releaseExpected.Contains($explorerChecklist)) {
         $anchor = '- [x] retained evidence additionally binds the package-specific live-session continuity manifest, verifier, helper and guide by SHA-256'
-        if (-not $release.Contains($anchor)) { throw 'docs/BETA-RELEASE.md live-session checklist anchor is missing.' }
-        $release = $release.Replace($anchor, "$anchor`n$explorerChecklist")
+        if (-not $releaseExpected.Contains($anchor)) { throw 'docs/BETA-RELEASE.md live-session checklist anchor is missing.' }
+        $releaseExpected = $releaseExpected.Replace($anchor, "$anchor`n$explorerChecklist")
     }
     $readbackPattern = '(?s)Independent retained-artifact read-back confirms GitHub artifact SHA-256 .*?(?=\r?\n\r?\n### Regression and manual QA)'
-    $rbMatches = [regex]::Matches($release, $readbackPattern)
+    $rbMatches = [regex]::Matches($releaseExpected, $readbackPattern)
     if ($rbMatches.Count -ne 1) { throw "docs/BETA-RELEASE.md must contain one retained read-back paragraph; found $($rbMatches.Count)." }
-    $releaseExpected = [regex]::Replace($release, $readbackPattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) New-ReleaseReadback -E $E }, 1)
+    $readback = New-ReleaseReadback -E $E
+    $releaseExpected = [regex]::Replace($releaseExpected, $readbackPattern, [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $readback }, 1)
     if ($Apply) { Write-Utf8NoBom -Path $releasePath -Text $releaseExpected }
     elseif (-not [string]::Equals($release, $releaseExpected, [System.StringComparison]::Ordinal)) { throw 'docs/BETA-RELEASE.md retained read-back is stale.' }
 
@@ -210,36 +213,39 @@ function Sync-RepositoryDocs {
 }
 
 function Invoke-SelfTest {
-    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-retained-doc-sync-' + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path (Join-Path $root 'docs') -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $root '.github/workflows') -Force | Out-Null
+    $sourceRoot = Resolve-RepositoryRoot -RequestedRoot $RepositoryRoot
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-retained-doc-sync-' + [guid]::NewGuid().ToString('N'))
+    $files = @(
+        'README.md', 'CHANGELOG.md', 'docs/ROADMAP.md', 'docs/STATUS.md', 'docs/MILESTONES.md',
+        'docs/BETA-RELEASE.md', 'docs/BETA-CANDIDATE.md', 'docs/retained-beta-candidate.json',
+        '.github/workflows/beta-retained-explorer-currency.yml'
+    )
+    New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
     try {
-        $fixture = [ordered]@{
-            schemaVersion = 2; kind = 'DragonDiskForgeRetainedBetaCandidateEvidence'; product = 'Dragon DiskForge'; version = '0.5.0-beta.1'; architecture = 'x64'; sourceCommit = ('a' * 40); workflowRunId = '123456'; workflowRunNumber = 158; artifactId = '654321'; artifactName = 'DragonDiskForge-0.5.0-beta.1-win-x64-candidate-123456'; artifactDigestSha256 = ('1' * 64); artifactCreatedAtUtc = '2026-09-19T00:00:00Z'; artifactExpiresAtUtc = '2026-10-03T00:00:00Z'; packageFile = 'DragonDiskForge-win-x64.zip'; packageSha256 = ('2' * 64); candidateMetadataSha256 = ('3' * 64); qaKitManifestSha256 = ('4' * 64); packageManifestSchema = 5; qaKitSchema = 2; liveKitSchema = 1; liveKitManifestSha256 = ('5' * 64); liveVerifierSha256 = ('6' * 64); liveSessionHelperSha256 = ('7' * 64); liveSessionGuideSha256 = ('8' * 64); witnessKitSchema = 1; witnessKitManifestSha256 = ('9' * 64); witnessVerifierSha256 = ('a' * 64); desktopWitnessHelperSha256 = ('b' * 64); desktopWitnessGuideSha256 = ('c' * 64); archiveKitSchema = 1; archiveKitManifestSha256 = ('d' * 64); archiveVerifierSha256 = ('e' * 64); archiveHelperSha256 = ('f' * 64); archiveGuideSha256 = ('1' * 64); explorerKitSchema = 1; explorerVerifierSha256 = ('2' * 64); explorerWitnessHelperSha256 = ('3' * 64); explorerWitnessGuideSha256 = ('4' * 64); entryPointSha256 = ('5' * 64); betaManualQaEntryPointSha256 = ('6' * 64); runtimeDeployment = [ordered]@{ dotNet = 'self-contained'; windowsAppSdk = 'self-contained'; visualCpp = 'app-local' }; publicRelease = $false; betaReady = $false; remainingInteractiveGates = @('clean-machine interactive launch/open/mount/explore/verify/analyze','normal-user UAC validation','real cross-process Explorer drag-out validation')
+        foreach ($relative in $files) {
+            $source = Join-Path $sourceRoot $relative
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Self-test source is missing: $relative" }
+            $destination = Join-Path $tempRoot $relative
+            $destinationDir = Split-Path -Parent $destination
+            if (-not (Test-Path -LiteralPath $destinationDir)) { New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null }
+            Copy-Item -LiteralPath $source -Destination $destination
         }
-        $evidencePath = Join-Path $root 'docs/retained-beta-candidate.json'
-        Write-Utf8NoBom -Path $evidencePath -Text (($fixture | ConvertTo-Json -Depth 8) + "`n")
-        $e = Read-RetainedEvidence -Path $evidencePath
-        foreach ($path in @('README.md','docs/ROADMAP.md','docs/STATUS.md','docs/MILESTONES.md','CHANGELOG.md')) {
-            $full = Join-Path $root $path
-            $dir = Split-Path -Parent $full
-            if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-            Write-Utf8NoBom -Path $full -Text "$StartMarker`nstale`n$EndMarker`n"
-        }
-        Write-Utf8NoBom -Path (Join-Path $root 'docs/BETA-RELEASE.md') -Text "$StartMarker`nstale`n$EndMarker`n`n- [x] retained evidence additionally binds the package-specific live-session continuity manifest, verifier, helper and guide by SHA-256`n`nIndependent retained-artifact read-back confirms GitHub artifact SHA-256 ``$('0' * 64)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$('0' * 64)``. Live-session binding additionally records live-kit manifest SHA-256 ``$('0' * 64)``.`n`n### Regression and manual QA`n"
-        Write-Utf8NoBom -Path (Join-Path $root 'docs/BETA-CANDIDATE.md') -Text "build the hash-bound core beta QA kit plus the live-session, desktop-witness and portable evidence-archive companions,`n`n```text`nBETA-QA-EVIDENCE-ARCHIVE.md.sha256`n``` `n`n### Current retained checkpoint`nold`n`n## Candidate contract script`n"
-        Write-Utf8NoBom -Path (Join-Path $root '.github/workflows/beta-retained-explorer-currency.yml') -Text "- name: Inspect retained Explorer companion currency`n  run: ./scripts/beta-retained-explorer-currency.ps1 -Mode verify -AllowStale`n"
-        Sync-RepositoryDocs -Root $root -E $e -Apply
-        Sync-RepositoryDocs -Root $root -E $e
+        $e = Read-RetainedEvidence -Path (Join-Path $tempRoot 'docs/retained-beta-candidate.json')
+        Sync-RepositoryDocs -Root $tempRoot -E $e -Apply
+        Sync-RepositoryDocs -Root $tempRoot -E $e
         Write-Host 'Retained candidate documentation sync self-test passed.'
     }
-    finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
+    finally { Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 if ($Mode -eq 'self-test') { Invoke-SelfTest; exit 0 }
 $root = Resolve-RepositoryRoot -RequestedRoot $RepositoryRoot
 $evidenceFile = if ([System.IO.Path]::IsPathRooted($EvidencePath)) { $EvidencePath } else { Join-Path $root $EvidencePath }
 $evidence = Read-RetainedEvidence -Path $evidenceFile
-if ($Mode -eq 'apply') { Sync-RepositoryDocs -Root $root -E $evidence -Apply; Write-Host "Retained candidate documentation synchronized to run #$($evidence.workflowRunNumber)."; exit 0 }
+if ($Mode -eq 'apply') {
+    Sync-RepositoryDocs -Root $root -E $evidence -Apply
+    Write-Host "Retained candidate documentation synchronized to run #$($evidence.workflowRunNumber)."
+    exit 0
+}
 Sync-RepositoryDocs -Root $root -E $evidence
 Write-Host "Retained candidate documentation is synchronized to run #$($evidence.workflowRunNumber) ($($evidence.workflowRunId))."
