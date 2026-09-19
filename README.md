@@ -30,7 +30,7 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #142 (`35407568129`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35407568129`, built from `main` source commit `ab21392f27a0909e0a62886a770607a7976b3334`; nested package SHA-256 `5740057c0592ebdd09bf82ac707b089cc12fcb1596d983654b064990584ce413`. Evidence is witness-bound (schema v2), archive-bound and live-session-bound to the packaged desktop witness, portable evidence-archive and package-specific live continuity companions; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #146 (`35417535316`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35417535316`, built from `main` source commit `75ba8788c9bf3eac44778e7e2efadc6f8119ad31`; nested package SHA-256 `277b076eae83a585825058c483756972da9e326fb77537a0b95d77d1e6ef128e`. Evidence is witness-bound (schema v2), archive-bound and live-session-bound to the packaged desktop witness, portable evidence-archive and package-specific live continuity companions; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
 ## Project progress — 83% toward 1.0
@@ -170,7 +170,7 @@ Exact implementation head `6451939...` passed full Windows build #374, Disposabl
 
 ### Accessibility + keyboard hardening ✅
 
-PR #54 adds explicit UI Automation names/help text to Direct Browse, Dragon Explorer, the multi-image workspace, Images and Mounted surfaces, plus polite live metadata for changing status/path/count/preview state and stable access keys for common actions. `scripts/accessibility-contract.ps1` fails on missing labels/live regions/named collections/progress indicators or duplicate per-view access keys, and the dedicated Windows workflow also compiles the WinUI x64 Release application.
+PR #54 adds explicit UI Automation names/help text to Direct Browse, Dragon Explorer, the multi-image workspace, Images and Mounted surfaces, plus polite live metadata for changing status/path/count/preview state and stable access keys. `scripts/accessibility-contract.ps1` fails on missing labels/live regions/named collections/progress indicators or duplicate per-view access keys, and the dedicated Windows workflow also compiles the WinUI application.
 
 Exact implementation head `69490fe...` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is automated accessibility/keyboard hardening evidence, not formal accessibility certification or a human Narrator/NVDA/JAWS validation. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md).
 
