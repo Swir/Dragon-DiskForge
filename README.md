@@ -170,7 +170,7 @@ Exact implementation head `6451939...` passed full Windows build #374, Disposabl
 
 ### Accessibility + keyboard hardening ✅
 
-PR #54 adds explicit UI Automation names/help text to Direct Browse, Dragon Explorer, the multi-image workspace, Images and Mounted surfaces, plus polite live metadata for changing status/path/count/preview state and stable access keys. `scripts/accessibility-contract.ps1` fails on missing labels/live regions/named collections/progress indicators or duplicate per-view access keys, and the dedicated Windows workflow also compiles the WinUI application.
+PR #54 adds explicit UI Automation names/help text to Direct Browse, Dragon Explorer, the multi-image workspace, Images and Mounted surfaces, plus polite live metadata for changing status/path/count/preview state and stable access keys for common actions. `scripts/accessibility-contract.ps1` fails on missing labels/live regions/named collections/progress indicators or duplicate per-view access keys, and the dedicated Windows workflow also compiles the WinUI x64 Release application.
 
 Exact implementation head `69490fe...` passed Accessibility Contract #1, full Windows build #381, Disposable Media Guard #53, Security Boundary #15 and Clean Machine Runtime #8 before accessibility/keyboard hardening was marked complete. This is automated accessibility/keyboard hardening evidence, not formal accessibility certification or a human Narrator/NVDA/JAWS validation. See [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md).
 
