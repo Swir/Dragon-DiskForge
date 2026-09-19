@@ -30,26 +30,19 @@ jobs:
         shell: powershell
         run: .\scripts\sync-retained-candidate-docs.ps1 -Mode self-test
 
-      - name: Normalize maintained text files for deterministic comparison
+      - name: Apply deterministic retained-candidate projection
         shell: pwsh
-        run: |
-          $paths = @(
-            'README.md',
-            'CHANGELOG.md',
-            'docs/ROADMAP.md',
-            'docs/STATUS.md',
-            'docs/MILESTONES.md',
-            'docs/BETA-RELEASE.md',
-            'docs/BETA-CANDIDATE.md',
-            '.github/workflows/beta-retained-explorer-currency.yml'
-          )
-          $utf8 = [System.Text.UTF8Encoding]::new($false)
-          foreach ($path in $paths) {
-            $text = Get-Content -LiteralPath $path -Raw
-            $text = $text.Replace("`r`n", "`n")
-            [System.IO.File]::WriteAllText($path, $text, $utf8)
-          }
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
 
-      - name: Verify retained candidate documentation
-        shell: pwsh
-        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode verify
+      - name: Verify repository is already synchronized
+        shell: bash
+        run: |
+          git diff --exit-code --ignore-space-at-eol --ignore-cr-at-eol -- \
+            README.md \
+            CHANGELOG.md \
+            docs/ROADMAP.md \
+            docs/STATUS.md \
+            docs/MILESTONES.md \
+            docs/BETA-RELEASE.md \
+            docs/BETA-CANDIDATE.md \
+            .github/workflows/beta-retained-explorer-currency.yml
