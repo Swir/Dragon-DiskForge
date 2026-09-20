@@ -1,0 +1,31 @@
+name: Dragon DiskForge Beta UAC Provenance Contract
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uac-provenance:
+    name: UAC witness + pair verifier provenance
+    runs-on: windows-latest
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 UAC provenance self-test
+        shell: pwsh
+        run: ./scripts/beta-uac-provenance-contract.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 UAC provenance self-test
+        shell: powershell
+        run: .\scripts\beta-uac-provenance-contract.ps1 -Mode self-test
+
+      - name: Verify canonical retained evidence does not overclaim UAC provenance
+        shell: pwsh
+        run: ./scripts/beta-uac-provenance-contract.ps1 -Mode verify-retained
