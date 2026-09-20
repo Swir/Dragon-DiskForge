@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Script:SessionSchemaVersion = 2
+$Script:SessionSchemaVersion = 1
 $Script:MinimumPackageManifestSchema = 6
 $Script:SessionFileName = "beta-qa-session.json"
 $Script:EvidenceFileName = "beta-manual-qa.json"
