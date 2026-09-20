@@ -101,6 +101,18 @@ function Assert-Property {
     }
 }
 
+function Assert-SameValue {
+    param(
+        [AllowNull()]$Left,
+        [AllowNull()]$Right,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    if ([string]$Left -cne [string]$Right) {
+        throw "UAC witness pair mismatch: $Label changed between before and after captures."
+    }
+}
+
 function Get-PackageIdentity {
     param(
         [Parameter(Mandatory = $true)][string]$ZipPath,
@@ -235,73 +247,61 @@ function Read-Witness {
     }
 }
 
-function Assert-SameValue {
-    param(
-        [Parameter(Mandatory = $true)]$Before,
-        [Parameter(Mandatory = $true)]$After,
-        [Parameter(Mandatory = $true)][string]$Label
-    )
-
-    if ([string]$Before -cne [string]$After) {
-        throw "UAC witness pair mismatch: $Label changed between before and after captures."
-    }
-}
-
 function Assert-Pair {
     param(
-        [Parameter(Mandatory = $true)]$Before,
-        [Parameter(Mandatory = $true)]$After,
-        [Parameter(Mandatory = $true)]$Package,
+        [Parameter(Mandatory = $true)]$BeforeRecord,
+        [Parameter(Mandatory = $true)]$AfterRecord,
+        [Parameter(Mandatory = $true)]$PackageIdentity,
         [Parameter(Mandatory = $true)][int]$MaximumMinutes
     )
 
-    $before = $Before.data
-    $after = $After.data
+    $beforeData = $BeforeRecord.data
+    $afterData = $AfterRecord.data
 
-    if ([string]$before.phase -ne "before") { throw "The first UAC witness must have phase 'before'." }
-    if ([string]$after.phase -ne "after") { throw "The second UAC witness must have phase 'after'." }
+    if ([string]$beforeData.phase -ne "before") { throw "The first UAC witness must have phase 'before'." }
+    if ([string]$afterData.phase -ne "after") { throw "The second UAC witness must have phase 'after'." }
 
     foreach ($field in @(
         "schemaVersion", "kind", "product", "version", "architecture", "packageFile",
         "packageSha256", "packageManifestSchema", "entryPointSha256", "betaManualQaEntryPointSha256",
         "toolSha256", "checkId"
     )) {
-        Assert-SameValue -Before $before.$field -After $after.$field -Label $field
+        Assert-SameValue -Left $beforeData.$field -Right $afterData.$field -Label $field
     }
 
-    if ([string]$before.packageSha256 -cne [string]$Package.packageSha256) { throw "Before witness is bound to a different candidate package." }
-    if ([string]$after.packageSha256 -cne [string]$Package.packageSha256) { throw "After witness is bound to a different candidate package." }
-    if ([string]$before.entryPointSha256 -cne [string]$Package.entryPointSha256) { throw "Before witness desktop identity does not match the candidate package." }
-    if ([string]$after.entryPointSha256 -cne [string]$Package.entryPointSha256) { throw "After witness desktop identity does not match the candidate package." }
-    if ([string]$before.betaManualQaEntryPointSha256 -cne [string]$Package.betaManualQaEntryPointSha256) { throw "Before witness manual-QA identity does not match the candidate package." }
-    if ([string]$after.betaManualQaEntryPointSha256 -cne [string]$Package.betaManualQaEntryPointSha256) { throw "After witness manual-QA identity does not match the candidate package." }
-    if ([string]$before.toolSha256 -cne [string]$Package.betaUacWitnessEntryPointSha256) { throw "Before witness was not produced by the packaged UAC witness tool." }
-    if ([string]$after.toolSha256 -cne [string]$Package.betaUacWitnessEntryPointSha256) { throw "After witness was not produced by the packaged UAC witness tool." }
+    if ([string]$beforeData.packageSha256 -cne [string]$PackageIdentity.packageSha256) { throw "Before witness is bound to a different candidate package." }
+    if ([string]$afterData.packageSha256 -cne [string]$PackageIdentity.packageSha256) { throw "After witness is bound to a different candidate package." }
+    if ([string]$beforeData.entryPointSha256 -cne [string]$PackageIdentity.entryPointSha256) { throw "Before witness desktop identity does not match the candidate package." }
+    if ([string]$afterData.entryPointSha256 -cne [string]$PackageIdentity.entryPointSha256) { throw "After witness desktop identity does not match the candidate package." }
+    if ([string]$beforeData.betaManualQaEntryPointSha256 -cne [string]$PackageIdentity.betaManualQaEntryPointSha256) { throw "Before witness manual-QA identity does not match the candidate package." }
+    if ([string]$afterData.betaManualQaEntryPointSha256 -cne [string]$PackageIdentity.betaManualQaEntryPointSha256) { throw "After witness manual-QA identity does not match the candidate package." }
+    if ([string]$beforeData.toolSha256 -cne [string]$PackageIdentity.betaUacWitnessEntryPointSha256) { throw "Before witness was not produced by the packaged UAC witness tool." }
+    if ([string]$afterData.toolSha256 -cne [string]$PackageIdentity.betaUacWitnessEntryPointSha256) { throw "After witness was not produced by the packaged UAC witness tool." }
 
     foreach ($field in @(
         "osBuild", "processArchitecture", "sessionId", "enableLUA",
         "consentPromptBehaviorAdmin", "consentPromptBehaviorUser", "promptOnSecureDesktop",
         "filterAdministratorToken"
     )) {
-        Assert-SameValue -Before $before.environment.$field -After $after.environment.$field -Label "environment.$field"
+        Assert-SameValue -Left $beforeData.environment.$field -Right $afterData.environment.$field -Label "environment.$field"
     }
 
     foreach ($field in @("imageLeaf", "imagePathSha256", "extension", "length")) {
-        Assert-SameValue -Before $before.diskImage.$field -After $after.diskImage.$field -Label "diskImage.$field"
+        Assert-SameValue -Left $beforeData.diskImage.$field -Right $afterData.diskImage.$field -Label "diskImage.$field"
     }
 
-    if ($After.createdUtc -lt $Before.createdUtc) {
+    if ($AfterRecord.createdUtc -lt $BeforeRecord.createdUtc) {
         throw "UAC witness pair timestamps are reversed."
     }
-    $elapsed = $After.createdUtc - $Before.createdUtc
+    $elapsed = $AfterRecord.createdUtc - $BeforeRecord.createdUtc
     if ($elapsed.TotalMinutes -gt $MaximumMinutes) {
         throw "UAC witness pair exceeds the allowed continuity window of $MaximumMinutes minutes."
     }
 
-    $check = [string]$before.checkId
-    $extension = ([string]$before.diskImage.extension).ToLowerInvariant()
-    $beforeAttached = [bool]$before.diskImage.attached
-    $afterAttached = [bool]$after.diskImage.attached
+    $check = [string]$beforeData.checkId
+    $extension = ([string]$beforeData.diskImage.extension).ToLowerInvariant()
+    $beforeAttached = [bool]$beforeData.diskImage.attached
+    $afterAttached = [bool]$afterData.diskImage.attached
 
     switch ($check) {
         "uac.iso-no-prompt" {
@@ -319,14 +319,14 @@ function Assert-Pair {
         "uac.vhd-approve-readonly" {
             if ($extension -ne ".vhd") { throw "uac.vhd-approve-readonly requires a VHD image." }
             if ($beforeAttached -or -not $afterAttached) { throw "VHD approval witness must prove detached -> attached state." }
-            if ($null -eq $after.diskImage.diskIsReadOnly -or -not [bool]$after.diskImage.diskIsReadOnly) {
+            if ($null -eq $afterData.diskImage.diskIsReadOnly -or -not [bool]$afterData.diskImage.diskIsReadOnly) {
                 throw "VHD approval witness must prove the attached disk is read-only."
             }
         }
         "uac.vhdx-approve-readonly" {
             if ($extension -ne ".vhdx") { throw "uac.vhdx-approve-readonly requires a VHDX image." }
             if ($beforeAttached -or -not $afterAttached) { throw "VHDX approval witness must prove detached -> attached state." }
-            if ($null -eq $after.diskImage.diskIsReadOnly -or -not [bool]$after.diskImage.diskIsReadOnly) {
+            if ($null -eq $afterData.diskImage.diskIsReadOnly -or -not [bool]$afterData.diskImage.diskIsReadOnly) {
                 throw "VHDX approval witness must prove the attached disk is read-only."
             }
         }
@@ -340,19 +340,44 @@ function Assert-Pair {
 
     Write-Host "Dragon DiskForge UAC before/after pair verification passed."
     Write-Host "Check: $check"
-    Write-Host "Session: $($before.environment.sessionId)"
+    Write-Host "Session: $($beforeData.environment.sessionId)"
     Write-Host "Elapsed: $([math]::Round($elapsed.TotalSeconds, 1)) seconds"
-    Write-Host "Package SHA-256: $($Package.packageSha256)"
+    Write-Host "Package SHA-256: $($PackageIdentity.packageSha256)"
     Write-Host "Human gate claimed: false"
 }
 
 function Invoke-Verification {
-    if ([string]::IsNullOrWhiteSpace($PackagePath)) { throw "-PackagePath is required for UAC pair verification." }
+    param(
+        [Parameter(Mandatory = $true)][string]$BeforePath,
+        [Parameter(Mandatory = $true)][string]$AfterPath,
+        [Parameter(Mandatory = $true)][string]$ZipPath,
+        [string]$SidecarPath = "",
+        [Parameter(Mandatory = $true)][int]$MaximumMinutes,
+        [Parameter(Mandatory = $true)][string]$Version
+    )
 
-    $package = Get-PackageIdentity -ZipPath $PackagePath -SidecarPath $ChecksumFile -Version $ExpectedVersion
-    $before = Read-Witness -Path $BeforeEvidencePath -Label "Before witness" -Version $ExpectedVersion
-    $after = Read-Witness -Path $AfterEvidencePath -Label "After witness" -Version $ExpectedVersion
-    Assert-Pair -Before $before -After $after -Package $package -MaximumMinutes $MaxPairMinutes
+    $packageIdentity = Get-PackageIdentity -ZipPath $ZipPath -SidecarPath $SidecarPath -Version $Version
+    $beforeRecord = Read-Witness -Path $BeforePath -Label "Before witness" -Version $Version
+    $afterRecord = Read-Witness -Path $AfterPath -Label "After witness" -Version $Version
+    Assert-Pair -BeforeRecord $beforeRecord -AfterRecord $afterRecord -PackageIdentity $packageIdentity -MaximumMinutes $MaximumMinutes
+}
+
+function Assert-Rejected {
+    param(
+        [Parameter(Mandatory = $true)][scriptblock]$Action,
+        [Parameter(Mandatory = $true)][string]$FailureMessage
+    )
+
+    $rejected = $false
+    try {
+        & $Action
+    }
+    catch {
+        $rejected = $true
+    }
+    if (-not $rejected) {
+        throw $FailureMessage
+    }
 }
 
 function Invoke-SelfTest {
@@ -444,72 +469,38 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $afterPath -Text (($after | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
         $null = Write-Sha256Sidecar -Path $afterPath
 
-        $savedBefore = $BeforeEvidencePath
-        $savedAfter = $AfterEvidencePath
-        $savedPackage = $PackagePath
-        $savedChecksum = $ChecksumFile
-        try {
-            $script:BeforeEvidencePath = $beforePath
-            $script:AfterEvidencePath = $afterPath
-            $script:PackagePath = $zip
-            $script:ChecksumFile = "$zip.sha256"
-            Invoke-Verification
-        }
-        finally {
-            $script:BeforeEvidencePath = $savedBefore
-            $script:AfterEvidencePath = $savedAfter
-            $script:PackagePath = $savedPackage
-            $script:ChecksumFile = $savedChecksum
-        }
+        Invoke-Verification -BeforePath $beforePath -AfterPath $afterPath -ZipPath $zip -SidecarPath "$zip.sha256" -MaximumMinutes 60 -Version "0.5.0-beta.1"
 
         $badAfter = $after | ConvertTo-Json -Depth 10 | ConvertFrom-Json
         $badAfter.environment.sessionId = 3
         Write-Utf8NoBom -Path $afterPath -Text (($badAfter | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
         $null = Write-Sha256Sidecar -Path $afterPath
-        $rejected = $false
-        try {
-            $pairBefore = Read-Witness -Path $beforePath -Label "Before witness" -Version "0.5.0-beta.1"
-            $pairAfter = Read-Witness -Path $afterPath -Label "After witness" -Version "0.5.0-beta.1"
-            $identity = Get-PackageIdentity -ZipPath $zip -Version "0.5.0-beta.1"
-            Assert-Pair -Before $pairBefore -After $pairAfter -Package $identity -MaximumMinutes 60
+        Assert-Rejected -FailureMessage "Self-test failed: cross-session pair was accepted." -Action {
+            Invoke-Verification -BeforePath $beforePath -AfterPath $afterPath -ZipPath $zip -MaximumMinutes 60 -Version "0.5.0-beta.1"
         }
-        catch { $rejected = $true }
-        if (-not $rejected) { throw "Self-test failed: cross-session pair was accepted." }
 
         $badAfter = $after | ConvertTo-Json -Depth 10 | ConvertFrom-Json
         $badAfter.diskImage.attached = $false
         Write-Utf8NoBom -Path $afterPath -Text (($badAfter | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
         $null = Write-Sha256Sidecar -Path $afterPath
-        $rejected = $false
-        try {
-            $pairBefore = Read-Witness -Path $beforePath -Label "Before witness" -Version "0.5.0-beta.1"
-            $pairAfter = Read-Witness -Path $afterPath -Label "After witness" -Version "0.5.0-beta.1"
-            $identity = Get-PackageIdentity -ZipPath $zip -Version "0.5.0-beta.1"
-            Assert-Pair -Before $pairBefore -After $pairAfter -Package $identity -MaximumMinutes 60
+        Assert-Rejected -FailureMessage "Self-test failed: invalid state transition was accepted." -Action {
+            Invoke-Verification -BeforePath $beforePath -AfterPath $afterPath -ZipPath $zip -MaximumMinutes 60 -Version "0.5.0-beta.1"
         }
-        catch { $rejected = $true }
-        if (-not $rejected) { throw "Self-test failed: invalid state transition was accepted." }
 
         $badAfter = $after | ConvertTo-Json -Depth 10 | ConvertFrom-Json
         $badAfter.createdUtc = "2026-09-19T23:59:59Z"
         Write-Utf8NoBom -Path $afterPath -Text (($badAfter | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
         $null = Write-Sha256Sidecar -Path $afterPath
-        $rejected = $false
-        try {
-            $pairBefore = Read-Witness -Path $beforePath -Label "Before witness" -Version "0.5.0-beta.1"
-            $pairAfter = Read-Witness -Path $afterPath -Label "After witness" -Version "0.5.0-beta.1"
-            $identity = Get-PackageIdentity -ZipPath $zip -Version "0.5.0-beta.1"
-            Assert-Pair -Before $pairBefore -After $pairAfter -Package $identity -MaximumMinutes 60
+        Assert-Rejected -FailureMessage "Self-test failed: reversed timestamps were accepted." -Action {
+            Invoke-Verification -BeforePath $beforePath -AfterPath $afterPath -ZipPath $zip -MaximumMinutes 60 -Version "0.5.0-beta.1"
         }
-        catch { $rejected = $true }
-        if (-not $rejected) { throw "Self-test failed: reversed timestamps were accepted." }
 
         Write-Utf8NoBom -Path $afterPath -Text (($after | ConvertTo-Json -Depth 10) + [Environment]::NewLine)
         $null = Write-Sha256Sidecar -Path $afterPath
         Add-Content -LiteralPath $afterPath -Value "tampered"
-        $rejected = $false
-        try { $null = Read-Witness -Path $afterPath -Label "After witness" -Version "0.5.0-beta.1" } catch { $rejected = $true }
-        if (-not $rejected) { throw "Self-test failed: tampered witness was accepted." }
+        Assert-Rejected -FailureMessage "Self-test failed: tampered witness was accepted." -Action {
+            Invoke-Verification -BeforePath $beforePath -AfterPath $afterPath -ZipPath $zip -MaximumMinutes 60 -Version "0.5.0-beta.1"
+        }
 
         Write-Host "Dragon DiskForge UAC before/after pair verifier self-test passed."
     }
@@ -523,4 +514,8 @@ if ($Mode -eq "self-test") {
     exit 0
 }
 
-Invoke-Verification
+if ([string]::IsNullOrWhiteSpace($PackagePath)) {
+    throw "-PackagePath is required for UAC pair verification."
+}
+
+Invoke-Verification -BeforePath $BeforeEvidencePath -AfterPath $AfterEvidencePath -ZipPath $PackagePath -SidecarPath $ChecksumFile -MaximumMinutes $MaxPairMinutes -Version $ExpectedVersion
