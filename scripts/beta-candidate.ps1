@@ -40,6 +40,19 @@ function Assert-VersionToken {
     }
 }
 
+function Assert-HexSha256 {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    if ($Value -notmatch '^[0-9a-fA-F]{64}$') {
+        throw "$Name must be a 64-character SHA-256 value."
+    }
+
+    return $Value.ToLowerInvariant()
+}
+
 function Get-ExpectedVersion {
     Assert-VersionToken -Value $ExpectedPrefix -Name "ExpectedPrefix"
     Assert-VersionToken -Value $BetaSuffix -Name "BetaSuffix"
@@ -153,7 +166,23 @@ function Write-CandidateMetadata {
         $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
         if ([string]$manifest.version -ne $expected) { throw "Candidate manifest version '$($manifest.version)' does not match '$expected'." }
         if ([string]$manifest.architecture -ne "x64") { throw "Candidate architecture '$($manifest.architecture)' is not x64." }
-        if ([int]$manifest.schemaVersion -lt 5) { throw "Candidate package manifest predates the beta QA contract." }
+        $packageManifestSchema = [int]$manifest.schemaVersion
+        if ($packageManifestSchema -lt 5) { throw "Candidate package manifest predates the beta QA contract." }
+
+        $entryPointSha256 = Assert-HexSha256 -Value ([string]$manifest.entryPointSha256) -Name "entryPointSha256"
+        $betaManualQaEntryPointSha256 = Assert-HexSha256 -Value ([string]$manifest.betaManualQaEntryPointSha256) -Name "betaManualQaEntryPointSha256"
+        $betaUacWitnessEntryPointSha256 = $null
+        $betaUacPairVerifierEntryPointSha256 = $null
+        if ($packageManifestSchema -ge 6) {
+            if (-not ($manifest.PSObject.Properties.Name -contains 'betaUacWitnessEntryPointSha256')) {
+                throw "Package manifest schema $packageManifestSchema is missing betaUacWitnessEntryPointSha256."
+            }
+            if (-not ($manifest.PSObject.Properties.Name -contains 'betaUacPairVerifierEntryPointSha256')) {
+                throw "Package manifest schema $packageManifestSchema is missing betaUacPairVerifierEntryPointSha256."
+            }
+            $betaUacWitnessEntryPointSha256 = Assert-HexSha256 -Value ([string]$manifest.betaUacWitnessEntryPointSha256) -Name "betaUacWitnessEntryPointSha256"
+            $betaUacPairVerifierEntryPointSha256 = Assert-HexSha256 -Value ([string]$manifest.betaUacPairVerifierEntryPointSha256) -Name "betaUacPairVerifierEntryPointSha256"
+        }
 
         $metadata = [ordered]@{
             schemaVersion = 1
@@ -165,11 +194,15 @@ function Write-CandidateMetadata {
             workflowRunId = $WorkflowRunId
             packageFile = [System.IO.Path]::GetFileName($zip)
             packageSha256 = $actualHash
-            packageManifestSchema = [int]$manifest.schemaVersion
-            entryPointSha256 = ([string]$manifest.entryPointSha256).ToLowerInvariant()
-            betaManualQaEntryPointSha256 = ([string]$manifest.betaManualQaEntryPointSha256).ToLowerInvariant()
+            packageManifestSchema = $packageManifestSchema
+            entryPointSha256 = $entryPointSha256
+            betaManualQaEntryPointSha256 = $betaManualQaEntryPointSha256
             createdUtc = [DateTimeOffset]::UtcNow.ToString("O")
             publicRelease = $false
+        }
+        if ($packageManifestSchema -ge 6) {
+            $metadata.betaUacWitnessEntryPointSha256 = $betaUacWitnessEntryPointSha256
+            $metadata.betaUacPairVerifierEntryPointSha256 = $betaUacPairVerifierEntryPointSha256
         }
 
         $metadataPath = Join-Path $output "beta-candidate.json"
@@ -182,6 +215,10 @@ function Write-CandidateMetadata {
         Write-Host "Version: $expected"
         Write-Host "Source commit: $($SourceCommit.ToLowerInvariant())"
         Write-Host "Package SHA-256: $actualHash"
+        if ($packageManifestSchema -ge 6) {
+            Write-Host "UAC witness SHA-256: $betaUacWitnessEntryPointSha256"
+            Write-Host "UAC pair verifier SHA-256: $betaUacPairVerifierEntryPointSha256"
+        }
         Write-Host "Metadata: $metadataPath"
     }
     finally {
@@ -244,7 +281,13 @@ function Invoke-SelfTest {
             throw "Self-test failed: invalid source commit did not fail closed."
         }
 
-        Write-Host "Dragon DiskForge beta candidate contract self-test passed."
+        $validHash = Assert-HexSha256 -Value ("a" * 64) -Name "selfTestSha256"
+        if ($validHash -ne ("a" * 64)) { throw "Self-test failed: valid SHA-256 changed unexpectedly." }
+        $invalidHashRejected = $false
+        try { $null = Assert-HexSha256 -Value "00" -Name "selfTestSha256" } catch { $invalidHashRejected = $true }
+        if (-not $invalidHashRejected) { throw "Self-test failed: invalid SHA-256 did not fail closed." }
+
+        Write-Host "Dragon DiskForge beta candidate contract self-test passed, including schema-6 UAC provenance hash validation."
     }
     finally {
         if (Test-Path $tempRoot) {
