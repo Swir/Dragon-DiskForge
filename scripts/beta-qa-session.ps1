@@ -14,7 +14,8 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Script:SessionSchemaVersion = 1
+$Script:SessionSchemaVersion = 2
+$Script:MinimumPackageManifestSchema = 6
 $Script:SessionFileName = "beta-qa-session.json"
 $Script:EvidenceFileName = "beta-manual-qa.json"
 
@@ -146,6 +147,108 @@ function Assert-InteractiveUnelevated {
     }
 }
 
+function Assert-ObjectProperty {
+    param(
+        [Parameter(Mandatory = $true)]$Object,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Context
+    )
+
+    if ($null -eq $Object -or -not ($Object.PSObject.Properties.Name -contains $Name)) {
+        throw "$Context is missing required property '$Name'."
+    }
+}
+
+function Assert-HexSha256 {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    if ($Value -notmatch '^[0-9a-fA-F]{64}$') {
+        throw "$Label is not a valid SHA-256 value."
+    }
+}
+
+function Resolve-PackageRelativePath {
+    param(
+        [Parameter(Mandatory = $true)][string]$ExtractRoot,
+        [Parameter(Mandatory = $true)][string]$RelativePath,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+        throw "$Label path is empty."
+    }
+
+    $normalized = $RelativePath.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+    if ([System.IO.Path]::IsPathRooted($normalized)) {
+        throw "$Label path must be package-relative."
+    }
+
+    $root = [System.IO.Path]::GetFullPath($ExtractRoot)
+    $candidate = [System.IO.Path]::GetFullPath((Join-Path $root $normalized))
+    $rootPrefix = $root.TrimEnd([char]'\', [char]'/') + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $candidate.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "$Label path escapes the extracted candidate root."
+    }
+
+    return [pscustomobject]@{
+        relative = $normalized
+        path = $candidate
+    }
+}
+
+function Get-BoundPackageFileIdentity {
+    param(
+        [Parameter(Mandatory = $true)]$Manifest,
+        [Parameter(Mandatory = $true)][string]$ExtractRoot,
+        [Parameter(Mandatory = $true)][string]$PathProperty,
+        [Parameter(Mandatory = $true)][string]$HashProperty,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    Assert-ObjectProperty -Object $Manifest -Name $PathProperty -Context "Candidate package manifest"
+    Assert-ObjectProperty -Object $Manifest -Name $HashProperty -Context "Candidate package manifest"
+
+    $declaredHash = [string]$Manifest.$HashProperty
+    Assert-HexSha256 -Value $declaredHash -Label "Candidate package $Label SHA-256"
+
+    $resolved = Resolve-PackageRelativePath -ExtractRoot $ExtractRoot -RelativePath ([string]$Manifest.$PathProperty) -Label $Label
+    if (-not (Test-Path -LiteralPath $resolved.path -PathType Leaf)) {
+        throw "Package $Label is missing: $($resolved.relative)"
+    }
+
+    $actualHash = (Get-FileHash -LiteralPath $resolved.path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualHash -ne $declaredHash.ToLowerInvariant()) {
+        throw "Package $Label SHA-256 does not match the manifest."
+    }
+
+    return [pscustomobject]@{
+        path = $resolved.path
+        relative = $resolved.relative
+        sha256 = $actualHash
+    }
+}
+
+function Assert-FileHashMatches {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$ExpectedSha256,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    Assert-HexSha256 -Value $ExpectedSha256 -Label "$Label expected SHA-256"
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "$Label is missing: $Path"
+    }
+    $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actual -ne $ExpectedSha256.ToLowerInvariant()) {
+        throw "$Label SHA-256 changed after session preparation."
+    }
+    return $actual
+}
+
 function Resolve-ChecksumSidecar {
     param(
         [Parameter(Mandatory = $true)][string]$ZipPath,
@@ -203,8 +306,18 @@ function Get-CandidateIdentity {
     }
 
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-    if ([int]$manifest.schemaVersion -lt 5) {
-        throw "Package manifest schema '$($manifest.schemaVersion)' predates the beta manual-QA contract."
+    foreach ($propertyName in @(
+        "schemaVersion", "product", "version", "architecture", "runtimeDeployment",
+        "entryPoint", "entryPointSha256",
+        "betaManualQaEntryPoint", "betaManualQaEntryPointSha256",
+        "betaUacWitnessEntryPoint", "betaUacWitnessEntryPointSha256",
+        "betaUacPairVerifierEntryPoint", "betaUacPairVerifierEntryPointSha256"
+    )) {
+        Assert-ObjectProperty -Object $manifest -Name $propertyName -Context "Candidate package manifest"
+    }
+
+    if ([int]$manifest.schemaVersion -lt $Script:MinimumPackageManifestSchema) {
+        throw "Package manifest schema '$($manifest.schemaVersion)' predates the schema-$($Script:MinimumPackageManifestSchema) UAC witness provenance contract required for live beta QA."
     }
     if ([string]$manifest.product -ne "Dragon DiskForge") {
         throw "Unexpected package product '$($manifest.product)'."
@@ -216,31 +329,19 @@ function Get-CandidateIdentity {
         throw "Expected x64 beta candidate; package reports '$($manifest.architecture)'."
     }
 
+    foreach ($runtimeProperty in @("dotNet", "windowsAppSdk", "visualCpp")) {
+        Assert-ObjectProperty -Object $manifest.runtimeDeployment -Name $runtimeProperty -Context "Candidate package runtimeDeployment"
+    }
     if ([string]$manifest.runtimeDeployment.dotNet -ne "self-contained" -or
         [string]$manifest.runtimeDeployment.windowsAppSdk -ne "self-contained" -or
         [string]$manifest.runtimeDeployment.visualCpp -ne "app-local") {
         throw "Package runtime deployment is not complete (.NET, Windows App SDK, Visual C++)."
     }
 
-    $entryPointRelative = ([string]$manifest.entryPoint).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
-    $entryPoint = Join-Path $ExtractRoot $entryPointRelative
-    if (-not (Test-Path -LiteralPath $entryPoint -PathType Leaf)) {
-        throw "Package desktop entry point is missing: $entryPointRelative"
-    }
-    $entryPointHash = (Get-FileHash -LiteralPath $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($entryPointHash -ne ([string]$manifest.entryPointSha256).ToLowerInvariant()) {
-        throw "Package desktop entry-point SHA-256 does not match the manifest."
-    }
-
-    $qaRelative = ([string]$manifest.betaManualQaEntryPoint).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
-    $qaTool = Join-Path $ExtractRoot $qaRelative
-    if (-not (Test-Path -LiteralPath $qaTool -PathType Leaf)) {
-        throw "Package beta manual-QA tool is missing: $qaRelative"
-    }
-    $qaHash = (Get-FileHash -LiteralPath $qaTool -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($qaHash -ne ([string]$manifest.betaManualQaEntryPointSha256).ToLowerInvariant()) {
-        throw "Package beta manual-QA tool SHA-256 does not match the manifest."
-    }
+    $entryIdentity = Get-BoundPackageFileIdentity -Manifest $manifest -ExtractRoot $ExtractRoot -PathProperty "entryPoint" -HashProperty "entryPointSha256" -Label "desktop entry point"
+    $qaIdentity = Get-BoundPackageFileIdentity -Manifest $manifest -ExtractRoot $ExtractRoot -PathProperty "betaManualQaEntryPoint" -HashProperty "betaManualQaEntryPointSha256" -Label "beta manual-QA tool"
+    $uacWitnessIdentity = Get-BoundPackageFileIdentity -Manifest $manifest -ExtractRoot $ExtractRoot -PathProperty "betaUacWitnessEntryPoint" -HashProperty "betaUacWitnessEntryPointSha256" -Label "UAC witness tool"
+    $uacPairIdentity = Get-BoundPackageFileIdentity -Manifest $manifest -ExtractRoot $ExtractRoot -PathProperty "betaUacPairVerifierEntryPoint" -HashProperty "betaUacPairVerifierEntryPointSha256" -Label "UAC before/after pair verifier"
 
     $requiredRuntimeFiles = @(
         "hostfxr.dll",
@@ -273,12 +374,18 @@ function Get-CandidateIdentity {
         version = [string]$manifest.version
         architecture = [string]$manifest.architecture
         manifestSchemaVersion = [int]$manifest.schemaVersion
-        entryPoint = $entryPoint
-        entryPointRelative = $entryPointRelative
-        entryPointSha256 = $entryPointHash
-        qaTool = $qaTool
-        qaToolRelative = $qaRelative
-        qaToolSha256 = $qaHash
+        entryPoint = $entryIdentity.path
+        entryPointRelative = $entryIdentity.relative
+        entryPointSha256 = $entryIdentity.sha256
+        qaTool = $qaIdentity.path
+        qaToolRelative = $qaIdentity.relative
+        qaToolSha256 = $qaIdentity.sha256
+        uacWitness = $uacWitnessIdentity.path
+        uacWitnessRelative = $uacWitnessIdentity.relative
+        uacWitnessSha256 = $uacWitnessIdentity.sha256
+        uacPairVerifier = $uacPairIdentity.path
+        uacPairVerifierRelative = $uacPairIdentity.relative
+        uacPairVerifierSha256 = $uacPairIdentity.sha256
         extractRoot = [System.IO.Path]::GetFullPath($ExtractRoot)
     }
 }
@@ -365,14 +472,17 @@ function Write-NextSteps {
 
     Write-Host ""
     Write-Host "Prepared exact-candidate interactive QA session."
-    Write-Host "Candidate: $($Identity.version) / $($Identity.architecture)"
+    Write-Host "Candidate: $($Identity.version) / $($Identity.architecture) / package schema $($Identity.manifestSchemaVersion)"
     Write-Host "Package SHA-256: $($Identity.packageSha256)"
     Write-Host "Evidence: $EvidencePath"
     Write-Host "Explorer drop target: $DropTarget"
+    Write-Host "Packaged UAC witness: $($Identity.uacWitness)"
+    Write-Host "Packaged UAC pair verifier: $($Identity.uacPairVerifier)"
     Write-Host ""
     Write-Host "IMPORTANT: the launch probe only proves that the process remained alive locally."
     Write-Host "It does NOT mark desktop.clean-launch or any UAC/Explorer gate as passed."
     Write-Host "After physically performing each checklist observation, record it with the packaged tool, exact package/checksum, -HumanConfirmed and a concise -Note."
+    Write-Host "For UAC observations, capture before/after evidence with the packaged UAC witness and verify each pair with the packaged pair verifier."
     Write-Host ""
     Write-Host "List checks:"
     Write-Host "  & '$($Identity.qaTool)' -Mode list -EvidencePath '$EvidencePath'"
@@ -433,8 +543,14 @@ function Invoke-Prepare {
             sha256 = $identity.packageSha256
             version = $identity.version
             architecture = $identity.architecture
+            manifestSchemaVersion = $identity.manifestSchemaVersion
             entryPointSha256 = $identity.entryPointSha256
+            qaToolRelative = $identity.qaToolRelative
             qaToolSha256 = $identity.qaToolSha256
+            uacWitnessRelative = $identity.uacWitnessRelative
+            uacWitnessSha256 = $identity.uacWitnessSha256
+            uacPairVerifierRelative = $identity.uacPairVerifierRelative
+            uacPairVerifierSha256 = $identity.uacPairVerifierSha256
         }
         environment = $environment
         workspace = $workspace
@@ -464,7 +580,7 @@ function Load-Session {
     $sessionPath = (Resolve-Path -LiteralPath $sessionPath).Path
     $session = Get-Content -LiteralPath $sessionPath -Raw | ConvertFrom-Json
     if ([int]$session.schemaVersion -ne $Script:SessionSchemaVersion) {
-        throw "Unsupported beta QA session schema '$($session.schemaVersion)'."
+        throw "Unsupported beta QA session schema '$($session.schemaVersion)'; expected '$Script:SessionSchemaVersion'. Re-prepare from the exact current candidate."
     }
     return [pscustomobject]@{ path = $sessionPath; value = $session }
 }
@@ -481,22 +597,40 @@ function Invoke-Status {
     $loaded = Load-Session -Path $workspace
     $session = $loaded.value
 
+    foreach ($propertyName in @(
+        "manifestSchemaVersion", "qaToolRelative", "qaToolSha256",
+        "uacWitnessRelative", "uacWitnessSha256",
+        "uacPairVerifierRelative", "uacPairVerifierSha256"
+    )) {
+        Assert-ObjectProperty -Object $session.package -Name $propertyName -Context "Beta QA session package metadata"
+    }
+    if ([int]$session.package.manifestSchemaVersion -lt $Script:MinimumPackageManifestSchema) {
+        throw "Session candidate package schema is too old for the UAC witness provenance gate. Re-prepare the session."
+    }
+
     Write-Host "Session: $($loaded.path)"
-    Write-Host "Candidate: $($session.package.version) / $($session.package.architecture)"
+    Write-Host "Candidate: $($session.package.version) / $($session.package.architecture) / package schema $($session.package.manifestSchemaVersion)"
     Write-Host "Package SHA-256: $($session.package.sha256)"
     Write-Host "Launch preflight: $($session.launchProbePassed) (manual gate remains false until package-bound human evidence verifies)"
     Write-Host "Evidence: $($session.evidencePath)"
     Write-Host "Drop target: $($session.dropTarget)"
 
-    $qaTool = Join-Path ([string]$session.extractRoot) "tools\beta-manual-qa.ps1"
-    if (-not (Test-Path -LiteralPath $qaTool -PathType Leaf)) {
-        throw "Extracted packaged beta manual-QA tool is missing: $qaTool"
-    }
+    $qaResolved = Resolve-PackageRelativePath -ExtractRoot ([string]$session.extractRoot) -RelativePath ([string]$session.package.qaToolRelative) -Label "beta manual-QA tool"
+    $uacWitnessResolved = Resolve-PackageRelativePath -ExtractRoot ([string]$session.extractRoot) -RelativePath ([string]$session.package.uacWitnessRelative) -Label "UAC witness tool"
+    $uacPairResolved = Resolve-PackageRelativePath -ExtractRoot ([string]$session.extractRoot) -RelativePath ([string]$session.package.uacPairVerifierRelative) -Label "UAC before/after pair verifier"
+
+    Assert-FileHashMatches -Path $qaResolved.path -ExpectedSha256 ([string]$session.package.qaToolSha256) -Label "Extracted packaged beta manual-QA tool" | Out-Null
+    Assert-FileHashMatches -Path $uacWitnessResolved.path -ExpectedSha256 ([string]$session.package.uacWitnessSha256) -Label "Extracted packaged UAC witness tool" | Out-Null
+    Assert-FileHashMatches -Path $uacPairResolved.path -ExpectedSha256 ([string]$session.package.uacPairVerifierSha256) -Label "Extracted packaged UAC pair verifier" | Out-Null
+
     if (-not (Test-Path -LiteralPath ([string]$session.evidencePath) -PathType Leaf)) {
         throw "Manual-QA evidence is missing: $($session.evidencePath)"
     }
 
-    & $qaTool -Mode list -EvidencePath ([string]$session.evidencePath)
+    Write-Host "Packaged UAC witness: $($uacWitnessResolved.path)"
+    Write-Host "Packaged UAC pair verifier: $($uacPairResolved.path)"
+
+    & $qaResolved.path -Mode list -EvidencePath ([string]$session.evidencePath)
     if ($LASTEXITCODE -ne 0) {
         throw "Packaged beta manual-QA tool failed to list evidence (exit code $LASTEXITCODE)."
     }
@@ -529,6 +663,22 @@ function Invoke-Cleanup {
     Write-Host "Removed beta QA workspace: $workspace"
 }
 
+function Write-SelfTestPackage {
+    param(
+        [Parameter(Mandatory = $true)][string]$PackageRoot,
+        [Parameter(Mandatory = $true)][string]$ZipPath
+    )
+
+    if (Test-Path -LiteralPath $ZipPath) {
+        Remove-Item -LiteralPath $ZipPath -Force
+    }
+    Compress-Archive -Path (Join-Path $PackageRoot "*") -DestinationPath $ZipPath -Force
+    $hash = (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $sidecar = "$ZipPath.sha256"
+    Write-Utf8NoBom -Path $sidecar -Text ("{0}  {1}{2}" -f $hash, [System.IO.Path]::GetFileName($ZipPath), [Environment]::NewLine)
+    return [pscustomobject]@{ zip = $ZipPath; sidecar = $sidecar; sha256 = $hash }
+}
+
 function New-SelfTestCandidate {
     param([Parameter(Mandatory = $true)][string]$Root)
 
@@ -538,8 +688,12 @@ function New-SelfTestCandidate {
 
     $entryPoint = Join-Path $packageRoot "DragonDiskForge.App.exe"
     $qaTool = Join-Path $packageRoot "tools\beta-manual-qa.ps1"
+    $uacWitnessTool = Join-Path $packageRoot "tools\beta-qa-uac-witness.ps1"
+    $uacPairVerifier = Join-Path $packageRoot "tools\beta-qa-uac-pair-verify.ps1"
     Write-Utf8NoBom -Path $entryPoint -Text "self-test-app"
     Write-Utf8NoBom -Path $qaTool -Text "Write-Host 'self-test-qa'"
+    Write-Utf8NoBom -Path $uacWitnessTool -Text "Write-Host 'self-test-uac-witness'"
+    Write-Utf8NoBom -Path $uacPairVerifier -Text "Write-Host 'self-test-uac-pair'"
 
     foreach ($runtimeFile in @("hostfxr.dll", "hostpolicy.dll", "coreclr.dll", "clrjit.dll", "vcruntime140.dll", "msvcp140.dll", "Microsoft.WindowsAppRuntime.dll")) {
         Write-Utf8NoBom -Path (Join-Path $packageRoot $runtimeFile) -Text "self-test-runtime-$runtimeFile"
@@ -547,8 +701,10 @@ function New-SelfTestCandidate {
 
     $entryHash = (Get-FileHash -LiteralPath $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $qaHash = (Get-FileHash -LiteralPath $qaTool -Algorithm SHA256).Hash.ToLowerInvariant()
+    $uacWitnessHash = (Get-FileHash -LiteralPath $uacWitnessTool -Algorithm SHA256).Hash.ToLowerInvariant()
+    $uacPairHash = (Get-FileHash -LiteralPath $uacPairVerifier -Algorithm SHA256).Hash.ToLowerInvariant()
     $manifest = [ordered]@{
-        schemaVersion = 5
+        schemaVersion = 6
         product = "Dragon DiskForge"
         version = "0.5.0-beta.1"
         architecture = "x64"
@@ -556,20 +712,29 @@ function New-SelfTestCandidate {
         entryPointSha256 = $entryHash
         betaManualQaEntryPoint = "tools/beta-manual-qa.ps1"
         betaManualQaEntryPointSha256 = $qaHash
+        betaUacWitnessEntryPoint = "tools/beta-qa-uac-witness.ps1"
+        betaUacWitnessEntryPointSha256 = $uacWitnessHash
+        betaUacPairVerifierEntryPoint = "tools/beta-qa-uac-pair-verify.ps1"
+        betaUacPairVerifierEntryPointSha256 = $uacPairHash
         runtimeDeployment = [ordered]@{
             dotNet = "self-contained"
             windowsAppSdk = "self-contained"
             visualCpp = "app-local"
         }
     }
-    Write-Utf8NoBom -Path (Join-Path $packageRoot "package-manifest.json") -Text (($manifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine)
+    $manifestPath = Join-Path $packageRoot "package-manifest.json"
+    Write-Utf8NoBom -Path $manifestPath -Text (($manifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine)
 
     $zip = Join-Path $Root "DragonDiskForge-win-x64.zip"
-    Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $zip -Force
-    $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-    $sidecar = "$zip.sha256"
-    Write-Utf8NoBom -Path $sidecar -Text ("{0}  {1}{2}" -f $hash, [System.IO.Path]::GetFileName($zip), [Environment]::NewLine)
-    return [pscustomobject]@{ zip = $zip; sidecar = $sidecar; sha256 = $hash }
+    $package = Write-SelfTestPackage -PackageRoot $packageRoot -ZipPath $zip
+    return [pscustomobject]@{
+        zip = $package.zip
+        sidecar = $package.sidecar
+        sha256 = $package.sha256
+        packageRoot = $packageRoot
+        manifestPath = $manifestPath
+        uacPairVerifier = $uacPairVerifier
+    }
 }
 
 function Invoke-SelfTest {
@@ -581,8 +746,11 @@ function Invoke-SelfTest {
         $identity = Get-CandidateIdentity -ZipPath $candidate.zip -SidecarPath $candidate.sidecar -ExtractRoot $extract -Version "0.5.0-beta.1"
         if ($identity.packageSha256 -ne $candidate.sha256) { throw "Self-test failed: package hash mismatch." }
         if ($identity.version -ne "0.5.0-beta.1" -or $identity.architecture -ne "x64") { throw "Self-test failed: candidate identity mismatch." }
+        if ([int]$identity.manifestSchemaVersion -ne 6) { throw "Self-test failed: schema-6 candidate was not retained in identity." }
         if (-not (Test-Path -LiteralPath $identity.entryPoint -PathType Leaf)) { throw "Self-test failed: entry point was not extracted." }
         if (-not (Test-Path -LiteralPath $identity.qaTool -PathType Leaf)) { throw "Self-test failed: QA tool was not extracted." }
+        if (-not (Test-Path -LiteralPath $identity.uacWitness -PathType Leaf)) { throw "Self-test failed: UAC witness tool was not extracted." }
+        if (-not (Test-Path -LiteralPath $identity.uacPairVerifier -PathType Leaf)) { throw "Self-test failed: UAC pair verifier was not extracted." }
 
         $recordExample = Get-RecordExampleCommand -Identity $identity -EvidencePath (Join-Path $tempRoot "beta-manual-qa.json")
         if ($recordExample -notmatch [regex]::Escape("-PackagePath '$($identity.packagePath)'")) { throw "Self-test failed: record guidance does not bind the exact package path." }
@@ -600,10 +768,52 @@ function Invoke-SelfTest {
         }
         if (-not $failedClosed) { throw "Self-test failed: checksum mismatch did not fail closed." }
 
+        $manifest = Get-Content -LiteralPath $candidate.manifestPath -Raw | ConvertFrom-Json
+        $manifest.schemaVersion = 5
+        Write-Utf8NoBom -Path $candidate.manifestPath -Text (($manifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine)
+        $schema5Zip = Join-Path $tempRoot "DragonDiskForge-schema5-win-x64.zip"
+        $schema5Candidate = Write-SelfTestPackage -PackageRoot $candidate.packageRoot -ZipPath $schema5Zip
+        $schema5Rejected = $false
+        try {
+            Get-CandidateIdentity -ZipPath $schema5Candidate.zip -SidecarPath $schema5Candidate.sidecar -ExtractRoot (Join-Path $tempRoot "extract-schema5") -Version "0.5.0-beta.1" | Out-Null
+        }
+        catch {
+            $schema5Rejected = $true
+        }
+        if (-not $schema5Rejected) { throw "Self-test failed: obsolete package manifest schema 5 did not fail closed." }
+
+        $manifest.schemaVersion = 6
+        $manifest.betaUacPairVerifierEntryPointSha256 = ("0" * 64)
+        Write-Utf8NoBom -Path $candidate.manifestPath -Text (($manifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine)
+        $tamperedZip = Join-Path $tempRoot "DragonDiskForge-bad-uac-pair-win-x64.zip"
+        $tamperedCandidate = Write-SelfTestPackage -PackageRoot $candidate.packageRoot -ZipPath $tamperedZip
+        $uacPairMismatchRejected = $false
+        try {
+            Get-CandidateIdentity -ZipPath $tamperedCandidate.zip -SidecarPath $tamperedCandidate.sidecar -ExtractRoot (Join-Path $tempRoot "extract-uac-pair") -Version "0.5.0-beta.1" | Out-Null
+        }
+        catch {
+            $uacPairMismatchRejected = $true
+        }
+        if (-not $uacPairMismatchRejected) { throw "Self-test failed: UAC pair verifier manifest hash mismatch did not fail closed." }
+
+        $traversalManifest = Get-Content -LiteralPath $candidate.manifestPath -Raw | ConvertFrom-Json
+        $traversalManifest.betaUacWitnessEntryPoint = "../outside.ps1"
+        Write-Utf8NoBom -Path $candidate.manifestPath -Text (($traversalManifest | ConvertTo-Json -Depth 6) + [Environment]::NewLine)
+        $traversalZip = Join-Path $tempRoot "DragonDiskForge-traversal-win-x64.zip"
+        $traversalCandidate = Write-SelfTestPackage -PackageRoot $candidate.packageRoot -ZipPath $traversalZip
+        $traversalRejected = $false
+        try {
+            Get-CandidateIdentity -ZipPath $traversalCandidate.zip -SidecarPath $traversalCandidate.sidecar -ExtractRoot (Join-Path $tempRoot "extract-traversal") -Version "0.5.0-beta.1" | Out-Null
+        }
+        catch {
+            $traversalRejected = $true
+        }
+        if (-not $traversalRejected) { throw "Self-test failed: package-manifest path traversal did not fail closed." }
+
         $sessionPath = Join-Path $tempRoot "session.json"
-        $saved = Save-JsonAtomic -Value ([pscustomobject]@{ schemaVersion = 1; packageSha256 = $candidate.sha256 }) -Path $sessionPath
+        $saved = Save-JsonAtomic -Value ([pscustomobject]@{ schemaVersion = $Script:SessionSchemaVersion; packageSha256 = $candidate.sha256 }) -Path $sessionPath
         $roundTrip = Get-Content -LiteralPath $saved -Raw | ConvertFrom-Json
-        if ([int]$roundTrip.schemaVersion -ne 1 -or [string]$roundTrip.packageSha256 -ne $candidate.sha256) {
+        if ([int]$roundTrip.schemaVersion -ne $Script:SessionSchemaVersion -or [string]$roundTrip.packageSha256 -ne $candidate.sha256) {
             throw "Self-test failed: session metadata round-trip mismatch."
         }
 
