@@ -53,7 +53,8 @@ try {
     $shellEntryPoint = Join-Path $tempRoot ([string]$manifest.shellIntegrationEntryPoint)
     $betaManualQaEntryPoint = Join-Path $tempRoot ([string]$manifest.betaManualQaEntryPoint)
     $betaUacWitnessEntryPoint = Join-Path $tempRoot ([string]$manifest.betaUacWitnessEntryPoint)
-    foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint, $betaManualQaEntryPoint, $betaUacWitnessEntryPoint)) {
+    $betaUacPairVerifierEntryPoint = Join-Path $tempRoot ([string]$manifest.betaUacPairVerifierEntryPoint)
+    foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint, $betaManualQaEntryPoint, $betaUacWitnessEntryPoint, $betaUacPairVerifierEntryPoint)) {
         if (-not (Test-Path $required -PathType Leaf)) { throw "Manifest entry point is missing: $required" }
     }
 
@@ -77,17 +78,22 @@ try {
     $shellHash = (Get-FileHash -Path $shellEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $betaManualQaHash = (Get-FileHash -Path $betaManualQaEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $betaUacWitnessHash = (Get-FileHash -Path $betaUacWitnessEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+    $betaUacPairVerifierHash = (Get-FileHash -Path $betaUacPairVerifierEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($entryHash -ne ([string]$manifest.entryPointSha256).ToLowerInvariant()) { throw "Entry-point SHA-256 does not match the package manifest." }
     if ($cliHash -ne ([string]$manifest.cliEntryPointSha256).ToLowerInvariant()) { throw "CLI SHA-256 does not match the package manifest." }
     if ($shellHash -ne ([string]$manifest.shellIntegrationEntryPointSha256).ToLowerInvariant()) { throw "Shell-helper SHA-256 does not match the package manifest." }
     if ($betaManualQaHash -ne ([string]$manifest.betaManualQaEntryPointSha256).ToLowerInvariant()) { throw "Beta manual-QA tool SHA-256 does not match the package manifest." }
     if ($betaUacWitnessHash -ne ([string]$manifest.betaUacWitnessEntryPointSha256).ToLowerInvariant()) { throw "Beta UAC witness tool SHA-256 does not match the package manifest." }
+    if ($betaUacPairVerifierHash -ne ([string]$manifest.betaUacPairVerifierEntryPointSha256).ToLowerInvariant()) { throw "Beta UAC pair verifier SHA-256 does not match the package manifest." }
 
     & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaManualQaEntryPoint -Mode self-test
     if ($LASTEXITCODE -ne 0) { throw "Packaged beta manual-QA evidence tool failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
 
     & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaUacWitnessEntryPoint -Mode self-test
     if ($LASTEXITCODE -ne 0) { throw "Packaged beta UAC witness tool failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
+
+    & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaUacPairVerifierEntryPoint -Mode self-test
+    if ($LASTEXITCODE -ne 0) { throw "Packaged beta UAC pair verifier failed its Windows PowerShell self-test with exit code $LASTEXITCODE." }
 
     $versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($entryPoint)
     $productVersion = [string]$versionInfo.ProductVersion
@@ -113,6 +119,7 @@ try {
     Write-Host "Shell helper SHA-256: $shellHash"
     Write-Host "Beta manual-QA tool SHA-256: $betaManualQaHash"
     Write-Host "Beta UAC witness tool SHA-256: $betaUacWitnessHash"
+    Write-Host "Beta UAC pair verifier SHA-256: $betaUacPairVerifierHash"
     Write-Host "CLI providers: $($providers.Count)"
 }
 finally {
