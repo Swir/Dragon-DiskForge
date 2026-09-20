@@ -142,7 +142,7 @@ function Write-Utf8NoBom {
     if (-not (Test-Path -LiteralPath $directory)) {
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
     }
-    [System.IO.File]::WriteAllText($Path, $Text, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($Path, $Text, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 function Assert-Rejected {
@@ -154,6 +154,11 @@ function Assert-Rejected {
     $rejected = $false
     try { & $Action } catch { $rejected = $true }
     if (-not $rejected) { throw $FailureMessage }
+}
+
+function Copy-JsonObject {
+    param([Parameter(Mandatory = $true)]$Value)
+    return ($Value | ConvertTo-Json -Depth 8 | ConvertFrom-Json)
 }
 
 function Invoke-SelfTest {
@@ -216,17 +221,17 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $releasePath -Text ($badPair + [Environment]::NewLine)
         Assert-Rejected -Action { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed6 } -FailureMessage 'Self-test failed: stale packaged UAC pair verifier digest was accepted.'
 
-        $missingUacEvidence = $schema6.Clone()
-        $missingUacEvidence.Remove('betaUacWitnessEntryPointSha256')
+        $missingUacEvidence = Copy-JsonObject -Value $schema6
+        $missingUacEvidence.PSObject.Properties.Remove('betaUacWitnessEntryPointSha256')
         Write-Utf8NoBom -Path $evidencePath -Text (($missingUacEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: schema-6 evidence without packaged UAC witness SHA-256 was accepted.'
 
-        $missingPairEvidence = $schema6.Clone()
-        $missingPairEvidence.Remove('betaUacPairVerifierEntryPointSha256')
+        $missingPairEvidence = Copy-JsonObject -Value $schema6
+        $missingPairEvidence.PSObject.Properties.Remove('betaUacPairVerifierEntryPointSha256')
         Write-Utf8NoBom -Path $evidencePath -Text (($missingPairEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: schema-6 evidence without packaged UAC pair verifier SHA-256 was accepted.'
 
-        $badPairEvidence = $schema6.Clone()
+        $badPairEvidence = Copy-JsonObject -Value $schema6
         $badPairEvidence.betaUacPairVerifierEntryPointSha256 = '00'
         Write-Utf8NoBom -Path $evidencePath -Text (($badPairEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: malformed packaged UAC pair verifier SHA-256 was accepted.'
