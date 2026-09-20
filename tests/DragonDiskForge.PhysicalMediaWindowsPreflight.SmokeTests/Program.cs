@@ -53,6 +53,22 @@ if (systemDisk is not null)
         Check(result.Evidence.Any(x => x.StartsWith("logical-sector-bytes:", StringComparison.Ordinal)),
             "Windows writer preflight retains logical-sector provenance");
 
+        var futureEvidencePath = Path.Combine(Path.GetDirectoryName(sourcePath)!, $"dragon-evidence-{Guid.NewGuid():N}.json");
+        var evidenceBackingDisks = WindowsPhysicalMediaPathEvidence.GetLocalBackingDiskNumbers(futureEvidencePath);
+        Check(evidenceBackingDisks.Contains(systemDisk.DiskNumber),
+            "local-path evidence resolves a future evidence file through its existing parent volume");
+
+        var uncRejected = false;
+        try
+        {
+            _ = WindowsPhysicalMediaPathEvidence.GetLocalBackingDiskNumbers(@"\\server\share\evidence.json");
+        }
+        catch (InvalidDataException)
+        {
+            uncRejected = true;
+        }
+        Check(uncRejected, "local-path evidence rejects UNC/device-namespace storage before any destructive path");
+
         await ExpectOpenRefusalAsync(
             syntheticPlan,
             "WRONG-CONFIRMATION",

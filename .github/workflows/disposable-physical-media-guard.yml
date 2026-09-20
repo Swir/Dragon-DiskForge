@@ -27,10 +27,21 @@ jobs:
       - name: Read-only Windows writer preflight smoke tests
         run: dotnet run --project tests/DragonDiskForge.PhysicalMediaWindowsPreflight.SmokeTests/DragonDiskForge.PhysicalMediaWindowsPreflight.SmokeTests.csproj -c Release
 
+      - name: Disposable hardware-evidence verifier self-test (PowerShell 7)
+        shell: pwsh
+        run: pwsh -NoProfile -File ./scripts/verify-disposable-physical-media-evidence.ps1 -SelfTest
+
+      - name: Disposable hardware-evidence verifier self-test (Windows PowerShell 5.1)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-disposable-physical-media-evidence.ps1 -SelfTest
+
       - name: Compile and execute disposable harness without destructive opt-in
         shell: pwsh
         run: |
           if ($env:DDF_DISPOSABLE_WRITE_OPT_IN) {
             throw 'CI must never provide DDF_DISPOSABLE_WRITE_OPT_IN.'
+          }
+          if ($env:DDF_DISPOSABLE_EVIDENCE_PATH) {
+            throw 'CI must never provide DDF_DISPOSABLE_EVIDENCE_PATH.'
           }
           dotnet run --project tests/DragonDiskForge.PhysicalMediaWrite.DisposableTests/DragonDiskForge.PhysicalMediaWrite.DisposableTests.csproj -c Release
