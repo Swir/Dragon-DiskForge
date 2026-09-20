@@ -1,0 +1,55 @@
+name: Dragon DiskForge Disposable Media Source Provenance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/run-disposable-physical-media-validation.ps1'
+      - 'scripts/verify-disposable-physical-media-provenance.ps1'
+      - '.github/workflows/disposable-media-source-provenance.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run-disposable-physical-media-validation.ps1'
+      - 'scripts/verify-disposable-physical-media-provenance.ps1'
+      - '.github/workflows/disposable-media-source-provenance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance-contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Refuse destructive opt-in in CI
+        shell: pwsh
+        run: |
+          if ($env:DDF_DISPOSABLE_WRITE_OPT_IN) {
+            throw 'CI must never provide DDF_DISPOSABLE_WRITE_OPT_IN.'
+          }
+          if ($env:DDF_DISPOSABLE_EVIDENCE_PATH) {
+            throw 'CI must never provide DDF_DISPOSABLE_EVIDENCE_PATH.'
+          }
+
+      - name: Source-provenance verifier self-test (PowerShell 7)
+        shell: pwsh
+        run: pwsh -NoProfile -File ./scripts/verify-disposable-physical-media-provenance.ps1 -SelfTest
+
+      - name: Validation wrapper self-test (PowerShell 7)
+        shell: pwsh
+        run: pwsh -NoProfile -File ./scripts/run-disposable-physical-media-validation.ps1 -SelfTest
+
+      - name: Source-provenance verifier self-test (Windows PowerShell 5.1)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-disposable-physical-media-provenance.ps1 -SelfTest
+
+      - name: Validation wrapper self-test (Windows PowerShell 5.1)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/run-disposable-physical-media-validation.ps1 -SelfTest
