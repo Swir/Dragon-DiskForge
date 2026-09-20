@@ -1,0 +1,33 @@
+name: Dragon DiskForge Retained Sync Autofix
+
+on:
+  push:
+    branches:
+      - release/retain-schema6-candidate-180
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/retain-schema6-candidate-180
+          fetch-depth: 0
+
+      - name: Apply canonical retained-candidate projection
+        shell: pwsh
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
+
+      - name: Commit synchronized projection and remove bootstrap workflow
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- README.md CHANGELOG.md docs/ROADMAP.md docs/STATUS.md docs/MILESTONES.md docs/BETA-RELEASE.md docs/BETA-CANDIDATE.md .github/workflows/beta-retained-explorer-currency.yml
+          git rm -- .github/workflows/retained-sync-autofix.yml
+          git commit -m "Synchronize retained candidate #180 documentation"
+          git push origin HEAD:release/retain-schema6-candidate-180
