@@ -30,6 +30,18 @@ function Assert-HexSha256 {
     }
 }
 
+function Assert-Property {
+    param(
+        [Parameter(Mandatory = $true)]$Object,
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$Message
+    )
+
+    if (-not ($Object.PSObject.Properties.Name -contains $Name)) {
+        throw $Message
+    }
+}
+
 function Read-CanonicalEvidence {
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -39,7 +51,7 @@ function Read-CanonicalEvidence {
 
     $evidence = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
     if ([int]$evidence.schemaVersion -ne 2) {
-        throw "Retained beta read-back contract requires canonical evidence schema v2."
+        throw 'Retained beta read-back contract requires canonical evidence schema v2.'
     }
     if ([string]$evidence.kind -ne 'DragonDiskForgeRetainedBetaCandidateEvidence') {
         throw 'Unexpected retained beta candidate evidence kind.'
@@ -55,10 +67,10 @@ function Read-CanonicalEvidence {
         throw 'Retained beta read-back requires package manifest schema 5 or 6.'
     }
     if ($packageManifestSchema -eq 6) {
-        if (-not ($evidence.PSObject.Properties.Name -contains 'betaUacWitnessEntryPointSha256')) {
-            throw 'Package manifest schema 6 retained evidence must bind betaUacWitnessEntryPointSha256.'
-        }
+        Assert-Property -Object $evidence -Name 'betaUacWitnessEntryPointSha256' -Message 'Package manifest schema 6 retained evidence must bind betaUacWitnessEntryPointSha256.'
+        Assert-Property -Object $evidence -Name 'betaUacPairVerifierEntryPointSha256' -Message 'Package manifest schema 6 retained evidence must bind betaUacPairVerifierEntryPointSha256.'
         Assert-HexSha256 -Value ([string]$evidence.betaUacWitnessEntryPointSha256) -Label 'betaUacWitnessEntryPointSha256'
+        Assert-HexSha256 -Value ([string]$evidence.betaUacPairVerifierEntryPointSha256) -Label 'betaUacPairVerifierEntryPointSha256'
     }
 
     if ([bool]$evidence.publicRelease) { throw 'Retained evidence must not claim a public release.' }
@@ -104,11 +116,18 @@ function Test-BetaReleaseReadback {
 
     if ([int]$Evidence.packageManifestSchema -eq 6) {
         $expectedUac = ([string]$Evidence.betaUacWitnessEntryPointSha256).ToLowerInvariant()
+        $expectedPair = ([string]$Evidence.betaUacPairVerifierEntryPointSha256).ToLowerInvariant()
         if ($paragraph.IndexOf($expectedUac, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
             throw "docs/BETA-RELEASE.md retained read-back is missing or stale for the packaged UAC witness SHA-256 $expectedUac."
         }
+        if ($paragraph.IndexOf($expectedPair, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            throw "docs/BETA-RELEASE.md retained read-back is missing or stale for the packaged UAC pair verifier SHA-256 $expectedPair."
+        }
         if ($paragraph -notmatch '(?i)packaged\s+(normal-user\s+)?UAC\s+witness') {
             throw 'docs/BETA-RELEASE.md retained read-back must explicitly identify the packaged UAC witness binding for package schema 6.'
+        }
+        if ($paragraph -notmatch '(?i)UAC\s+(before/after\s+)?pair\s+verifier|UAC\s+pair-verifier') {
+            throw 'docs/BETA-RELEASE.md retained read-back must explicitly identify the packaged UAC pair verifier binding for package schema 6.'
         }
     }
 }
@@ -123,7 +142,23 @@ function Write-Utf8NoBom {
     if (-not (Test-Path -LiteralPath $directory)) {
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
     }
-    [System.IO.File]::WriteAllText($Path, $Text, [System.Text.UTF8Encoding]::new($false))
+    [System.IO.File]::WriteAllText($Path, $Text, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Assert-Rejected {
+    param(
+        [Parameter(Mandatory = $true)][scriptblock]$Action,
+        [Parameter(Mandatory = $true)][string]$FailureMessage
+    )
+
+    $rejected = $false
+    try { & $Action } catch { $rejected = $true }
+    if (-not $rejected) { throw $FailureMessage }
+}
+
+function Copy-JsonObject {
+    param([Parameter(Mandatory = $true)]$Value)
+    return ($Value | ConvertTo-Json -Depth 8 | ConvertFrom-Json)
 }
 
 function Invoke-SelfTest {
@@ -150,23 +185,14 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $releasePath -Text ($good + [Environment]::NewLine)
         Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed
 
-        $badArtifact = $good.Replace([string]$parsed.artifactDigestSha256, ('9' * 64))
-        Write-Utf8NoBom -Path $releasePath -Text ($badArtifact + [Environment]::NewLine)
-        $rejected = $false
-        try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } catch { $rejected = $true }
-        if (-not $rejected) { throw 'Self-test failed: stale artifact digest was accepted.' }
-
-        $badWitness = $good.Replace([string]$parsed.witnessKitManifestSha256, ('8' * 64))
-        Write-Utf8NoBom -Path $releasePath -Text ($badWitness + [Environment]::NewLine)
-        $rejected = $false
-        try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } catch { $rejected = $true }
-        if (-not $rejected) { throw 'Self-test failed: stale witness-kit digest was accepted.' }
-
-        $badLive = $good.Replace([string]$parsed.liveKitManifestSha256, ('7' * 64))
-        Write-Utf8NoBom -Path $releasePath -Text ($badLive + [Environment]::NewLine)
-        $rejected = $false
-        try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } catch { $rejected = $true }
-        if (-not $rejected) { throw 'Self-test failed: stale live-kit digest was accepted.' }
+        foreach ($case in @(
+            @{ Text = $good.Replace([string]$parsed.artifactDigestSha256, ('9' * 64)); Message = 'Self-test failed: stale artifact digest was accepted.' },
+            @{ Text = $good.Replace([string]$parsed.witnessKitManifestSha256, ('8' * 64)); Message = 'Self-test failed: stale witness-kit digest was accepted.' },
+            @{ Text = $good.Replace([string]$parsed.liveKitManifestSha256, ('7' * 64)); Message = 'Self-test failed: stale live-kit digest was accepted.' }
+        )) {
+            Write-Utf8NoBom -Path $releasePath -Text ($case.Text + [Environment]::NewLine)
+            Assert-Rejected -Action { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } -FailureMessage $case.Message
+        }
 
         $schema6 = [ordered]@{
             schemaVersion = 2
@@ -177,45 +203,45 @@ function Invoke-SelfTest {
             liveKitManifestSha256 = ('3' * 64)
             packageManifestSchema = 6
             betaUacWitnessEntryPointSha256 = ('4' * 64)
+            betaUacPairVerifierEntryPointSha256 = ('5' * 64)
             publicRelease = $false
             betaReady = $false
         }
         Write-Utf8NoBom -Path $evidencePath -Text (($schema6 | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         $parsed6 = Read-CanonicalEvidence -Path $evidencePath
-        $good6 = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed6.artifactDigestSha256)``, package manifest schema 6 and packaged normal-user UAC witness SHA-256 ``$($parsed6.betaUacWitnessEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed6.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed6.liveKitManifestSha256)``, verifier evidence. The retained package binds the exact packaged normal-user UAC witness."
+        $good6 = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed6.artifactDigestSha256)``, package manifest schema 6 and packaged normal-user UAC witness SHA-256 ``$($parsed6.betaUacWitnessEntryPointSha256)`` plus packaged UAC before/after pair verifier SHA-256 ``$($parsed6.betaUacPairVerifierEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed6.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed6.liveKitManifestSha256)``, verifier evidence. The retained package binds the exact packaged normal-user UAC witness and UAC pair verifier."
         Write-Utf8NoBom -Path $releasePath -Text ($good6 + [Environment]::NewLine)
         Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed6
 
         $badUac = $good6.Replace([string]$parsed6.betaUacWitnessEntryPointSha256, ('6' * 64))
         Write-Utf8NoBom -Path $releasePath -Text ($badUac + [Environment]::NewLine)
-        $rejected = $false
-        try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed6 } catch { $rejected = $true }
-        if (-not $rejected) { throw 'Self-test failed: stale packaged UAC witness digest was accepted.' }
+        Assert-Rejected -Action { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed6 } -FailureMessage 'Self-test failed: stale packaged UAC witness digest was accepted.'
 
-        $missingUacEvidence = [ordered]@{
-            schemaVersion = 2
-            kind = 'DragonDiskForgeRetainedBetaCandidateEvidence'
-            artifactDigestSha256 = ('1' * 64)
-            witnessKitManifestSha256 = ('2' * 64)
-            liveKitSchema = 1
-            liveKitManifestSha256 = ('3' * 64)
-            packageManifestSchema = 6
-            publicRelease = $false
-            betaReady = $false
-        }
+        $badPair = $good6.Replace([string]$parsed6.betaUacPairVerifierEntryPointSha256, ('7' * 64))
+        Write-Utf8NoBom -Path $releasePath -Text ($badPair + [Environment]::NewLine)
+        Assert-Rejected -Action { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed6 } -FailureMessage 'Self-test failed: stale packaged UAC pair verifier digest was accepted.'
+
+        $missingUacEvidence = Copy-JsonObject -Value $schema6
+        $missingUacEvidence.PSObject.Properties.Remove('betaUacWitnessEntryPointSha256')
         Write-Utf8NoBom -Path $evidencePath -Text (($missingUacEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
-        $rejected = $false
-        try { $null = Read-CanonicalEvidence -Path $evidencePath } catch { $rejected = $true }
-        if (-not $rejected) { throw 'Self-test failed: schema-6 evidence without packaged UAC witness SHA-256 was accepted.' }
+        Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: schema-6 evidence without packaged UAC witness SHA-256 was accepted.'
+
+        $missingPairEvidence = Copy-JsonObject -Value $schema6
+        $missingPairEvidence.PSObject.Properties.Remove('betaUacPairVerifierEntryPointSha256')
+        Write-Utf8NoBom -Path $evidencePath -Text (($missingPairEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
+        Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: schema-6 evidence without packaged UAC pair verifier SHA-256 was accepted.'
+
+        $badPairEvidence = Copy-JsonObject -Value $schema6
+        $badPairEvidence.betaUacPairVerifierEntryPointSha256 = '00'
+        Write-Utf8NoBom -Path $evidencePath -Text (($badPairEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
+        Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: malformed packaged UAC pair verifier SHA-256 was accepted.'
 
         Write-Utf8NoBom -Path $releasePath -Text "No retained read-back paragraph.`n"
         Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         $parsed = Read-CanonicalEvidence -Path $evidencePath
-        $rejected = $false
-        try { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } catch { $rejected = $true }
-        if (-not $rejected) { throw 'Self-test failed: missing retained read-back paragraph was accepted.' }
+        Assert-Rejected -Action { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } -FailureMessage 'Self-test failed: missing retained read-back paragraph was accepted.'
 
-        Write-Host 'Dragon DiskForge retained beta read-back contract self-test passed for package manifest schemas 5 and 6.'
+        Write-Host 'Dragon DiskForge retained beta read-back contract self-test passed for package manifest schemas 5 and 6, including the schema-6 UAC pair verifier binding.'
     }
     finally {
         Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
@@ -231,4 +257,9 @@ $root = Resolve-RepositoryRoot -RequestedRoot $RepositoryRoot
 $evidenceFile = if ([System.IO.Path]::IsPathRooted($EvidencePath)) { $EvidencePath } else { Join-Path $root $EvidencePath }
 $evidence = Read-CanonicalEvidence -Path $evidenceFile
 Test-BetaReleaseReadback -BetaReleasePath (Join-Path $root 'docs/BETA-RELEASE.md') -Evidence $evidence
-Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}; live manifest {2}; package manifest schema {3}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.packageManifestSchema)
+if ([int]$evidence.packageManifestSchema -eq 6) {
+    Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}; live manifest {2}; package manifest schema 6; UAC witness {3}; UAC pair verifier {4}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.betaUacWitnessEntryPointSha256, $evidence.betaUacPairVerifierEntryPointSha256)
+}
+else {
+    Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}; live manifest {2}; package manifest schema {3}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.packageManifestSchema)
+}
