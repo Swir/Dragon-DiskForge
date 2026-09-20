@@ -78,6 +78,13 @@ function Test-DisposableMediaEvidence {
     Assert-True ($sourceBacking.Count -gt 0) 'SourceBackingDiskNumbers must contain proven source topology.'
     Assert-True (-not ($sourceBacking -contains $diskNumber)) 'Source backing disks include the destructive destination.'
 
+    $evidenceBacking = @($evidence.EvidenceBackingDiskNumbers | ForEach-Object { [int]$_ })
+    Assert-True ($evidenceBacking.Count -gt 0) 'EvidenceBackingDiskNumbers must contain proven local evidence-storage topology.'
+    foreach ($evidenceDisk in $evidenceBacking) {
+        Assert-True ($evidenceDisk -ge 0) 'EvidenceBackingDiskNumbers contains an invalid physical disk number.'
+    }
+    Assert-True (-not ($evidenceBacking -contains $diskNumber)) 'Evidence storage is backed by the destructive destination disk.'
+
     $preflight = @($evidence.PreflightEvidence | ForEach-Object { [string]$_ })
     Assert-True ($preflight -contains 'windows-preflight:read-only') 'Read-only Windows preflight marker is missing.'
     Assert-True ($preflight -contains "logical-sector-bytes:$sector") 'Logical-sector preflight evidence does not match the recorded sector size.'
@@ -98,7 +105,11 @@ function Test-DisposableMediaEvidence {
 }
 
 function Write-SelfTestEvidence {
-    param([string]$Path, [string]$Result = 'pass')
+    param(
+        [string]$Path,
+        [string]$Result = 'pass',
+        [int[]]$EvidenceBackingDiskNumbers = @(0)
+    )
 
     $obj = [ordered]@{
         SchemaVersion = 1
@@ -117,6 +128,7 @@ function Write-SelfTestEvidence {
         SourceLengthBytes = 4096
         SourceSha256 = ('A' * 64)
         SourceBackingDiskNumbers = @(0)
+        EvidenceBackingDiskNumbers = $EvidenceBackingDiskNumbers
         LogicalSectorSizeBytes = 512
         ExecutionBufferSizeBytes = 4096
         BytesWritten = 4096
@@ -149,6 +161,11 @@ if ($SelfTest) {
         $rejected = $false
         try { $null = Test-DisposableMediaEvidence -Path $path } catch { $rejected = $true }
         Assert-True $rejected 'Semantic negative self-test was not rejected.'
+
+        Write-SelfTestEvidence -Path $path -EvidenceBackingDiskNumbers 7
+        $rejectedTargetEvidence = $false
+        try { $null = Test-DisposableMediaEvidence -Path $path } catch { $rejectedTargetEvidence = $true }
+        Assert-True $rejectedTargetEvidence 'Evidence-on-target negative self-test was not rejected.'
 
         Write-Host 'PASS  Disposable-media evidence verifier self-test passed.'
         exit 0

@@ -6,7 +6,7 @@ This guide exists only for the final **0.7 Dedicated disposable-media validation
 
 Use only a dedicated disposable device whose loss is acceptable. The harness remains fail-closed and requires an elevated Windows session, explicit destructive opt-in, exact `PhysicalDriveN`, exact stable identity, exact source path, destination-bound confirmation token, and an additional acknowledgement for fixed media.
 
-A real destructive run now also requires `DDF_DISPOSABLE_EVIDENCE_PATH`. The path must be a fresh local `.json` file. Existing evidence is never overwritten. Keep the evidence output on storage that is **not** the disposable target.
+A real destructive run also requires `DDF_DISPOSABLE_EVIDENCE_PATH`. The path must be a fresh local `.json` file. Existing evidence is never overwritten. Before destructive device access, the harness resolves the evidence path's Windows volume to physical-disk extents and refuses the run unless that backing topology is proven and excludes the destructive destination. UNC/device-namespace evidence paths are refused.
 
 ## Required inputs
 
@@ -33,6 +33,7 @@ The harness writes the JSON witness and `<evidence>.sha256` sidecar only after a
 
 - destination stable identity and non-system-disk validation;
 - read-only Windows preflight and proven source backing-disk topology;
+- proven local evidence-storage backing topology that excludes the destructive destination;
 - logical-sector alignment;
 - target-volume lock/dismount path and exact destination revalidation;
 - bounded sector-aligned write completion;
@@ -40,7 +41,7 @@ The harness writes the JSON witness and `<evidence>.sha256` sidecar only after a
 - execution SHA-256 equality with the locked source image;
 - independent physical-device read-back SHA-256 equality.
 
-The witness records schema version, UTC completion time, OS/architecture, exact disk number/device path/stable ID, capacity/bus/removable evidence, source length/hash/backing-disk numbers, logical sector size, aligned execution buffer, bytes written, execution state, lock/dismount + flush completion flags, read-back result, a SHA-256 of the destructive confirmation token, and the read-only preflight evidence strings. The full source path and raw confirmation token are deliberately not stored.
+The witness records schema version, UTC completion time, OS/architecture, exact disk number/device path/stable ID, capacity/bus/removable evidence, source length/hash/backing-disk numbers, evidence-storage backing-disk numbers, logical sector size, aligned execution buffer, bytes written, execution state, lock/dismount + flush completion flags, read-back result, a SHA-256 of the destructive confirmation token, and the read-only preflight evidence strings. The full source path, evidence path and raw confirmation token are deliberately not stored.
 
 ## Offline verification
 
@@ -51,7 +52,7 @@ pwsh -NoProfile -File .\scripts\verify-disposable-physical-media-evidence.ps1 `
   -EvidencePath '<path>\dragon-diskforge-physical-media-evidence.json'
 ```
 
-The verifier fails closed on a bad sidecar, unsupported schema, non-passing result, malformed hashes, mismatched source/execution/read-back hashes, incorrect byte counts/alignment, recovery-required state, missing lock/dismount/flush/read-back flags, source-on-target topology, or inconsistent preflight markers.
+The verifier fails closed on a bad sidecar, unsupported schema, non-passing result, malformed hashes, mismatched source/execution/read-back hashes, incorrect byte counts/alignment, recovery-required state, missing lock/dismount/flush/read-back flags, source-on-target topology, evidence-storage-on-target topology, or inconsistent preflight markers.
 
 The contract itself is non-destructively self-tested under both PowerShell 7 and Windows PowerShell 5.1 in the Disposable Media Guard workflow:
 
@@ -62,4 +63,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-disposable-
 
 ## Gate rule
 
-A valid JSON/sidecar pair is necessary evidence, not an automatic milestone completion. Before checking off 0.7, review that the run used intentionally selected disposable hardware and that the recorded identity matches the physically supervised target. Any interrupted, failed, ambiguous, source-on-target, hash-mismatched or recovery-required run does **not** satisfy the gate.
+A valid JSON/sidecar pair is necessary evidence, not an automatic milestone completion. Before checking off 0.7, review that the run used intentionally selected disposable hardware and that the recorded identity matches the physically supervised target. Any interrupted, failed, ambiguous, source-on-target, evidence-on-target, hash-mismatched or recovery-required run does **not** satisfy the gate.

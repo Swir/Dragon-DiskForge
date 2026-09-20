@@ -83,6 +83,14 @@ if (preflight.SourceBackingDiskNumbers.Count == 0)
 if (preflight.SourceBackingDiskNumbers.Contains(destination.DiskNumber))
     Fail("Source backing-disk evidence resolves to the destructive destination; validation is refused.");
 
+var evidenceBackingDiskNumbers = WindowsPhysicalMediaPathEvidence.GetLocalBackingDiskNumbers(evidencePath);
+if (evidenceBackingDiskNumbers.Contains(destination.DiskNumber))
+{
+    Fail(
+        "DDF_DISPOSABLE_EVIDENCE_PATH resolves to the destructive destination physical disk. " +
+        "Evidence must be stored on separately proven local storage.");
+}
+
 Console.WriteLine($"DANGER  This validation will erase the beginning of PhysicalDrive{diskNumber}: {destination.DisplayName}");
 Console.WriteLine($"INFO    Device path: {destination.DevicePath}");
 Console.WriteLine($"INFO    Stable ID: {destination.StableId}");
@@ -91,6 +99,7 @@ Console.WriteLine($"INFO    Source: {sourcePath} ({sourceLength} bytes)");
 Console.WriteLine($"INFO    Logical sector: {preflight.LogicalSectorSizeBytes} bytes");
 Console.WriteLine($"INFO    Confirmation binding: {plan.ConfirmationToken}");
 Console.WriteLine($"INFO    Evidence output: {evidencePath}");
+Console.WriteLine($"INFO    Evidence backing disks: {string.Join(",", evidenceBackingDiskNumbers)}");
 
 // Keep a read-only handle open without FileShare.Write/Delete while hashing and writing. This
 // closes the same-length source-mutation gap between pre-hash and destructive execution.
@@ -158,6 +167,7 @@ var evidence = new DisposablePhysicalMediaEvidence(
     SourceLengthBytes: sourceLength,
     SourceSha256: sourceSha256,
     SourceBackingDiskNumbers: preflight.SourceBackingDiskNumbers.ToArray(),
+    EvidenceBackingDiskNumbers: evidenceBackingDiskNumbers.ToArray(),
     LogicalSectorSizeBytes: preflight.LogicalSectorSizeBytes,
     ExecutionBufferSizeBytes: bufferSize,
     BytesWritten: result.BytesWritten,
@@ -299,6 +309,7 @@ sealed record DisposablePhysicalMediaEvidence(
     long SourceLengthBytes,
     string SourceSha256,
     int[] SourceBackingDiskNumbers,
+    int[] EvidenceBackingDiskNumbers,
     int LogicalSectorSizeBytes,
     int ExecutionBufferSizeBytes,
     long BytesWritten,
