@@ -18,50 +18,73 @@ public sealed class WindowsDiskImageManager
     private const string StorageNamespace = @"\\.\root\Microsoft\Windows\Storage";
     private const ushort AccessReadWrite = 2;
     private const ushort AccessReadOnly = 3;
+    private const uint StorageTypeUnknown = 0;
 
     public WindowsDiskImageState? TryGetState(string imagePath)
     {
         var fullPath = NormalizePath(imagePath);
+        EnsureSupportedExtension(fullPath);
         EnsureWindows();
 
         var scope = CreateScope();
-        foreach (var image in QueryDiskImages(scope))
+        try
         {
-            using (image)
-            {
-                var candidate = Convert.ToString(image["ImagePath"], CultureInfo.InvariantCulture);
-                if (!string.Equals(candidate, fullPath, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                return ToState(scope, image);
-            }
+            using var image = OpenDiskImage(scope, fullPath);
+            return ToState(scope, image);
         }
-
-        return null;
+        catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.NotFound)
+        {
+            return null;
+        }
     }
 
     public IReadOnlyList<WindowsDiskImageState> GetMounted()
     {
         EnsureWindows();
         var scope = CreateScope();
-        var result = new List<WindowsDiskImageState>();
+        var result = new Dictionary<string, WindowsDiskImageState>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var image in QueryDiskImages(scope))
+        // MSFT_DiskImage is a dynamic provider class: class enumeration/WQL does not
+        // enumerate image instances reliably. Discover attached images through the
+        // provider's documented DiskImage<->Volume association, mirroring the native
+        // Get-Volume | Get-DiskImage relationship without launching PowerShell.
+        using var volumeSearcher = new ManagementObjectSearcher(
+            scope,
+            new ObjectQuery("SELECT * FROM MSFT_Volume"));
+        using var volumes = volumeSearcher.Get();
+
+        foreach (ManagementObject volume in volumes)
         {
-            using (image)
+            using (volume)
             {
-                if (!ReadBoolean(image, "Attached"))
+                var relativePath = volume.Path.RelativePath;
+                if (string.IsNullOrWhiteSpace(relativePath))
                     continue;
 
-                var path = Convert.ToString(image["ImagePath"], CultureInfo.InvariantCulture);
-                if (string.IsNullOrWhiteSpace(path))
-                    continue;
+                var query = new RelatedObjectQuery(
+                    $"ASSOCIATORS OF {{{relativePath}}} WHERE AssocClass=MSFT_DiskImageToVolume ResultClass=MSFT_DiskImage");
+                using var imageSearcher = new ManagementObjectSearcher(scope, query);
+                using var images = imageSearcher.Get();
 
-                result.Add(ToState(scope, image));
+                foreach (ManagementObject image in images)
+                {
+                    using (image)
+                    {
+                        if (!ReadBoolean(image, "Attached"))
+                            continue;
+
+                        var path = Convert.ToString(image["ImagePath"], CultureInfo.InvariantCulture);
+                        if (string.IsNullOrWhiteSpace(path) || !IsSupportedExtension(path))
+                            continue;
+
+                        var state = ToState(scope, image);
+                        result[state.ImagePath] = state;
+                    }
+                }
             }
         }
 
-        return result
+        return result.Values
             .OrderBy(x => x.ImagePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -69,10 +92,11 @@ public sealed class WindowsDiskImageManager
     public void Mount(string imagePath, bool readOnly, bool noDriveLetter)
     {
         var fullPath = NormalizePath(imagePath);
+        EnsureSupportedExtension(fullPath);
         EnsureWindows();
 
         var scope = CreateScope();
-        using var image = CreateDiskImage(scope, fullPath);
+        using var image = OpenDiskImage(scope, fullPath);
         using var input = image.GetMethodParameters("Mount");
         input["Access"] = readOnly ? AccessReadOnly : AccessReadWrite;
         input["NoDriveLetter"] = noDriveLetter;
@@ -84,10 +108,11 @@ public sealed class WindowsDiskImageManager
     public void Dismount(string imagePath)
     {
         var fullPath = NormalizePath(imagePath);
+        EnsureSupportedExtension(fullPath);
         EnsureWindows();
 
         var scope = CreateScope();
-        using var image = CreateDiskImage(scope, fullPath);
+        using var image = OpenDiskImage(scope, fullPath);
         using var output = image.InvokeMethod("Dismount", null, null);
         EnsureSuccess(output, "dismount");
     }
@@ -99,24 +124,26 @@ public sealed class WindowsDiskImageManager
         return scope;
     }
 
-    private static IEnumerable<ManagementObject> QueryDiskImages(ManagementScope scope)
+    private static ManagementObject OpenDiskImage(ManagementScope scope, string fullPath)
     {
-        using var searcher = new ManagementObjectSearcher(
-            scope,
-            new ObjectQuery("SELECT ImagePath, StorageType, DevicePath, Attached FROM MSFT_DiskImage"));
-
-        using var images = searcher.Get();
-        foreach (ManagementObject image in images)
-            yield return image;
-    }
-
-    private static ManagementObject CreateDiskImage(ManagementScope scope, string fullPath)
-    {
-        var storageType = GetStorageType(fullPath);
+        // StorageWMI resolves MSFT_DiskImage through an instance object path. The
+        // StorageType key must be Unknown (0) for provider-side type resolution;
+        // after Get(), the returned instance exposes the actual ISO/VHD/VHDX type.
         var escapedPath = EscapeManagementPathKey(fullPath);
         var path = new ManagementPath(
-            $"MSFT_DiskImage.ImagePath=\"{escapedPath}\",StorageType={storageType}");
-        return new ManagementObject(scope, path, null);
+            $"MSFT_DiskImage.ImagePath=\"{escapedPath}\",StorageType={StorageTypeUnknown}");
+        var image = new ManagementObject(scope, path, null);
+
+        try
+        {
+            image.Get();
+            return image;
+        }
+        catch
+        {
+            image.Dispose();
+            throw;
+        }
     }
 
     private static WindowsDiskImageState ToState(ManagementScope scope, ManagementObject image)
@@ -163,14 +190,14 @@ public sealed class WindowsDiskImageManager
     private static bool ReadBoolean(ManagementBaseObject value, string propertyName)
         => value[propertyName] is bool boolean && boolean;
 
-    private static uint GetStorageType(string fullPath)
-        => Path.GetExtension(fullPath).ToLowerInvariant() switch
-        {
-            ".iso" => 1u,
-            ".vhd" => 2u,
-            ".vhdx" => 3u,
-            _ => throw new NotSupportedException("Native Windows disk-image management supports ISO, VHD and VHDX only.")
-        };
+    private static bool IsSupportedExtension(string path)
+        => Path.GetExtension(path).ToLowerInvariant() is ".iso" or ".vhd" or ".vhdx";
+
+    private static void EnsureSupportedExtension(string path)
+    {
+        if (!IsSupportedExtension(path))
+            throw new NotSupportedException("Native Windows disk-image management supports ISO, VHD and VHDX only.");
+    }
 
     private static string NormalizePath(string path)
     {
