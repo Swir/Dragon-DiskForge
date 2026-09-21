@@ -53,6 +53,30 @@ function Assert-HexSha256 {
     return $Value.ToLowerInvariant()
 }
 
+function Get-MountHelperManifestBinding {
+    param(
+        [Parameter(Mandatory = $true)]$Manifest,
+        [Parameter(Mandatory = $true)][int]$PackageManifestSchema
+    )
+
+    if ($PackageManifestSchema -lt 6) {
+        return $null
+    }
+
+    foreach ($property in @('mountHelperEntryPoint', 'mountHelperEntryPointSha256')) {
+        if (-not ($Manifest.PSObject.Properties.Name -contains $property)) {
+            throw "Package manifest schema $PackageManifestSchema is missing $property."
+        }
+    }
+
+    $expectedPath = 'tools/dragon-diskforge-mount.exe'
+    if ([string]$Manifest.mountHelperEntryPoint -cne $expectedPath) {
+        throw "Package manifest native mount helper path '$($Manifest.mountHelperEntryPoint)' does not match '$expectedPath'."
+    }
+
+    return Assert-HexSha256 -Value ([string]$Manifest.mountHelperEntryPointSha256) -Name 'mountHelperEntryPointSha256'
+}
+
 function Get-ExpectedVersion {
     Assert-VersionToken -Value $ExpectedPrefix -Name "ExpectedPrefix"
     Assert-VersionToken -Value $BetaSuffix -Name "BetaSuffix"
@@ -171,6 +195,7 @@ function Write-CandidateMetadata {
 
         $entryPointSha256 = Assert-HexSha256 -Value ([string]$manifest.entryPointSha256) -Name "entryPointSha256"
         $betaManualQaEntryPointSha256 = Assert-HexSha256 -Value ([string]$manifest.betaManualQaEntryPointSha256) -Name "betaManualQaEntryPointSha256"
+        $mountHelperEntryPointSha256 = Get-MountHelperManifestBinding -Manifest $manifest -PackageManifestSchema $packageManifestSchema
         $betaUacWitnessEntryPointSha256 = $null
         $betaUacPairVerifierEntryPointSha256 = $null
         if ($packageManifestSchema -ge 6) {
@@ -201,6 +226,7 @@ function Write-CandidateMetadata {
             publicRelease = $false
         }
         if ($packageManifestSchema -ge 6) {
+            $metadata.mountHelperEntryPointSha256 = $mountHelperEntryPointSha256
             $metadata.betaUacWitnessEntryPointSha256 = $betaUacWitnessEntryPointSha256
             $metadata.betaUacPairVerifierEntryPointSha256 = $betaUacPairVerifierEntryPointSha256
         }
@@ -216,6 +242,7 @@ function Write-CandidateMetadata {
         Write-Host "Source commit: $($SourceCommit.ToLowerInvariant())"
         Write-Host "Package SHA-256: $actualHash"
         if ($packageManifestSchema -ge 6) {
+            Write-Host "Native mount helper SHA-256: $mountHelperEntryPointSha256"
             Write-Host "UAC witness SHA-256: $betaUacWitnessEntryPointSha256"
             Write-Host "UAC pair verifier SHA-256: $betaUacPairVerifierEntryPointSha256"
         }
@@ -287,7 +314,28 @@ function Invoke-SelfTest {
         try { $null = Assert-HexSha256 -Value "00" -Name "selfTestSha256" } catch { $invalidHashRejected = $true }
         if (-not $invalidHashRejected) { throw "Self-test failed: invalid SHA-256 did not fail closed." }
 
-        Write-Host "Dragon DiskForge beta candidate contract self-test passed, including schema-6 UAC provenance hash validation."
+        $validManifest = [pscustomobject]@{
+            mountHelperEntryPoint = 'tools/dragon-diskforge-mount.exe'
+            mountHelperEntryPointSha256 = ('b' * 64)
+        }
+        $mountHelperHash = Get-MountHelperManifestBinding -Manifest $validManifest -PackageManifestSchema 6
+        if ($mountHelperHash -ne ('b' * 64)) { throw "Self-test failed: valid native mount-helper binding changed unexpectedly." }
+
+        foreach ($invalidManifest in @(
+            [pscustomobject]@{ mountHelperEntryPoint = 'tools/dragon-diskforge-mount.exe' },
+            [pscustomobject]@{ mountHelperEntryPoint = 'tools/other.exe'; mountHelperEntryPointSha256 = ('b' * 64) },
+            [pscustomobject]@{ mountHelperEntryPoint = 'tools/dragon-diskforge-mount.exe'; mountHelperEntryPointSha256 = '00' }
+        )) {
+            $rejected = $false
+            try { $null = Get-MountHelperManifestBinding -Manifest $invalidManifest -PackageManifestSchema 6 } catch { $rejected = $true }
+            if (-not $rejected) { throw "Self-test failed: invalid native mount-helper binding was accepted." }
+        }
+
+        if ($null -ne (Get-MountHelperManifestBinding -Manifest ([pscustomobject]@{}) -PackageManifestSchema 5)) {
+            throw "Self-test failed: legacy package schema unexpectedly claimed native mount-helper provenance."
+        }
+
+        Write-Host "Dragon DiskForge beta candidate contract self-test passed, including schema-6 native mount-helper and UAC provenance hash validation."
     }
     finally {
         if (Test-Path $tempRoot) {
