@@ -6,12 +6,8 @@ on:
   pull_request:
     branches: [ main ]
 
-# Temporary branch-only bootstrap: this copy deterministically projects a newly
-# retained candidate, commits the generated documentation back to the same PR
-# branch, and restores this workflow from main before that commit. The resulting
-# PR head therefore contains the normal read-only workflow again.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: dragon-retained-doc-sync-${{ github.workflow }}-${{ github.ref }}
@@ -23,11 +19,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout retained-candidate branch
+      - name: Checkout exact source
         uses: actions/checkout@v4
-        with:
-          ref: beta/retain-candidate-208
-          fetch-depth: 0
 
       - name: PowerShell 7 self-test
         shell: pwsh
@@ -40,35 +33,6 @@ jobs:
       - name: Apply deterministic retained-candidate projection
         shell: pwsh
         run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
-
-      - name: Synchronize active retained-candidate narrative
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $utf8 = New-Object System.Text.UTF8Encoding($false)
-          $evidence = Get-Content -LiteralPath 'docs/retained-beta-candidate.json' -Raw | ConvertFrom-Json
-          $expectedRun = [string]$evidence.workflowRunNumber
-          $expectedSchema = [string]$evidence.packageManifestSchema
-
-          foreach ($path in @('docs/ROADMAP.md', 'docs/MILESTONES.md', 'docs/BETA-RELEASE.md')) {
-            $text = Get-Content -LiteralPath $path -Raw
-            $pattern = 'Candidate #\d+ is the current retained package-bound target'
-            $matches = [regex]::Matches($text, $pattern)
-            if ($matches.Count -ne 1) {
-              throw "$path must contain exactly one active retained-candidate narrative; found $($matches.Count)."
-            }
-            $updated = [regex]::Replace($text, $pattern, "Candidate #$expectedRun is the current retained package-bound target", 1)
-            [System.IO.File]::WriteAllText((Resolve-Path $path).Path, $updated, $utf8)
-          }
-
-          $statusPath = 'docs/STATUS.md'
-          $status = Get-Content -LiteralPath $statusPath -Raw
-          $statusPattern = 'The retained artifact is package-manifest schema \d+'
-          if ([regex]::Matches($status, $statusPattern).Count -ne 1) {
-            throw 'docs/STATUS.md must contain exactly one retained package-manifest schema narrative.'
-          }
-          $status = [regex]::Replace($status, $statusPattern, "The retained artifact is package-manifest schema $expectedSchema", 1)
-          [System.IO.File]::WriteAllText((Resolve-Path $statusPath).Path, $status, $utf8)
 
       - name: Verify active retained-candidate narrative
         shell: pwsh
@@ -87,32 +51,33 @@ jobs:
           foreach ($rule in $rules) {
             $text = Get-Content -LiteralPath $rule.Path -Raw
             $matches = [regex]::Matches($text, $rule.Pattern)
-            if ($matches.Count -ne 1) { throw "$($rule.Path) must contain exactly one active retained-candidate narrative; found $($matches.Count)." }
-            if ($matches[0].Groups['run'].Value -ne $expectedRun) { throw "$($rule.Path) active retained candidate is stale." }
+            if ($matches.Count -ne 1) {
+              throw "$($rule.Path) must contain exactly one active retained-candidate narrative; found $($matches.Count)."
+            }
+            $actualRun = $matches[0].Groups['run'].Value
+            if ($actualRun -ne $expectedRun) {
+              throw "$($rule.Path) active retained candidate #$actualRun is stale; expected #$expectedRun."
+            }
           }
 
           $status = Get-Content -LiteralPath 'docs/STATUS.md' -Raw
           $schemaMatch = [regex]::Match($status, 'The retained artifact is package-manifest schema (?<schema>\d+)')
-          if (-not $schemaMatch.Success -or $schemaMatch.Groups['schema'].Value -ne $expectedSchema) {
-            throw 'docs/STATUS.md retained package-manifest schema narrative is stale.'
+          if (-not $schemaMatch.Success) {
+            throw 'docs/STATUS.md is missing the active retained package-manifest schema narrative.'
           }
-
-      - name: Restore canonical workflow and commit synchronized projection
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          git fetch origin main --depth=1
-          git checkout origin/main -- .github/workflows/retained-candidate-doc-sync.yml
-          git diff --check
-          git add README.md CHANGELOG.md docs/ROADMAP.md docs/STATUS.md docs/MILESTONES.md docs/BETA-RELEASE.md docs/BETA-CANDIDATE.md docs/retained-beta-candidate.json .github/workflows/beta-retained-explorer-currency.yml .github/workflows/retained-candidate-doc-sync.yml
-          if (-not (git diff --cached --quiet)) {
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'beta: sync retained Candidate 208 documentation'
-            git push origin HEAD:beta/retain-candidate-208
+          if ($schemaMatch.Groups['schema'].Value -ne $expectedSchema) {
+            throw "docs/STATUS.md retained package-manifest schema $($schemaMatch.Groups['schema'].Value) is stale; expected $expectedSchema."
           }
 
       - name: Verify repository is already synchronized
-        shell: pwsh
+        shell: bash
         run: |
-          ./scripts/sync-retained-candidate-docs.ps1 -Mode verify
+          git diff --exit-code --ignore-space-at-eol --ignore-cr-at-eol -- \
+            README.md \
+            CHANGELOG.md \
+            docs/ROADMAP.md \
+            docs/STATUS.md \
+            docs/MILESTONES.md \
+            docs/BETA-RELEASE.md \
+            docs/BETA-CANDIDATE.md \
+            .github/workflows/beta-retained-explorer-currency.yml
