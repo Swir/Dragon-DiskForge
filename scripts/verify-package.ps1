@@ -51,10 +51,11 @@ try {
     $entryPoint = Join-Path $tempRoot ([string]$manifest.entryPoint)
     $cliEntryPoint = Join-Path $tempRoot ([string]$manifest.cliEntryPoint)
     $shellEntryPoint = Join-Path $tempRoot ([string]$manifest.shellIntegrationEntryPoint)
+    $mountHelperEntryPoint = Join-Path $tempRoot ([string]$manifest.mountHelperEntryPoint)
     $betaManualQaEntryPoint = Join-Path $tempRoot ([string]$manifest.betaManualQaEntryPoint)
     $betaUacWitnessEntryPoint = Join-Path $tempRoot ([string]$manifest.betaUacWitnessEntryPoint)
     $betaUacPairVerifierEntryPoint = Join-Path $tempRoot ([string]$manifest.betaUacPairVerifierEntryPoint)
-    foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint, $betaManualQaEntryPoint, $betaUacWitnessEntryPoint, $betaUacPairVerifierEntryPoint)) {
+    foreach ($required in @($entryPoint, $cliEntryPoint, $shellEntryPoint, $mountHelperEntryPoint, $betaManualQaEntryPoint, $betaUacWitnessEntryPoint, $betaUacPairVerifierEntryPoint)) {
         if (-not (Test-Path $required -PathType Leaf)) { throw "Manifest entry point is missing: $required" }
     }
 
@@ -76,12 +77,14 @@ try {
     $entryHash = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $cliHash = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $shellHash = (Get-FileHash -Path $shellEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+    $mountHelperHash = (Get-FileHash -Path $mountHelperEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $betaManualQaHash = (Get-FileHash -Path $betaManualQaEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $betaUacWitnessHash = (Get-FileHash -Path $betaUacWitnessEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     $betaUacPairVerifierHash = (Get-FileHash -Path $betaUacPairVerifierEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($entryHash -ne ([string]$manifest.entryPointSha256).ToLowerInvariant()) { throw "Entry-point SHA-256 does not match the package manifest." }
     if ($cliHash -ne ([string]$manifest.cliEntryPointSha256).ToLowerInvariant()) { throw "CLI SHA-256 does not match the package manifest." }
     if ($shellHash -ne ([string]$manifest.shellIntegrationEntryPointSha256).ToLowerInvariant()) { throw "Shell-helper SHA-256 does not match the package manifest." }
+    if ($mountHelperHash -ne ([string]$manifest.mountHelperEntryPointSha256).ToLowerInvariant()) { throw "Native mount-helper SHA-256 does not match the package manifest." }
     if ($betaManualQaHash -ne ([string]$manifest.betaManualQaEntryPointSha256).ToLowerInvariant()) { throw "Beta manual-QA tool SHA-256 does not match the package manifest." }
     if ($betaUacWitnessHash -ne ([string]$manifest.betaUacWitnessEntryPointSha256).ToLowerInvariant()) { throw "Beta UAC witness tool SHA-256 does not match the package manifest." }
     if ($betaUacPairVerifierHash -ne ([string]$manifest.betaUacPairVerifierEntryPointSha256).ToLowerInvariant()) { throw "Beta UAC pair verifier SHA-256 does not match the package manifest." }
@@ -110,6 +113,9 @@ try {
     & $shellEntryPoint --help | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Packaged shell helper failed its launch smoke test with exit code $LASTEXITCODE." }
 
+    & $mountHelperEntryPoint --help | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Packaged native mount helper failed its launch smoke test with exit code $LASTEXITCODE." }
+
     Write-Host "Verified runtime-complete Windows x64 package."
     Write-Host "Version: $expected"
     Write-Host "Files: $((Get-ChildItem -Path $tempRoot -Recurse -File).Count)"
@@ -117,6 +123,7 @@ try {
     Write-Host "EXE SHA-256: $entryHash"
     Write-Host "CLI SHA-256: $cliHash"
     Write-Host "Shell helper SHA-256: $shellHash"
+    Write-Host "Native mount helper SHA-256: $mountHelperHash"
     Write-Host "Beta manual-QA tool SHA-256: $betaManualQaHash"
     Write-Host "Beta UAC witness tool SHA-256: $betaUacWitnessHash"
     Write-Host "Beta UAC pair verifier SHA-256: $betaUacPairVerifierHash"
