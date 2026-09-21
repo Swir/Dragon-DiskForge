@@ -24,7 +24,7 @@ public sealed class WindowsDiskImageManager
         var fullPath = NormalizePath(imagePath);
         EnsureWindows();
 
-        using var scope = CreateScope();
+        var scope = CreateScope();
         foreach (var image in QueryDiskImages(scope))
         {
             using (image)
@@ -43,7 +43,7 @@ public sealed class WindowsDiskImageManager
     public IReadOnlyList<WindowsDiskImageState> GetMounted()
     {
         EnsureWindows();
-        using var scope = CreateScope();
+        var scope = CreateScope();
         var result = new List<WindowsDiskImageState>();
 
         foreach (var image in QueryDiskImages(scope))
@@ -71,7 +71,7 @@ public sealed class WindowsDiskImageManager
         var fullPath = NormalizePath(imagePath);
         EnsureWindows();
 
-        using var scope = CreateScope();
+        var scope = CreateScope();
         using var image = CreateDiskImage(scope, fullPath);
         using var input = image.GetMethodParameters("Mount");
         input["Access"] = readOnly ? AccessReadOnly : AccessReadWrite;
@@ -86,7 +86,7 @@ public sealed class WindowsDiskImageManager
         var fullPath = NormalizePath(imagePath);
         EnsureWindows();
 
-        using var scope = CreateScope();
+        var scope = CreateScope();
         using var image = CreateDiskImage(scope, fullPath);
         using var output = image.InvokeMethod("Dismount", null, null);
         EnsureSuccess(output, "dismount");
