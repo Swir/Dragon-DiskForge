@@ -35,9 +35,10 @@ public sealed class WindowsDiskImageMountService : IMountService
         EnsureWindows();
         cancellationToken.ThrowIfCancellationRequested();
 
-        var state = await Task.Run(
+        var stateQuery = Task.Run(
             () => _manager.TryGetState(path),
-            cancellationToken).ConfigureAwait(false);
+            CancellationToken.None);
+        var state = await stateQuery.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         return state is null
             ? new MountState(path, false, null, Array.Empty<string>(), RequiresElevation(path))
@@ -50,9 +51,10 @@ public sealed class WindowsDiskImageMountService : IMountService
         EnsureWindows();
         cancellationToken.ThrowIfCancellationRequested();
 
-        var mounted = await Task.Run(
+        var mountedQuery = Task.Run(
             _manager.GetMounted,
-            cancellationToken).ConfigureAwait(false);
+            CancellationToken.None);
+        var mounted = await mountedQuery.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         return mounted
             .Where(state => state.Attached && CanHandle(state.ImagePath))
