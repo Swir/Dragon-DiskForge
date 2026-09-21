@@ -1,0 +1,42 @@
+name: Dragon DiskForge Beta Post-Release Verification Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/beta-post-release-verify.ps1'
+      - '.github/workflows/beta-post-release-verify-contract.yml'
+      - 'docs/BETA-PUBLISHING.md'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/beta-post-release-verify.ps1'
+      - '.github/workflows/beta-post-release-verify-contract.yml'
+      - 'docs/BETA-PUBLISHING.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  powershell-7:
+    name: PowerShell 7 self-test
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify post-release contract
+        shell: pwsh
+        run: ./scripts/beta-post-release-verify.ps1 -Mode self-test
+
+  windows-powershell-51:
+    name: Windows PowerShell 5.1 self-test
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify post-release contract
+        shell: powershell
+        run: .\scripts\beta-post-release-verify.ps1 -Mode self-test
