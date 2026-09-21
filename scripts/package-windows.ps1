@@ -3,6 +3,7 @@ param(
     [string]$AppProject = "src/DragonDiskForge.App/DragonDiskForge.App.csproj",
     [string]$CliProject = "src/DragonDiskForge.Cli/DragonDiskForge.Cli.csproj",
     [string]$ShellProject = "src/DragonDiskForge.Shell/DragonDiskForge.Shell.csproj",
+    [string]$MountHelperProject = "src/DragonDiskForge.MountHelper/DragonDiskForge.MountHelper.csproj",
     [string]$BetaManualQaScript = "scripts/beta-manual-qa.ps1",
     [string]$BetaUacWitnessScript = "scripts/beta-qa-uac-witness.ps1",
     [string]$BetaUacPairVerifierScript = "scripts/beta-qa-uac-pair-verify.ps1",
@@ -81,6 +82,7 @@ $expected = Get-RepositoryVersion -Override $ExpectedVersion
 $appProjectPath = (Resolve-Path $AppProject).Path
 $cliProjectPath = (Resolve-Path $CliProject).Path
 $shellProjectPath = (Resolve-Path $ShellProject).Path
+$mountHelperProjectPath = (Resolve-Path $MountHelperProject).Path
 $betaManualQaScriptPath = (Resolve-Path $BetaManualQaScript).Path
 $betaUacWitnessScriptPath = (Resolve-Path $BetaUacWitnessScript).Path
 $betaUacPairVerifierScriptPath = (Resolve-Path $BetaUacPairVerifierScript).Path
@@ -123,6 +125,13 @@ if ($LASTEXITCODE -ne 0) { throw "Self-contained shell-helper publish failed wit
 $shellProjectDirectory = Split-Path $shellProjectPath -Parent
 $shellExecutable = Join-Path $shellProjectDirectory "bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/dragon-diskforge-shell.exe"
 if (-not (Test-Path $shellExecutable -PathType Leaf)) { throw "Published shell helper was not found: $shellExecutable" }
+
+Write-Host "Publishing self-contained Dragon DiskForge native mount helper."
+& dotnet publish $mountHelperProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false
+if ($LASTEXITCODE -ne 0) { throw "Self-contained native mount-helper publish failed with exit code $LASTEXITCODE." }
+$mountHelperProjectDirectory = Split-Path $mountHelperProjectPath -Parent
+$mountHelperExecutable = Join-Path $mountHelperProjectDirectory "bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/dragon-diskforge-mount.exe"
+if (-not (Test-Path $mountHelperExecutable -PathType Leaf)) { throw "Published native mount helper was not found: $mountHelperExecutable" }
 
 if (Test-Path $output) { Remove-Item $output -Recurse -Force }
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -172,6 +181,11 @@ Copy-Item $shellExecutable $shellEntryPoint -Force
 & $shellEntryPoint --help | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Packaged shell helper failed its launch smoke test with exit code $LASTEXITCODE." }
 
+$mountHelperEntryPoint = Join-Path $toolsStageDirectory "dragon-diskforge-mount.exe"
+Copy-Item $mountHelperExecutable $mountHelperEntryPoint -Force
+& $mountHelperEntryPoint --help | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Packaged native mount helper failed its launch smoke test with exit code $LASTEXITCODE." }
+
 $betaManualQaEntryPoint = Join-Path $toolsStageDirectory "beta-manual-qa.ps1"
 Copy-Item $betaManualQaScriptPath $betaManualQaEntryPoint -Force
 & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $betaManualQaEntryPoint -Mode self-test
@@ -209,6 +223,7 @@ if ([string]::IsNullOrWhiteSpace($productVersion) -or -not $productVersion.Start
 $entryPointSha256 = (Get-FileHash -Path $entryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $cliEntryPointSha256 = (Get-FileHash -Path $cliEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $shellEntryPointSha256 = (Get-FileHash -Path $shellEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
+$mountHelperEntryPointSha256 = (Get-FileHash -Path $mountHelperEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $betaManualQaEntryPointSha256 = (Get-FileHash -Path $betaManualQaEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $betaUacWitnessEntryPointSha256 = (Get-FileHash -Path $betaUacWitnessEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
 $betaUacPairVerifierEntryPointSha256 = (Get-FileHash -Path $betaUacPairVerifierEntryPoint -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -223,6 +238,7 @@ $manifest = [ordered]@{
     entryPoint = "DragonDiskForge.App.exe"
     cliEntryPoint = "cli/dragon-diskforge.exe"
     shellIntegrationEntryPoint = "tools/dragon-diskforge-shell.exe"
+    mountHelperEntryPoint = "tools/dragon-diskforge-mount.exe"
     betaManualQaEntryPoint = "tools/beta-manual-qa.ps1"
     betaUacWitnessEntryPoint = "tools/beta-qa-uac-witness.ps1"
     betaUacPairVerifierEntryPoint = "tools/beta-qa-uac-pair-verify.ps1"
@@ -230,6 +246,7 @@ $manifest = [ordered]@{
     entryPointSha256 = $entryPointSha256
     cliEntryPointSha256 = $cliEntryPointSha256
     shellIntegrationEntryPointSha256 = $shellEntryPointSha256
+    mountHelperEntryPointSha256 = $mountHelperEntryPointSha256
     betaManualQaEntryPointSha256 = $betaManualQaEntryPointSha256
     betaUacWitnessEntryPointSha256 = $betaUacWitnessEntryPointSha256
     betaUacPairVerifierEntryPointSha256 = $betaUacPairVerifierEntryPointSha256
@@ -252,3 +269,4 @@ Write-Host "Packaged $((Get-ChildItem -Path $stage -Recurse -File).Count) files.
 Write-Host "Version: $expected"
 Write-Host "ZIP: $zip"
 Write-Host "SHA-256: $hash"
+Write-Host "Native mount helper SHA-256: $mountHelperEntryPointSha256"

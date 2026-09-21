@@ -78,7 +78,8 @@ The project follows semantic versioning while it evolves toward 1.0.
 <!-- retained-beta-candidate:start -->
 - Current retained candidate: Beta Candidate run #208 (`35607989060`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35607989060`, built from `main` source commit `9e0ea20b677e9f56bf5dc6f58bc55a4e51ca9998`; nested package SHA-256 `3ae71a7468b487500f6a3e4e80ce65fe752c6fbefc3729f5723b2caf5bbbf342`. Evidence is witness-bound (schema v2), archive-bound, live-session-bound, Explorer-witness-bound and package-UAC-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity, package-specific real-Explorer witness, packaged normal-user UAC witness and packaged UAC before/after pair-verifier companions; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
-- clean Windows packaging builds and verifies both the self-contained CLI and shell-integration helper alongside the desktop application
+- native Windows ISO/VHD/VHDX mount state and mutations now use the Windows Storage `MSFT_DiskImage` management provider directly; the shipped desktop no longer starts PowerShell or emits encoded command lines for disk-image operations
+- clean Windows packaging builds, hash-binds and verifies the self-contained CLI, shell-integration helper and native elevated mount helper alongside the desktop application
 - package manifest schema 5 records and SHA-256-binds the packaged `tools/beta-manual-qa.ps1` release-evidence tool
 - diagnostic bundles include bounded sanitized crash evidence without weakening their privacy boundary
 - CI publishes a dedicated large-image performance benchmark artifact, separately gates reviewed security-boundary invariants, validates the clean package on fresh Windows runner images without source checkout, separately gates beta-facing XAML accessibility, and self-tests the exact-package manual-QA evidence contract, session-preparation helper, desktop witness companion, live-session continuity companion, candidate-retention policy and release contracts under PowerShell 7 and Windows PowerShell 5.1
@@ -88,6 +89,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - unsupported UI actions remain disabled rather than simulated
 - the desktop manifest explicitly requests `asInvoker` and disables UI access; normal startup does not request ambient administrator elevation
 - caller cancellation is honored up to the native mount/unmount commit boundary; once Windows begins the storage mutation, Dragon DiskForge completes the helper wait and performs bounded live-state reconciliation instead of killing a potentially committed operation
+- VHD/VHDX elevation is isolated to the signed-package-ready native `dragon-diskforge-mount.exe` helper launched through Windows `runas`; normal desktop startup and read-only state discovery remain unelevated and PowerShell-free
 - file-producing Core operations publish through explicit transaction boundaries
 - state imports validate version/size/path data before atomically replacing local application state
 - diagnostic bundles intentionally exclude full saved-image paths and image contents
