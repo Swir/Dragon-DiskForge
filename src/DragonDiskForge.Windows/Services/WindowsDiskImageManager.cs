@@ -29,15 +29,18 @@ public sealed class WindowsDiskImageManager
         EnsureWindows();
 
         var scope = CreateScope();
+        ManagementObject image;
         try
         {
-            using var image = OpenDiskImage(scope, fullPath);
-            return ToState(image);
+            image = OpenDiskImage(scope, fullPath);
         }
         catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.NotFound)
         {
             return null;
         }
+
+        using (image)
+            return ToState(image);
     }
 
     public IReadOnlyList<WindowsDiskImageState> GetMounted()
@@ -174,14 +177,60 @@ public sealed class WindowsDiskImageManager
             Path.GetFullPath(path),
             attached,
             string.IsNullOrWhiteSpace(devicePath) ? null : devicePath,
-            attached ? ReadDriveLetters(image) : Array.Empty<string>());
+            attached ? ReadDriveLetters(image, path) : Array.Empty<string>());
     }
 
-    private static IReadOnlyList<string> ReadDriveLetters(ManagementObject image)
+    private static IReadOnlyList<string> ReadDriveLetters(ManagementObject image, string imagePath)
     {
-        // Ask System.Management to build the ASSOCIATORS query instead of passing a
-        // hand-written RelatedObjectQuery. The related-class filter keeps the result
-        // deterministic while avoiding the parser failure covered by Windows CI.
+        var extension = Path.GetExtension(imagePath);
+        if (extension.Equals(".vhd", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".vhdx", StringComparison.OrdinalIgnoreCase))
+        {
+            return ReadVirtualDiskDriveLetters(image);
+        }
+
+        return ReadDirectImageDriveLetters(image);
+    }
+
+    private static IReadOnlyList<string> ReadVirtualDiskDriveLetters(ManagementObject image)
+    {
+        // MSFT_DiskImage.Number is the mounted virtual disk number. For VHD/VHDX,
+        // drive letters belong to MSFT_Partition objects on that disk; following the
+        // DiskImage -> DiskNumber -> Partition path mirrors Windows' native storage
+        // object model and is more reliable than DiskImageToVolume on hosted Windows.
+        if (image["Number"] is null)
+            return Array.Empty<string>();
+
+        uint diskNumber;
+        try
+        {
+            diskNumber = Convert.ToUInt32(image["Number"], CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
+        {
+            throw new InvalidDataException("Windows Storage returned an invalid disk number for the mounted image.", ex);
+        }
+
+        using var partitionSearcher = new ManagementObjectSearcher(
+            image.Scope,
+            new ObjectQuery($"SELECT DriveLetter FROM MSFT_Partition WHERE DiskNumber = {diskNumber}"));
+        using var partitions = partitionSearcher.Get();
+        var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (ManagementObject partition in partitions)
+        {
+            using (partition)
+            {
+                AddDriveLetter(letters, partition["DriveLetter"]);
+            }
+        }
+
+        return letters.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadDirectImageDriveLetters(ManagementObject image)
+    {
+        // ISO images are exposed through the DiskImage<->Volume association directly.
         using var volumes = image.GetRelated("MSFT_Volume");
         var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -189,15 +238,20 @@ public sealed class WindowsDiskImageManager
         {
             using (volume)
             {
-                var driveLetter = Convert.ToString(volume["DriveLetter"], CultureInfo.InvariantCulture);
-                if (string.IsNullOrWhiteSpace(driveLetter))
-                    continue;
-
-                letters.Add(driveLetter.EndsWith(':') ? driveLetter : $"{driveLetter}:");
+                AddDriveLetter(letters, volume["DriveLetter"]);
             }
         }
 
         return letters.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static void AddDriveLetter(HashSet<string> letters, object? rawDriveLetter)
+    {
+        var driveLetter = Convert.ToString(rawDriveLetter, CultureInfo.InvariantCulture);
+        if (string.IsNullOrWhiteSpace(driveLetter))
+            return;
+
+        letters.Add(driveLetter.EndsWith(':') ? driveLetter : $"{driveLetter}:");
     }
 
     private static bool ReadBoolean(ManagementBaseObject value, string propertyName)
