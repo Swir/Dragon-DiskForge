@@ -7,6 +7,7 @@ param(
     [string]$TagName = '0.5.0-beta.1',
     [string]$ExpectedVersion = '0.5.0-beta.1',
     [string]$ExpectedSourceCommit = '',
+    [string]$ExpectedVerifierCommit = '',
     [string]$VerifyPackageScriptPath = 'scripts/verify-package.ps1',
     [switch]$KeepDownloads
 )
@@ -167,16 +168,104 @@ function Assert-PublicReleaseMetadata {
 function Assert-PublicAssetUrl {
     param(
         [Parameter(Mandatory = $true)][string]$Url,
-        [Parameter(Mandatory = $true)][string]$RepositoryName
+        [Parameter(Mandatory = $true)][string]$RepositoryName,
+        [Parameter(Mandatory = $true)][string]$Tag
     )
 
     $uri = [Uri]$Url
     if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'github.com') {
         throw "Release asset URL is not an HTTPS github.com URL: $Url"
     }
-    $prefix = '/' + $RepositoryName + '/releases/download/'
+    $prefix = '/' + $RepositoryName + '/releases/download/' + [Uri]::EscapeDataString($Tag) + '/'
     if (-not $uri.AbsolutePath.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
-        throw "Release asset URL is outside the expected repository release path: $Url"
+        throw "Release asset URL is outside the expected repository/tag release path: $Url"
+    }
+}
+
+function Get-PublicRawToolUrl {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepositoryName,
+        [Parameter(Mandatory = $true)][string]$Commit,
+        [Parameter(Mandatory = $true)][string]$RepositoryPath
+    )
+
+    $repo = Assert-RepositoryName -Value $RepositoryName
+    $sha = Assert-ExactCommit -Commit $Commit -Label 'Verifier tooling commit'
+    if ($RepositoryPath -notmatch '^scripts/[A-Za-z0-9_.-]+\.ps1$') {
+        throw "Repository tooling path '$RepositoryPath' is not an allowed fixed scripts/*.ps1 path."
+    }
+    return "https://raw.githubusercontent.com/$repo/$sha/$RepositoryPath"
+}
+
+function Assert-ToolingProvenance {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepositoryName,
+        [Parameter(Mandatory = $true)][string]$ToolingCommit,
+        [Parameter(Mandatory = $true)][string]$LocalVerifierPath,
+        [Parameter(Mandatory = $true)][string]$LocalPackageVerifierPath
+    )
+
+    $repo = Assert-RepositoryName -Value $RepositoryName
+    $commit = Assert-ExactCommit -Commit $ToolingCommit -Label 'ExpectedVerifierCommit'
+    $localVerifier = (Resolve-Path -LiteralPath $LocalVerifierPath -ErrorAction Stop).Path
+    $localPackageVerifier = (Resolve-Path -LiteralPath $LocalPackageVerifierPath -ErrorAction Stop).Path
+    $localVerifierHash = Get-Sha256 -Path $localVerifier
+    $localPackageVerifierHash = Get-Sha256 -Path $localPackageVerifier
+
+    $headers = @{
+        'Accept' = 'application/vnd.github+json'
+        'User-Agent' = 'DragonDiskForge-PostReleaseVerifier'
+        'X-GitHub-Api-Version' = '2022-11-28'
+    }
+    $commitResponse = Invoke-RestMethod -Method Get -Uri "https://api.github.com/repos/$repo/commits/$commit" -Headers $headers
+    $resolvedCommit = Assert-ExactCommit -Commit ([string]$commitResponse.sha) -Label 'Verifier tooling commit read-back'
+    if ($resolvedCommit -ne $commit) {
+        throw "Verifier tooling commit read-back resolved '$resolvedCommit' instead of '$commit'."
+    }
+
+    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-verifier-provenance-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $root -Force | Out-Null
+    try {
+        $expected = @(
+            [pscustomobject]@{
+                repositoryPath = 'scripts/beta-post-release-verify.ps1'
+                localPath = $localVerifier
+                localHash = $localVerifierHash
+                destination = Join-Path $root 'beta-post-release-verify.ps1'
+                label = 'post-release verifier'
+            },
+            [pscustomobject]@{
+                repositoryPath = 'scripts/verify-package.ps1'
+                localPath = $localPackageVerifier
+                localHash = $localPackageVerifierHash
+                destination = Join-Path $root 'verify-package.ps1'
+                label = 'package verifier'
+            }
+        )
+
+        foreach ($tool in $expected) {
+            $url = Get-PublicRawToolUrl -RepositoryName $repo -Commit $commit -RepositoryPath $tool.repositoryPath
+            Invoke-WebRequest -UseBasicParsing -Uri $url -Headers @{ 'User-Agent' = 'DragonDiskForge-PostReleaseVerifier' } -OutFile $tool.destination
+            if (-not (Test-Path -LiteralPath $tool.destination -PathType Leaf) -or (Get-Item -LiteralPath $tool.destination).Length -le 0) {
+                throw "Public read-back of $($tool.label) did not produce a non-empty file."
+            }
+            $publicHash = Get-Sha256 -Path $tool.destination
+            if ($publicHash -ne $tool.localHash) {
+                throw "Local $($tool.label) SHA-256 '$($tool.localHash)' does not match exact public tooling commit '$commit' SHA-256 '$publicHash'."
+            }
+        }
+
+        return [pscustomobject]@{
+            verifierCommit = $commit
+            postReleaseVerifierSha256 = $localVerifierHash
+            packageVerifierSha256 = $localPackageVerifierHash
+            exactPublicToolingReadBack = $true
+        }
+    }
+    finally {
+        if (Test-Path -LiteralPath $root) {
+            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
@@ -301,6 +390,8 @@ function Invoke-PublicReleaseVerification {
         [Parameter(Mandatory = $true)][string]$Tag,
         [Parameter(Mandatory = $true)][string]$Version,
         [Parameter(Mandatory = $true)][string]$SourceCommit,
+        [Parameter(Mandatory = $true)][string]$ToolingCommit,
+        [Parameter(Mandatory = $true)][string]$VerifierScriptPath,
         [Parameter(Mandatory = $true)][string]$PackageVerifier,
         [bool]$PreserveDownloads
     )
@@ -308,6 +399,7 @@ function Invoke-PublicReleaseVerification {
     $repo = Assert-RepositoryName -Value $RepositoryName
     Assert-VersionAndTag -Version $Version -Tag $Tag | Out-Null
     $commit = Assert-ExactCommit -Commit $SourceCommit -Label 'ExpectedSourceCommit'
+    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier
 
     $encodedTag = [Uri]::EscapeDataString($Tag)
     $headers = @{
@@ -332,7 +424,7 @@ function Invoke-PublicReleaseVerification {
         foreach ($assetName in (Get-ExpectedAssetNames -Version $Version)) {
             $asset = @($release.assets | Where-Object { [string]$_.name -eq $assetName })[0]
             $url = [string]$asset.browser_download_url
-            Assert-PublicAssetUrl -Url $url -RepositoryName $repo
+            Assert-PublicAssetUrl -Url $url -RepositoryName $repo -Tag $Tag
             $destination = Join-Path $downloadRoot $assetName
             Invoke-WebRequest -UseBasicParsing -Uri $url -Headers @{ 'User-Agent' = 'DragonDiskForge-PostReleaseVerifier' } -OutFile $destination
             if (-not (Test-Path -LiteralPath $destination -PathType Leaf) -or (Get-Item -LiteralPath $destination).Length -le 0) {
@@ -349,6 +441,9 @@ function Invoke-PublicReleaseVerification {
             tag = $Tag
             version = $Version
             sourceCommit = $commit
+            verifierCommit = $tooling.verifierCommit
+            postReleaseVerifierSha256 = $tooling.postReleaseVerifierSha256
+            packageVerifierSha256 = $tooling.packageVerifierSha256
             releaseUrl = [string]$release.html_url
             publishedAt = [string]$release.published_at
             packageSha256 = $bundle.packageSha256
@@ -358,6 +453,7 @@ function Invoke-PublicReleaseVerification {
             manualQaEvidenceSha256 = $bundle.manualQaEvidenceSha256
             downloadedFromPublicRelease = $true
             runtimePackageVerified = $true
+            exactPublicToolingReadBack = $true
         }
     }
     finally {
@@ -404,8 +500,25 @@ function Invoke-SelfTest {
         $release = New-SelfTestRelease -Version $version
         Assert-PublicReleaseMetadata -Release $release -Tag $tag -Version $version
         foreach ($asset in @($release.assets)) {
-            Assert-PublicAssetUrl -Url ([string]$asset.browser_download_url) -RepositoryName 'Swir/Dragon-DiskForge'
+            Assert-PublicAssetUrl -Url ([string]$asset.browser_download_url) -RepositoryName 'Swir/Dragon-DiskForge' -Tag $tag
         }
+
+        $wrongTagUrlRejected = $false
+        try {
+            Assert-PublicAssetUrl -Url "https://github.com/Swir/Dragon-DiskForge/releases/download/0.5.0-beta.2/file.zip" -RepositoryName 'Swir/Dragon-DiskForge' -Tag $tag
+        }
+        catch {
+            $wrongTagUrlRejected = $true
+        }
+        if (-not $wrongTagUrlRejected) { throw 'Self-test failed: asset URL from the wrong release tag was accepted.' }
+
+        $rawUrl = Get-PublicRawToolUrl -RepositoryName 'Swir/Dragon-DiskForge' -Commit $commit -RepositoryPath 'scripts/beta-post-release-verify.ps1'
+        if ($rawUrl -ne "https://raw.githubusercontent.com/Swir/Dragon-DiskForge/$commit/scripts/beta-post-release-verify.ps1") {
+            throw 'Self-test failed: canonical public tooling URL was not generated deterministically.'
+        }
+        $unsafeToolPathRejected = $false
+        try { $null = Get-PublicRawToolUrl -RepositoryName 'Swir/Dragon-DiskForge' -Commit $commit -RepositoryPath '../verify-package.ps1' } catch { $unsafeToolPathRejected = $true }
+        if (-not $unsafeToolPathRejected) { throw 'Self-test failed: unsafe tooling repository path was accepted.' }
 
         $packageName = "DragonDiskForge-$version-win-x64.zip"
         $packagePath = Join-Path $root $packageName
@@ -488,11 +601,17 @@ if ($Mode -eq 'self-test') {
 if ([string]::IsNullOrWhiteSpace($ExpectedSourceCommit)) {
     throw 'ExpectedSourceCommit is required in verify mode; post-release verification must be bound to the exact approved source commit.'
 }
+if ([string]::IsNullOrWhiteSpace($ExpectedVerifierCommit)) {
+    throw 'ExpectedVerifierCommit is required in verify mode; post-release verification tooling must be bound to an exact public repository commit.'
+}
 
-$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -PackageVerifier $VerifyPackageScriptPath -PreserveDownloads $KeepDownloads.IsPresent
+$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -PreserveDownloads $KeepDownloads.IsPresent
 Write-Host 'Dragon DiskForge public beta post-release verification passed.'
 Write-Host ("Release: {0}" -f $result.releaseUrl)
 Write-Host ("Tag/source: {0} -> {1}" -f $result.tag, $result.sourceCommit)
+Write-Host ("Verifier tooling commit: {0}" -f $result.verifierCommit)
+Write-Host ("Post-release verifier SHA-256: {0}" -f $result.postReleaseVerifierSha256)
+Write-Host ("Package verifier SHA-256: {0}" -f $result.packageVerifierSha256)
 Write-Host ("Package SHA-256: {0}" -f $result.packageSha256)
 Write-Host ("Release manifest SHA-256: {0}" -f $result.releaseManifestSha256)
 Write-Host ("Capability matrix SHA-256: {0}" -f $result.capabilityMatrixSha256)
