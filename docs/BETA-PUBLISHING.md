@@ -85,25 +85,34 @@ A failed proof prevents publication. A pre-existing tag/release is treated as am
 
 ## Public post-release verification
 
-Publication is not the final proof. After GitHub has accepted the pre-release, run the independent public verifier on a Windows machine from the exact approved source tree:
+Publication is not the final proof. The **released application source commit** and the **post-release verifier tooling commit** are intentionally separate identities: the retained beta candidate may have been built before the verifier itself was added or hardened. Do not try to run the verifier from the retained candidate source tree when that tree does not contain the verifier.
+
+Run the independent verifier on a Windows machine from an exact repository commit that contains `scripts/beta-post-release-verify.ps1` and `scripts/verify-package.ps1`, and bind both identities explicitly:
 
 ```powershell
 .\scripts\beta-post-release-verify.ps1 `
   -Mode verify `
-  -ExpectedSourceCommit <40-character-retained-candidate-source-sha>
+  -ExpectedSourceCommit <40-character-retained-candidate-source-sha> `
+  -ExpectedVerifierCommit <40-character-release-tooling-sha>
 ```
 
-The post-release verifier deliberately reads the Release through GitHub's **public unauthenticated API** and downloads the published assets through their public `github.com` browser-download URLs. It then fails closed unless all of the following remain true after publication:
+`ExpectedSourceCommit` is the commit the public beta tag must resolve to. `ExpectedVerifierCommit` is the exact public repository commit whose verifier scripts are allowed to perform the post-release proof. Before checking the Release, the verifier downloads those two scripts back from `raw.githubusercontent.com` at `ExpectedVerifierCommit` and requires their SHA-256 values to match the local scripts byte-for-byte. This prevents an uncommitted, stale or locally modified verifier from being silently trusted while still allowing release tooling to be newer than the retained application candidate.
 
-1. the tag exists publicly and resolves to the exact approved source commit;
-2. the Release is published, non-draft and still marked as a pre-release;
-3. the expected versioned Windows ZIP, ZIP SHA-256, release manifest + SHA-256 and capability-matrix snapshot are present exactly once and are non-empty;
-4. public downloads succeed without relying on a private Actions artifact or authenticated GitHub CLI session;
-5. downloaded package and release-manifest sidecars target the correct filenames and match the downloaded bytes;
-6. the release manifest binds the exact tag/source commit, candidate/QA/manual-evidence provenance, package SHA-256 and capability-matrix SHA-256;
-7. the downloaded public ZIP passes the existing `scripts/verify-package.ps1` runtime-completeness, manifest, embedded-tool self-test, CLI-provider and shell-helper verification on Windows.
+The post-release verifier deliberately reads the Release through GitHub's **public unauthenticated API** and downloads the published assets through their public `github.com` browser-download URLs. Asset URLs must also resolve under the exact expected release tag, not merely the correct repository. It then fails closed unless all of the following remain true after publication:
 
-This is intentionally separate from the publisher's immediate read-back. It proves the durable **public** assets that users can actually fetch, rather than only the local bundle or newly-created Release metadata. A successful publication must not be considered post-release verified until this command passes against the public Release.
+1. the verifier and package-verifier local bytes match the exact public `ExpectedVerifierCommit`;
+2. the release tag exists publicly and resolves to the exact approved application source commit;
+3. the Release is published, non-draft and still marked as a pre-release;
+4. the expected versioned Windows ZIP, ZIP SHA-256, release manifest + SHA-256 and capability-matrix snapshot are present exactly once and are non-empty;
+5. every release asset URL belongs to the exact expected repository **and tag**;
+6. public downloads succeed without relying on a private Actions artifact or authenticated GitHub CLI session;
+7. downloaded package and release-manifest sidecars target the correct filenames and match the downloaded bytes;
+8. the release manifest binds the exact tag/source commit, candidate/QA/manual-evidence provenance, package SHA-256 and capability-matrix SHA-256;
+9. the downloaded public ZIP passes the existing `scripts/verify-package.ps1` runtime-completeness, manifest, embedded-tool self-test, CLI-provider and shell-helper verification on Windows.
+
+This is intentionally separate from the publisher's immediate read-back. It proves the durable **public** assets that users can actually fetch and the exact verifier bytes used to validate them, rather than only the local bundle or newly-created Release metadata. A successful publication must not be considered post-release verified until this command passes against the public Release.
+
+Record the successful command output with the release evidence. It includes the application source commit, verifier tooling commit, post-release-verifier SHA-256, package-verifier SHA-256, public package SHA-256, release-manifest SHA-256 and capability-matrix SHA-256.
 
 `-KeepDownloads` may be used while diagnosing a failed verification; normal successful runs delete the temporary public-download copy automatically.
 
@@ -118,7 +127,7 @@ This is intentionally separate from the publisher's immediate read-back. It prov
 - non-canonical tag spelling is rejected;
 - the generated GitHub CLI argument set retains exact source, pre-release and asset binding.
 
-`.github/workflows/beta-post-release-verify-contract.yml` separately runs the public-verifier contract under PowerShell 7 and Windows PowerShell 5.1. Its offline self-test covers release-state validation, required-asset identity, public URL scoping, release-manifest/source binding, checksum validation and rejection of package tampering. CI does **not** claim that a public Release exists; real `verify` mode is run only after publication.
+`.github/workflows/beta-post-release-verify-contract.yml` separately runs the public-verifier contract under PowerShell 7 and Windows PowerShell 5.1. Its offline self-test covers release-state validation, required-asset identity, exact-tag public URL scoping, release-manifest/source binding, checksum validation, canonical tooling URL construction and rejection of package tampering or unsafe tooling paths. The live `verify` path additionally performs the exact public verifier-tooling read-back described above. CI does **not** claim that a public Release exists; real `verify` mode is run only after publication.
 
 The CI contracts **do not publish a Release** and do not substitute for interactive Windows QA.
 
