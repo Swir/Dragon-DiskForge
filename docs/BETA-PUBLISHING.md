@@ -83,6 +83,30 @@ Publish mode:
 
 A failed proof prevents publication. A pre-existing tag/release is treated as ambiguous state and is refused rather than overwritten. If GitHub accepts a new release but the immediate source/pre-release/asset read-back fails, the publisher attempts to delete only that newly created release and tag before returning failure.
 
+## Public post-release verification
+
+Publication is not the final proof. After GitHub has accepted the pre-release, run the independent public verifier on a Windows machine from the exact approved source tree:
+
+```powershell
+.\scripts\beta-post-release-verify.ps1 `
+  -Mode verify `
+  -ExpectedSourceCommit <40-character-retained-candidate-source-sha>
+```
+
+The post-release verifier deliberately reads the Release through GitHub's **public unauthenticated API** and downloads the published assets through their public `github.com` browser-download URLs. It then fails closed unless all of the following remain true after publication:
+
+1. the tag exists publicly and resolves to the exact approved source commit;
+2. the Release is published, non-draft and still marked as a pre-release;
+3. the expected versioned Windows ZIP, ZIP SHA-256, release manifest + SHA-256 and capability-matrix snapshot are present exactly once and are non-empty;
+4. public downloads succeed without relying on a private Actions artifact or authenticated GitHub CLI session;
+5. downloaded package and release-manifest sidecars target the correct filenames and match the downloaded bytes;
+6. the release manifest binds the exact tag/source commit, candidate/QA/manual-evidence provenance, package SHA-256 and capability-matrix SHA-256;
+7. the downloaded public ZIP passes the existing `scripts/verify-package.ps1` runtime-completeness, manifest, embedded-tool self-test, CLI-provider and shell-helper verification on Windows.
+
+This is intentionally separate from the publisher's immediate read-back. It proves the durable **public** assets that users can actually fetch, rather than only the local bundle or newly-created Release metadata. A successful publication must not be considered post-release verified until this command passes against the public Release.
+
+`-KeepDownloads` may be used while diagnosing a failed verification; normal successful runs delete the temporary public-download copy automatically.
+
 ## CI contract
 
 `.github/workflows/beta-release-publish-contract.yml` runs the publisher self-test under both PowerShell 7 and Windows PowerShell 5.1. The self-test proves that:
@@ -94,8 +118,10 @@ A failed proof prevents publication. A pre-existing tag/release is treated as am
 - non-canonical tag spelling is rejected;
 - the generated GitHub CLI argument set retains exact source, pre-release and asset binding.
 
-The CI contract **does not publish a Release** and does not substitute for interactive Windows QA.
+`.github/workflows/beta-post-release-verify-contract.yml` separately runs the public-verifier contract under PowerShell 7 and Windows PowerShell 5.1. Its offline self-test covers release-state validation, required-asset identity, public URL scoping, release-manifest/source binding, checksum validation and rejection of package tampering. CI does **not** claim that a public Release exists; real `verify` mode is run only after publication.
+
+The CI contracts **do not publish a Release** and do not substitute for interactive Windows QA.
 
 ## Release readiness remains separate
 
-The public beta stays **NOT READY** until every unchecked item in [`BETA-RELEASE.md`](BETA-RELEASE.md) has real evidence. The publisher exists to make the final promotion reproducible and fail-closed after those gates pass; its existence does not change project or milestone percentages.
+The public beta stays **NOT READY** until every unchecked item in [`BETA-RELEASE.md`](BETA-RELEASE.md) has real evidence. The publisher exists to make the final promotion reproducible and fail-closed after those gates pass; its existence does not change project or milestone percentages. After publication, the separate public post-release verifier must also pass before the beta can be treated as fully publication-verified.
