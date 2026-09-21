@@ -19,6 +19,8 @@ public sealed class WindowsDiskImageManager
     private const ushort AccessReadWrite = 2;
     private const ushort AccessReadOnly = 3;
     private const uint StorageTypeUnknown = 0;
+    private const int MountedInventoryMaxAttempts = 4;
+    private const int MountedInventoryRetryDelayMilliseconds = 100;
 
     public WindowsDiskImageState? TryGetState(string imagePath)
     {
@@ -42,6 +44,28 @@ public sealed class WindowsDiskImageManager
     {
         EnsureWindows();
         var scope = CreateScope();
+
+        // StorageWMI can invalidate an MSFT_Volume/MSFT_DiskImage association while a
+        // detach is settling. Retry the complete read-only snapshot on provider-level
+        // NotFound only; persistent failures still surface instead of being hidden as
+        // an empty mounted-image inventory.
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return GetMountedSnapshot(scope);
+            }
+            catch (ManagementException ex) when (
+                ex.ErrorCode == ManagementStatus.NotFound
+                && attempt < MountedInventoryMaxAttempts - 1)
+            {
+                Thread.Sleep(MountedInventoryRetryDelayMilliseconds * (attempt + 1));
+            }
+        }
+    }
+
+    private static IReadOnlyList<WindowsDiskImageState> GetMountedSnapshot(ManagementScope scope)
+    {
         var result = new Dictionary<string, WindowsDiskImageState>(StringComparer.OrdinalIgnoreCase);
 
         // MSFT_DiskImage is a dynamic provider class: class enumeration/WQL does not
