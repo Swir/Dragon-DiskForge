@@ -105,7 +105,8 @@ public sealed class WindowsDiskImageManager
             scope,
             new ObjectQuery("SELECT ImagePath, StorageType, DevicePath, Attached FROM MSFT_DiskImage"));
 
-        foreach (ManagementObject image in searcher.Get())
+        using var images = searcher.Get();
+        foreach (ManagementObject image in images)
             yield return image;
     }
 
@@ -143,7 +144,8 @@ public sealed class WindowsDiskImageManager
         using var searcher = new ManagementObjectSearcher(scope, query);
         var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ManagementObject volume in searcher.Get())
+        using var volumes = searcher.Get();
+        foreach (ManagementObject volume in volumes)
         {
             using (volume)
             {
