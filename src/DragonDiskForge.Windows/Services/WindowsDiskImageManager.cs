@@ -182,63 +182,66 @@ public sealed class WindowsDiskImageManager
 
     private static IReadOnlyList<string> ReadDriveLetters(ManagementObject image, string imagePath)
     {
-        var extension = Path.GetExtension(imagePath);
-        if (extension.Equals(".vhd", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".vhdx", StringComparison.OrdinalIgnoreCase))
-        {
-            return ReadVirtualDiskDriveLetters(image);
-        }
+        // MSFT_DiskImage.Number/MSFT_Partition.DriveLetter can expose a remembered
+        // partition letter even when Mount(NoDriveLetter=true) has deliberately not
+        // published that letter in the current namespace. Conversely, the forward
+        // DiskImage->Volume relation is not reliable for dynamically opened VHDX
+        // instances on hosted Windows. Resolve the live namespace from the direction
+        // already proven by mounted inventory: Volume -> related DiskImage, then bind
+        // each non-empty volume DriveLetter back to the exact canonical image path.
+        var expectedPath = Path.GetFullPath(imagePath);
+        var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        return ReadDirectImageDriveLetters(image);
-    }
-
-    private static IReadOnlyList<string> ReadVirtualDiskDriveLetters(ManagementObject image)
-    {
-        // MSFT_DiskImage.Number is the mounted virtual disk number. For VHD/VHDX,
-        // drive letters belong to MSFT_Partition objects on that disk; following the
-        // DiskImage -> DiskNumber -> Partition path mirrors Windows' native storage
-        // object model and is more reliable than DiskImageToVolume on hosted Windows.
-        if (image["Number"] is null)
-            return Array.Empty<string>();
-
-        uint diskNumber;
-        try
-        {
-            diskNumber = Convert.ToUInt32(image["Number"], CultureInfo.InvariantCulture);
-        }
-        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
-        {
-            throw new InvalidDataException("Windows Storage returned an invalid disk number for the mounted image.", ex);
-        }
-
-        using var partitionSearcher = new ManagementObjectSearcher(
+        using var volumeSearcher = new ManagementObjectSearcher(
             image.Scope,
-            new ObjectQuery($"SELECT DriveLetter FROM MSFT_Partition WHERE DiskNumber = {diskNumber}"));
-        using var partitions = partitionSearcher.Get();
-        var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (ManagementObject partition in partitions)
-        {
-            using (partition)
-            {
-                AddDriveLetter(letters, partition["DriveLetter"]);
-            }
-        }
-
-        return letters.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
-    }
-
-    private static IReadOnlyList<string> ReadDirectImageDriveLetters(ManagementObject image)
-    {
-        // ISO images are exposed through the DiskImage<->Volume association directly.
-        using var volumes = image.GetRelated("MSFT_Volume");
-        var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            new ObjectQuery("SELECT * FROM MSFT_Volume"));
+        using var volumes = volumeSearcher.Get();
 
         foreach (ManagementObject volume in volumes)
         {
             using (volume)
             {
-                AddDriveLetter(letters, volume["DriveLetter"]);
+                var driveLetter = Convert.ToString(volume["DriveLetter"], CultureInfo.InvariantCulture);
+                if (string.IsNullOrWhiteSpace(driveLetter))
+                    continue;
+
+                using var relatedImages = volume.GetRelated("MSFT_DiskImage");
+                foreach (ManagementObject relatedImage in relatedImages)
+                {
+                    using (relatedImage)
+                    {
+                        if (!ReadBoolean(relatedImage, "Attached"))
+                            continue;
+
+                        var relatedPath = Convert.ToString(
+                            relatedImage["ImagePath"],
+                            CultureInfo.InvariantCulture);
+                        if (string.IsNullOrWhiteSpace(relatedPath))
+                            continue;
+
+                        string normalizedRelatedPath;
+                        try
+                        {
+                            normalizedRelatedPath = Path.GetFullPath(relatedPath);
+                        }
+                        catch (Exception ex) when (
+                            ex is ArgumentException or NotSupportedException or PathTooLongException)
+                        {
+                            continue;
+                        }
+
+                        if (!string.Equals(
+                                normalizedRelatedPath,
+                                expectedPath,
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        AddDriveLetter(letters, driveLetter);
+                        break;
+                    }
+                }
             }
         }
 
