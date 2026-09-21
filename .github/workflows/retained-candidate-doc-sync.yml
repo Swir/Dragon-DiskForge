@@ -34,6 +34,41 @@ jobs:
         shell: pwsh
         run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
 
+      - name: Verify active retained-candidate narrative
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Get-Content -LiteralPath 'docs/retained-beta-candidate.json' -Raw | ConvertFrom-Json
+          $expectedRun = [string]$evidence.workflowRunNumber
+          $expectedSchema = [string]$evidence.packageManifestSchema
+
+          $rules = @(
+            @{ Path = 'docs/ROADMAP.md'; Pattern = 'Candidate #(?<run>\d+) is the current retained package-bound target' },
+            @{ Path = 'docs/MILESTONES.md'; Pattern = 'Candidate #(?<run>\d+) is the current retained package-bound target' },
+            @{ Path = 'docs/BETA-RELEASE.md'; Pattern = 'Candidate #(?<run>\d+) is the current retained package-bound target' }
+          )
+
+          foreach ($rule in $rules) {
+            $text = Get-Content -LiteralPath $rule.Path -Raw
+            $matches = [regex]::Matches($text, $rule.Pattern)
+            if ($matches.Count -ne 1) {
+              throw "$($rule.Path) must contain exactly one active retained-candidate narrative; found $($matches.Count)."
+            }
+            $actualRun = $matches[0].Groups['run'].Value
+            if ($actualRun -ne $expectedRun) {
+              throw "$($rule.Path) active retained candidate #$actualRun is stale; expected #$expectedRun."
+            }
+          }
+
+          $status = Get-Content -LiteralPath 'docs/STATUS.md' -Raw
+          $schemaMatch = [regex]::Match($status, 'The retained artifact is package-manifest schema (?<schema>\d+)')
+          if (-not $schemaMatch.Success) {
+            throw 'docs/STATUS.md is missing the active retained package-manifest schema narrative.'
+          }
+          if ($schemaMatch.Groups['schema'].Value -ne $expectedSchema) {
+            throw "docs/STATUS.md retained package-manifest schema $($schemaMatch.Groups['schema'].Value) is stale; expected $expectedSchema."
+          }
+
       - name: Verify repository is already synchronized
         shell: bash
         run: |
