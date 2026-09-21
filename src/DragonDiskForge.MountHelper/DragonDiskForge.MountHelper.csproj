@@ -7,6 +7,7 @@
     <AssemblyName>dragon-diskforge-mount</AssemblyName>
     <RootNamespace>DragonDiskForge.MountHelper</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\DragonDiskForge.App\Assets\DragonDiskForge.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
