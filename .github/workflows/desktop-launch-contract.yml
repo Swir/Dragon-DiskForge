@@ -19,6 +19,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify WinUI resource bootstrap
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $appXaml = Get-Content 'src/DragonDiskForge.App/App.xaml' -Raw
+          if ($appXaml -notmatch 'xmlns:controls="using:Microsoft\.UI\.Xaml\.Controls"') {
+            throw 'App.xaml does not declare the Microsoft.UI.Xaml.Controls namespace.'
+          }
+          if ($appXaml -notmatch '<controls:XamlControlsResources\s*/>') {
+            throw 'App.xaml does not merge XamlControlsResources; WinUI built-in control ThemeResources can fail at runtime.'
+          }
+          Write-Host 'WinUI resource bootstrap contract passed.'
+
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
