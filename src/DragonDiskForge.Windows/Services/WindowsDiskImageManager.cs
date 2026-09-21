@@ -30,7 +30,7 @@ public sealed class WindowsDiskImageManager
         try
         {
             using var image = OpenDiskImage(scope, fullPath);
-            return ToState(scope, image);
+            return ToState(image);
         }
         catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.NotFound)
         {
@@ -46,8 +46,9 @@ public sealed class WindowsDiskImageManager
 
         // MSFT_DiskImage is a dynamic provider class: class enumeration/WQL does not
         // enumerate image instances reliably. Discover attached images through the
-        // provider's documented DiskImage<->Volume association, mirroring the native
-        // Get-Volume | Get-DiskImage relationship without launching PowerShell.
+        // provider's DiskImage<->Volume association without hand-building ASSOCIATORS
+        // queries: System.Management's RelatedObjectQuery parser is stricter than the
+        // Storage provider and rejected a valid provider query on the Windows CI host.
         using var volumeSearcher = new ManagementObjectSearcher(
             scope,
             new ObjectQuery("SELECT * FROM MSFT_Volume"));
@@ -56,16 +57,8 @@ public sealed class WindowsDiskImageManager
         foreach (ManagementObject volume in volumes)
         {
             using (volume)
+            using (var images = volume.GetRelated("MSFT_DiskImage"))
             {
-                var relativePath = volume.Path.RelativePath;
-                if (string.IsNullOrWhiteSpace(relativePath))
-                    continue;
-
-                var query = new RelatedObjectQuery(
-                    $"ASSOCIATORS OF {{{relativePath}}} WHERE AssocClass=MSFT_DiskImageToVolume ResultClass=MSFT_DiskImage");
-                using var imageSearcher = new ManagementObjectSearcher(scope, query);
-                using var images = imageSearcher.Get();
-
                 foreach (ManagementObject image in images)
                 {
                     using (image)
@@ -77,7 +70,7 @@ public sealed class WindowsDiskImageManager
                         if (string.IsNullOrWhiteSpace(path) || !IsSupportedExtension(path))
                             continue;
 
-                        var state = ToState(scope, image);
+                        var state = ToState(image);
                         result[state.ImagePath] = state;
                     }
                 }
@@ -146,7 +139,7 @@ public sealed class WindowsDiskImageManager
         }
     }
 
-    private static WindowsDiskImageState ToState(ManagementScope scope, ManagementObject image)
+    private static WindowsDiskImageState ToState(ManagementObject image)
     {
         var path = Convert.ToString(image["ImagePath"], CultureInfo.InvariantCulture)
             ?? throw new InvalidDataException("Windows Storage returned a disk image without ImagePath.");
@@ -157,21 +150,17 @@ public sealed class WindowsDiskImageManager
             Path.GetFullPath(path),
             attached,
             string.IsNullOrWhiteSpace(devicePath) ? null : devicePath,
-            attached ? ReadDriveLetters(scope, image) : Array.Empty<string>());
+            attached ? ReadDriveLetters(image) : Array.Empty<string>());
     }
 
-    private static IReadOnlyList<string> ReadDriveLetters(ManagementScope scope, ManagementObject image)
+    private static IReadOnlyList<string> ReadDriveLetters(ManagementObject image)
     {
-        var relativePath = image.Path.RelativePath;
-        if (string.IsNullOrWhiteSpace(relativePath))
-            return Array.Empty<string>();
-
-        var query = new RelatedObjectQuery(
-            $"ASSOCIATORS OF {{{relativePath}}} WHERE AssocClass=MSFT_DiskImageToVolume ResultClass=MSFT_Volume");
-        using var searcher = new ManagementObjectSearcher(scope, query);
+        // Ask System.Management to build the ASSOCIATORS query instead of passing a
+        // hand-written RelatedObjectQuery. The related-class filter keeps the result
+        // deterministic while avoiding the parser failure covered by Windows CI.
+        using var volumes = image.GetRelated("MSFT_Volume");
         var letters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        using var volumes = searcher.Get();
         foreach (ManagementObject volume in volumes)
         {
             using (volume)
