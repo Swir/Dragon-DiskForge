@@ -189,8 +189,24 @@ public sealed class WindowsDiskImageManager
 
     private static void EnsureSuccess(ManagementBaseObject? output, string operation)
     {
-        var raw = output?["ReturnValue"];
-        var code = raw is null ? 0u : Convert.ToUInt32(raw, CultureInfo.InvariantCulture);
+        if (output is null || output["ReturnValue"] is null)
+        {
+            throw new InvalidOperationException(
+                $"Windows Storage did not return a status code for the {operation} operation.");
+        }
+
+        uint code;
+        try
+        {
+            code = Convert.ToUInt32(output["ReturnValue"], CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
+        {
+            throw new InvalidOperationException(
+                $"Windows Storage returned an invalid status code for the {operation} operation.",
+                ex);
+        }
+
         if (code == 0)
             return;
 

@@ -1,4 +1,3 @@
-using System.Security.Principal;
 using DragonDiskForge.Windows.Services;
 
 if (!OperatingSystem.IsWindows())
@@ -56,17 +55,21 @@ static Dictionary<string, string?> ParseOptions(string[] args)
     for (var index = 0; index < args.Length; index++)
     {
         var option = args[index];
-        switch (option.ToLowerInvariant())
+        var canonicalOption = option.ToLowerInvariant();
+        if (result.ContainsKey(canonicalOption))
+            throw new ArgumentException($"Option '{option}' was specified more than once.");
+
+        switch (canonicalOption)
         {
             case "--image":
                 if (++index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
                     throw new ArgumentException("--image requires a path.");
-                result[option] = args[index];
+                result[canonicalOption] = args[index];
                 break;
             case "--read-only":
             case "--read-write":
             case "--no-drive-letter":
-                result[option] = null;
+                result[canonicalOption] = null;
                 break;
             default:
                 throw new ArgumentException($"Unknown option '{option}'.");

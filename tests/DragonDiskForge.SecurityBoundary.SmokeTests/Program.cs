@@ -85,6 +85,14 @@ internal static class Program
             source.Contains("new CancellationTokenSource(TimeSpan.FromSeconds(15))", StringComparison.Ordinal)
             && source.Contains("Refresh Mounted before retrying", StringComparison.Ordinal),
             "Post-commit state reconciliation must remain bounded and surface an explicit refresh-safe failure if confirmation times out.");
+        Require(
+            manager.Contains("did not return a status code", StringComparison.Ordinal)
+            && manager.Contains("returned an invalid status code", StringComparison.Ordinal),
+            "Native Windows Storage mutations must fail closed when WMI omits or corrupts ReturnValue instead of treating an unknown status as success.");
+        Require(
+            helper.Contains("was specified more than once", StringComparison.Ordinal)
+            && helper.Contains("Choose either --read-only or --read-write, not both.", StringComparison.Ordinal),
+            "Elevated mount-helper command lines must reject duplicate or conflicting options rather than resolving ambiguous destructive intent implicitly.");
     }
 
     private static void VerifyShellBoundary(string repositoryRoot)
