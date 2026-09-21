@@ -54,14 +54,29 @@ internal static class Program
     private static void VerifyNativeMountMutationBoundary(string repositoryRoot)
     {
         var source = Read(repositoryRoot, "src", "DragonDiskForge.Windows", "Services", "WindowsDiskImageMountService.cs");
+        var manager = Read(repositoryRoot, "src", "DragonDiskForge.Windows", "Services", "WindowsDiskImageManager.cs");
+        var helper = Read(repositoryRoot, "src", "DragonDiskForge.MountHelper", "Program.cs");
 
         Require(
             source.Contains("cancellationToken.ThrowIfCancellationRequested();", StringComparison.Ordinal)
-            && source.Contains("await process.WaitForExitAsync(CancellationToken.None);", StringComparison.Ordinal),
-            "Native mount/dismount must honor cancellation before launch but finish a started Windows storage mutation instead of killing it mid-commit.");
+            && source.Contains("CancellationToken.None", StringComparison.Ordinal),
+            "Native mount/dismount must honor cancellation before launch but finish a started Windows storage mutation instead of cancelling it mid-commit.");
         Require(
-            source.Contains("ReadToEndAsync(CancellationToken.None)", StringComparison.Ordinal),
-            "Native storage mutation stderr capture must not reintroduce caller cancellation after the Windows command starts.");
+            source.Contains("_manager.Mount(path, readOnly, noDriveLetter)", StringComparison.Ordinal)
+            && source.Contains("_manager.Dismount(path)", StringComparison.Ordinal)
+            && manager.Contains("MSFT_DiskImage", StringComparison.Ordinal),
+            "Desktop mount/unmount must use the native Windows Storage WMI path.");
+        Require(
+            !source.Contains("powershell.exe", StringComparison.OrdinalIgnoreCase)
+            && !source.Contains("EncodedCommand", StringComparison.OrdinalIgnoreCase)
+            && !manager.Contains("powershell.exe", StringComparison.OrdinalIgnoreCase)
+            && !helper.Contains("powershell.exe", StringComparison.OrdinalIgnoreCase),
+            "Shipped native disk-image paths must not spawn PowerShell or encoded command lines.");
+        Require(
+            source.Contains("Verb = \"runas\"", StringComparison.Ordinal)
+            && source.Contains("dragon-diskforge-mount.exe", StringComparison.Ordinal)
+            && source.Contains("await process.WaitForExitAsync(CancellationToken.None)", StringComparison.Ordinal),
+            "VHD/VHDX elevation must be explicit through the bounded native helper and complete once Windows starts it.");
         Require(
             source.Contains("WaitForCommittedStateAsync(path, true)", StringComparison.Ordinal)
             && source.Contains("WaitForCommittedStateAsync(path, false)", StringComparison.Ordinal),
@@ -110,10 +125,12 @@ internal static class Program
             "Public package staging must continue rejecting test-only payloads.");
         Require(packageScript.Contains("entryPointSha256", StringComparison.Ordinal)
                 && packageScript.Contains("cliEntryPointSha256", StringComparison.Ordinal)
-                && packageScript.Contains("shellIntegrationEntryPointSha256", StringComparison.Ordinal),
-            "Package manifest must continue binding application, CLI and shell-helper entry points by SHA-256.");
-        Require(verifyScript.Contains("SHA256", StringComparison.OrdinalIgnoreCase),
-            "Independent package verification must retain SHA-256 validation.");
+                && packageScript.Contains("shellIntegrationEntryPointSha256", StringComparison.Ordinal)
+                && packageScript.Contains("mountHelperEntryPointSha256", StringComparison.Ordinal),
+            "Package manifest must continue binding application, CLI, shell-helper and native mount-helper entry points by SHA-256.");
+        Require(verifyScript.Contains("SHA256", StringComparison.OrdinalIgnoreCase)
+                && verifyScript.Contains("mountHelperEntryPointSha256", StringComparison.Ordinal),
+            "Independent package verification must retain SHA-256 validation for every shipped executable helper.");
     }
 
     private static void VerifyDisposableWriterCiLock(string repositoryRoot)
