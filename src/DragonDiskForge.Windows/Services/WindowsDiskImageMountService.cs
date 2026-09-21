@@ -9,6 +9,8 @@ namespace DragonDiskForge.Windows.Services;
 public sealed class WindowsDiskImageMountService : IMountService
 {
     private const string ElevatedMountHelperExecutable = "dragon-diskforge-mount.exe";
+    private const int DriveLetterSettleAttempts = 10;
+    private const int DriveLetterSettleDelayMilliseconds = 150;
 
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -96,6 +98,9 @@ public sealed class WindowsDiskImageMountService : IMountService
 
         progress?.Report(0.75d);
         var mounted = await WaitForCommittedStateAsync(path, true).ConfigureAwait(false);
+        if (!request.NoDriveLetter && mounted.DriveLetters.Count == 0)
+            mounted = await ReconcileOptionalDriveLetterAsync(path, mounted).ConfigureAwait(false);
+
         progress?.Report(1d);
         return mounted;
     }
@@ -176,6 +181,31 @@ public sealed class WindowsDiskImageMountService : IMountService
             throw new MountOperationException(
                 "Windows completed the native disk-image command, but Dragon DiskForge could not confirm the resulting state in time. Refresh Mounted before retrying.");
         }
+    }
+
+    private async Task<MountState> ReconcileOptionalDriveLetterAsync(string path, MountState attachedState)
+    {
+        // A successful MSFT_DiskImage Mount can become Attached before Windows finishes
+        // exposing the associated volume/drive letter. Give that read-only association
+        // a short bounded settle window, but do not turn a valid blank/no-volume image
+        // into a false mount failure merely because no drive letter can exist.
+        var latest = attachedState;
+        for (var attempt = 0; attempt < DriveLetterSettleAttempts; attempt++)
+        {
+            await Task.Delay(DriveLetterSettleDelayMilliseconds, CancellationToken.None).ConfigureAwait(false);
+            latest = await GetStateAsync(path, CancellationToken.None).ConfigureAwait(false);
+
+            if (!latest.IsMounted)
+            {
+                throw new MountOperationException(
+                    "Windows reported the disk image detached while Dragon DiskForge was reconciling its mounted volume state.");
+            }
+
+            if (latest.DriveLetters.Count > 0)
+                return latest;
+        }
+
+        return latest;
     }
 
     private async Task RunStorageMutationAsync(
