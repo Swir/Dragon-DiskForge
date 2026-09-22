@@ -159,13 +159,14 @@ function Get-ExactHeadCiProof {
         }
 
         $endpoint = "repos/$Repo/actions/runs?head_sha=$commit&per_page=100&page=$page"
-        $json = & $gh.Source api -H 'Accept: application/vnd.github+json' $endpoint 2>$null
-        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace([string]$json)) {
+        $json = @(& $gh.Source api -H 'Accept: application/vnd.github+json' $endpoint 2>$null)
+        $jsonText = ($json -join [Environment]::NewLine).Trim()
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($jsonText)) {
             throw "Cannot read exact-head GitHub Actions state for '$commit' (page $page)."
         }
 
         try {
-            $response = ([string]$json) | ConvertFrom-Json
+            $response = $jsonText | ConvertFrom-Json
         }
         catch {
             throw "GitHub Actions response for '$commit' is not valid JSON."
@@ -227,7 +228,7 @@ function Get-PublisherArguments {
         $arguments += @('-EvidenceChecksumFile', $EvidenceChecksumFile)
     }
 
-    return ,$arguments
+    return $arguments
 }
 
 function Invoke-SelfTest {
