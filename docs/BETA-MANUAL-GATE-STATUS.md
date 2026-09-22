@@ -4,6 +4,8 @@
 
 It is a **read-only verifier**. It does not record observations, alter evidence, mark a roadmap checkbox, publish a release or replace `tools/beta-manual-qa.ps1`. Human observations remain authoritative only when they were recorded by the exact QA tool inside the retained candidate package.
 
+The Beta Candidate workflow also stages a standalone copy of this verifier plus this guide in every explicitly retained candidate artifact. Both files receive SHA-256 sidecars and the staged verifier is self-tested under PowerShell 7 and Windows PowerShell 5.1 before artifact upload. This removes the repository-checkout requirement for checking partial manual-gate progress; it does **not** make any human gate automatic.
+
 ## Why this exists
 
 The current 0.9 roadmap has two independent open deliverables: normal-user UAC validation and real cross-process Explorer drag-out validation. The release gate also requires clean-desktop launch/basic regression. The existing packaged manual-QA verifier intentionally requires all 14 observations before declaring the full interactive QA set complete.
@@ -23,10 +25,22 @@ beta-manual-qa.json.sha256
 
 The verifier rechecks package checksum/manifest/version/x64 identity, desktop entry-point SHA-256, packaged manual-QA-tool SHA-256, evidence sidecar, exact package/tool binding, baseline session/UAC state and every passing observation's human confirmation, note, timestamp and same-session/build/architecture bindings.
 
-## Show all group states
+## Retained-candidate use without a repository checkout
+
+From the extracted retained candidate artifact directory, first self-test the staged verifier:
 
 ```powershell
-.\scripts\beta-manual-gate-status.ps1 `
+.\beta-manual-gate-status.ps1 -Mode self-test
+```
+
+The retained artifact also contains `beta-manual-gate-status.ps1.sha256` and `BETA-MANUAL-GATE-STATUS.md.sha256`. They bind the staged files to the exact artifact contents; GitHub Actions additionally records the retained artifact digest and source commit. The standalone verifier remains a reporting/checking companion only and cannot create passing observations.
+
+## Show all group states
+
+From a repository checkout use `scripts\beta-manual-gate-status.ps1`; from an extracted retained candidate use the root-level `beta-manual-gate-status.ps1` copy:
+
+```powershell
+.\beta-manual-gate-status.ps1 `
   -Mode status `
   -EvidencePath .\beta-manual-qa.json `
   -PackagePath .\DragonDiskForge-win-x64.zip `
@@ -42,7 +56,7 @@ The output reports `COMPLETE`, `PENDING` or `FAILED` separately for:
 ## Verify one canonical group
 
 ```powershell
-.\scripts\beta-manual-gate-status.ps1 `
+.\beta-manual-gate-status.ps1 `
   -Mode verify-group `
   -Group uac `
   -EvidencePath .\beta-manual-qa.json `
@@ -56,8 +70,16 @@ A successful group verification is **not** a public-beta authorization. `docs/BE
 
 ## Contract test
 
+Repository checkout:
+
 ```powershell
 .\scripts\beta-manual-gate-status.ps1 -Mode self-test
 ```
 
-The dedicated GitHub Actions contract runs the self-test under PowerShell 7 and Windows PowerShell 5.1. It covers complete groups plus fail-closed pending evidence, short notes, cross-session observations, duplicate checks, package mismatch and missing human confirmation.
+Retained candidate artifact:
+
+```powershell
+.\beta-manual-gate-status.ps1 -Mode self-test
+```
+
+The dedicated GitHub Actions contract runs the self-test under PowerShell 7 and Windows PowerShell 5.1. It covers complete groups plus fail-closed pending evidence, short notes, cross-session observations, duplicate checks, package mismatch and missing human confirmation. The Beta Candidate workflow repeats the self-test against the staged retained copy before it can upload a selected candidate artifact.
