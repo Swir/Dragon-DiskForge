@@ -4,7 +4,7 @@ This document describes the final local promotion path for the first public GitH
 
 ## Purpose
 
-`scripts/beta-release-publish.ps1` turns an already verified retained candidate plus completed interactive QA evidence into a deterministic release bundle. `publish` mode can then create the GitHub pre-release through GitHub CLI, but only after the existing exact-candidate release-proof contract succeeds.
+`scripts/beta-release-publish.ps1` turns an already verified retained candidate plus completed interactive QA evidence into a deterministic release bundle. Public publication must go through `scripts/beta-release-publish-gated.ps1`, which first proves that the exact retained-candidate source commit has a complete green GitHub Actions run set and the required Build, Security Boundary, Release Proof and Release Publish contracts. Only then does it delegate to the existing exact-candidate publisher.
 
 The publisher is intentionally downstream of:
 
@@ -12,9 +12,10 @@ The publisher is intentionally downstream of:
 - the hash-bound beta QA kit;
 - schema-v3 manual QA evidence produced by the exact packaged QA tool;
 - `scripts/beta-release-proof.ps1 -Mode verify`;
+- a live exact-head GitHub Actions gate for the retained candidate source commit;
 - the source-derived supported capability matrix.
 
-It cannot convert pending or fabricated evidence into release readiness.
+It cannot convert pending or fabricated evidence, or red/pending/partial exact-head CI, into release readiness.
 
 ## Inputs
 
@@ -61,27 +62,51 @@ artifacts/release/0.5.0-beta.1/
 
 The release manifest binds the exact source commit, retained candidate run, candidate/QA-kit/manual-evidence hashes, package hash, release-notes hash and the bundled capability-matrix snapshot hash. The manual QA JSON itself is deliberately not copied into the public release bundle.
 
-## Publish the GitHub pre-release
+## Verify exact-head CI without publishing
 
-Only after reviewing the prepared bundle, run from an authenticated GitHub CLI session:
+Before publication, the live CI gate can be checked independently. This is read-only and creates no tag or Release:
 
 ```powershell
-.\scripts\beta-release-publish.ps1 `
+.\scripts\beta-release-publish-gated.ps1 `
+  -Mode verify-ci `
+  -ExpectedSourceCommit <40-character-retained-candidate-source-sha>
+```
+
+The verifier reads every GitHub Actions workflow run for that exact 40-character source SHA through authenticated `gh api`, follows pagination fail-closed, rejects an empty/partial/mixed-head run set, requires all exact-head runs to be `completed/success`, and additionally requires these named workflows to exist in the snapshot:
+
+- `Dragon DiskForge Build`;
+- `Dragon DiskForge Security Boundary`;
+- `Dragon DiskForge Beta Release Proof Contract`;
+- `Dragon DiskForge Beta Release Publish Contract`.
+
+A missing, queued, in-progress, cancelled, skipped or failed exact-head run blocks publication.
+
+## Publish the GitHub pre-release
+
+Only after reviewing the prepared bundle, run the gated publisher from an authenticated GitHub CLI session:
+
+```powershell
+.\scripts\beta-release-publish-gated.ps1 `
   -Mode publish `
   -ExpectedSourceCommit <40-character-retained-candidate-source-sha>
 ```
 
-Publish mode:
+Gated publish mode:
 
-1. re-runs the full release proof;
-2. rebuilds the release bundle from the verified inputs;
-3. requires authenticated `gh` access to exactly `Swir/Dragon-DiskForge`;
-4. refuses to overwrite an existing `0.5.0-beta.1` tag or Release;
-5. creates a GitHub **pre-release** targeted at the exact verified source commit;
-6. uploads the versioned Windows x64 ZIP, checksum, release manifest + checksum and capability-matrix snapshot;
-7. reads the tag and Release back and verifies the exact source commit, pre-release state and expected asset set.
+1. proves repository identity through authenticated `gh`;
+2. reads the complete GitHub Actions run set for the exact retained-candidate source commit;
+3. requires every exact-head run to be completed successfully and requires the four critical release workflows listed above;
+4. delegates to `scripts/beta-release-publish.ps1 -Mode publish` only after that CI gate is green;
+5. re-runs the full release proof;
+6. rebuilds the release bundle from the verified inputs;
+7. refuses to overwrite an existing `0.5.0-beta.1` tag or Release;
+8. creates a GitHub **pre-release** targeted at the exact verified source commit;
+9. uploads the versioned Windows x64 ZIP, checksum, release manifest + checksum and capability-matrix snapshot;
+10. reads the tag and Release back and verifies the exact source commit, pre-release state and expected asset set.
 
-A failed proof prevents publication. A pre-existing tag/release is treated as ambiguous state and is refused rather than overwritten. If GitHub accepts a new release but the immediate source/pre-release/asset read-back fails, the publisher attempts to delete only that newly created release and tag before returning failure.
+A failed proof or non-green exact-head CI prevents publication. A pre-existing tag/release is treated as ambiguous state and is refused rather than overwritten. If GitHub accepts a new release but the immediate source/pre-release/asset read-back fails, the underlying publisher attempts to delete only that newly created release and tag before returning failure.
+
+The lower-level `scripts/beta-release-publish.ps1 -Mode publish` remains an implementation detail for the gated wrapper. Do not use it as the final public-beta command because it does not perform the live exact-head Actions read-back itself.
 
 ## Public post-release verification
 
@@ -118,7 +143,7 @@ Record the successful command output with the release evidence. It includes the 
 
 ## CI contract
 
-`.github/workflows/beta-release-publish-contract.yml` runs the publisher self-test under both PowerShell 7 and Windows PowerShell 5.1. The self-test proves that:
+`.github/workflows/beta-release-publish-contract.yml` continues to run the deterministic bundle/publisher self-test under both PowerShell 7 and Windows PowerShell 5.1. The self-test proves that:
 
 - a verified fixture creates a hash-bound bundle and resolved release notes;
 - a failed release proof blocks preparation;
@@ -126,6 +151,8 @@ Record the successful command output with the release evidence. It includes the 
 - candidate/source mismatch is rejected;
 - non-canonical tag spelling is rejected;
 - the generated GitHub CLI argument set retains exact source, pre-release and asset binding.
+
+`.github/workflows/beta-exact-head-release-gate.yml` separately runs `beta-release-publish-gated.ps1 -Mode self-test` under PowerShell 7 and Windows PowerShell 5.1. Its offline contract accepts a complete green exact-head snapshot and rejects pending, failed, missing-required-workflow, mixed-head and empty snapshots. Real `verify-ci`/`publish` modes additionally perform the authenticated paginated GitHub Actions read-back immediately before publication.
 
 `.github/workflows/beta-post-release-verify-contract.yml` separately runs the public-verifier contract under PowerShell 7 and Windows PowerShell 5.1. Its offline self-test covers release-state validation, required-asset identity, exact-tag public URL scoping, release-manifest/source binding, checksum validation, canonical tooling URL construction and rejection of package tampering or unsafe tooling paths. The live `verify` path additionally performs the exact public verifier-tooling read-back described above. CI does **not** claim that a public Release exists; real `verify` mode is run only after publication.
 
