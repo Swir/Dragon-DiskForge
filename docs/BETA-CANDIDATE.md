@@ -109,9 +109,9 @@ Before starting manual QA, confirm that the retained artifact's `beta-candidate.
 
 ### Current retained checkpoint
 
-The authoritative retained candidate is **Beta Candidate run #208 (`35607989060`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35607989060`, built from `main` commit `9e0ea20b677e9f56bf5dc6f58bc55a4e51ca9998`. The nested package SHA-256 is `3ae71a7468b487500f6a3e4e80ce65fe752c6fbefc3729f5723b2caf5bbbf342`; the GitHub artifact SHA-256 is `67cdc1196d91444a513705b446d08c8d273dd146598b68492aa0c1398363ad13`.
+The authoritative retained candidate is **Beta Candidate run #227 (`35669955641`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35669955641`, built from `main` commit `4c90a46dcc3d5b3370b9696ad40f1df5bd4e3a6d`. The nested package SHA-256 is `3c8c9401bc136165a27fcddce4008cffe75b2498eb93f2e3dc1e098324de726a`; the GitHub artifact SHA-256 is `c54e028c156d3598d7d325344824e751ddd10ac655f1fc43f5032bc654691f4c`.
 
-Independent artifact read-back verified every supplied SHA-256 sidecar, package manifest schema 6, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop executable, no PDB payloads, the desktop entry-point hash `dc784c728cc446ceb658256eaaf346209d1178ae81847aca6379e1a8b9586866`, the packaged manual-QA-tool hash `525f632943ece5e2ae72ca350015bab49d2a8149a54aa98e9a8e1fd1788a6d94`, the packaged UAC-witness-tool hash `19897638afa6015b94355927ae07001b9ae6750242e510339966f0a2d288e431` and the packaged UAC before/after pair-verifier hash `e3e7f08cb278bf35e38bc425e5b4006f9da90da18a8bef2e718363b190833500`.
+Independent artifact read-back verified every supplied SHA-256 sidecar, package manifest schema 6, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop executable, no PDB payloads, the desktop entry-point hash `afce41d0c5d94b61f1fc9f5a20f560232589ac69cc1cd9d4b2d8511029466440`, the packaged manual-QA-tool hash `525f632943ece5e2ae72ca350015bab49d2a8149a54aa98e9a8e1fd1788a6d94`, the packaged UAC-witness-tool hash `19897638afa6015b94355927ae07001b9ae6750242e510339966f0a2d288e431` and the packaged UAC before/after pair-verifier hash `e3e7f08cb278bf35e38bc425e5b4006f9da90da18a8bef2e718363b190833500`.
 
 Canonical retained evidence remains schema v2. It is witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, live-session-bound to the package-specific live continuity manifest/verifier/helper/guide, Explorer-witness-bound to the package-specific verifier/helper/guide used to capture real File Explorer process/window/path evidence, and package-UAC-witness-bound to the exact normal-user UAC helper plus before/after pair verifier shipped inside the retained ZIP. None of these bindings claims a human gate.
 
@@ -187,7 +187,6 @@ Record a required observation only after physically performing it, and always su
 A record operation fails closed if the ZIP, package checksum, desktop entry point, packaged QA tool, currently running QA tool, Windows build, process architecture or desktop session no longer matches the evidence baseline. Passing observations additionally require an interactive unelevated session with UAC enabled and a non-service session id. This prevents stale or externally generated evidence from being filled in while a different candidate, different QA tool or different desktop session is actually under test.
 
 Use `-Mode list` to see the remaining checks. When all observations are complete, verify the evidence against the **same** ZIP/checksum pair with the same packaged tool:
-
 ```powershell
 .\tools\beta-manual-qa.ps1 -Mode verify `
   -PackagePath .\DragonDiskForge-win-x64.zip `
