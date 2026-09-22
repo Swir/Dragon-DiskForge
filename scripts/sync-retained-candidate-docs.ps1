@@ -216,6 +216,13 @@ function Sync-RepositoryDocs {
         $expectedBlock = New-RetainedBlock -Evidence $E -Link $spec.Link -Bullet:$spec.Bullet
         $updated = Replace-SingleMarkedBlock -Text $text -Replacement $expectedBlock -Label $spec.Path
         if ($spec.Path -in @('docs/ROADMAP.md', 'docs/STATUS.md', 'docs/MILESTONES.md', 'CHANGELOG.md')) { $updated = Add-HistoryLine -Text $updated }
+        if ($spec.Path -in @('docs/ROADMAP.md', 'docs/MILESTONES.md', 'docs/BETA-RELEASE.md')) {
+            $narrativePattern = 'Candidate #\d+ is the current retained package-bound target'
+            $narrativeMatches = [regex]::Matches($updated, $narrativePattern)
+            if ($narrativeMatches.Count -ne 1) { throw "$($spec.Path) must contain exactly one active retained-candidate narrative; found $($narrativeMatches.Count)." }
+            $replacement = "Candidate #$($E.workflowRunNumber) is the current retained package-bound target"
+            $updated = [regex]::Replace($updated, $narrativePattern, $replacement, 1)
+        }
         if ($Apply) { Write-Utf8NoBom -Path $path -Text $updated }
         elseif (-not [string]::Equals($text, $updated, [System.StringComparison]::Ordinal)) { throw "$($spec.Path) retained-candidate documentation is stale." }
     }
@@ -317,6 +324,15 @@ function Invoke-SelfTest {
         $releaseText = Get-Content -LiteralPath (Join-Path $tempRoot 'docs/BETA-RELEASE.md') -Raw
         if (-not $releaseText.Contains(('a' * 64)) -or -not $releaseText.Contains(('b' * 64)) -or $releaseText -notmatch '(?i)pair verifier') {
             throw 'Schema-6 beta release read-back did not bind both UAC provenance hashes.'
+        }
+
+        foreach ($relative in @('docs/ROADMAP.md', 'docs/MILESTONES.md', 'docs/BETA-RELEASE.md')) {
+            $narrativeText = Get-Content -LiteralPath (Join-Path $tempRoot $relative) -Raw
+            $expectedNarrative = "Candidate #$($e6.workflowRunNumber) is the current retained package-bound target"
+            $narrativeMatches = [regex]::Matches($narrativeText, 'Candidate #\d+ is the current retained package-bound target')
+            if ($narrativeMatches.Count -ne 1 -or $narrativeMatches[0].Value -ne $expectedNarrative) {
+                throw "$relative did not synchronize the active retained-candidate narrative to run #$($e6.workflowRunNumber)."
+            }
         }
 
         $missingPair = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
