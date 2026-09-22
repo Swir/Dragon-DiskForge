@@ -30,7 +30,7 @@ Dragon DiskForge is a WinUI 3 / .NET 10 desktop application and shared Core tool
 Source and clean-package metadata are promoted to the `0.5.0-beta.1` candidate suffix. A retained, independently verified Windows x64 candidate exists from green `main`, but it is **not a public release**; interactive clean-desktop, normal-user UAC, real cross-process Explorer drag-out and final GitHub pre-release gates remain tracked in [`docs/BETA-RELEASE.md`](docs/BETA-RELEASE.md).
 
 <!-- retained-beta-candidate:start -->
-Current retained candidate: Beta Candidate run #208 (`35607989060`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35607989060`, built from `main` source commit `9e0ea20b677e9f56bf5dc6f58bc55a4e51ca9998`; nested package SHA-256 `3ae71a7468b487500f6a3e4e80ce65fe752c6fbefc3729f5723b2caf5bbbf342`. Evidence is witness-bound (schema v2), archive-bound, live-session-bound, Explorer-witness-bound and package-UAC-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity, package-specific real-Explorer witness, packaged normal-user UAC witness and packaged UAC before/after pair-verifier companions; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
+Current retained candidate: Beta Candidate run #227 (`35669955641`), artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-35669955641`, built from `main` source commit `4c90a46dcc3d5b3370b9696ad40f1df5bd4e3a6d`; nested package SHA-256 `3c8c9401bc136165a27fcddce4008cffe75b2498eb93f2e3dc1e098324de726a`. Evidence is witness-bound (schema v2), archive-bound, live-session-bound, Explorer-witness-bound and package-UAC-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity, package-specific real-Explorer witness, packaged normal-user UAC witness and packaged UAC before/after pair-verifier companions; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [`docs/retained-beta-candidate.json`](docs/retained-beta-candidate.json).
 <!-- retained-beta-candidate:end -->
 
 ## Project progress — 83% toward 1.0
@@ -107,7 +107,6 @@ The clean Windows package includes a self-contained `cli/dragon-diskforge.exe` t
 ```
 
 Image inspection/verification commands remain read-only. The CLI also exposes narrowly scoped local application-state commands; it does not expose Create/Convert or physical-media mutation. See [`docs/CLI.md`](docs/CLI.md).
-
 ### PowerShell-friendly automation contract ✅
 
 - text or one complete JSON document on stdout
@@ -237,7 +236,6 @@ Development is tracked in [`docs/ROADMAP.md`](docs/ROADMAP.md), with execution s
 <img width="100%" src="https://raw.githubusercontent.com/Swir/Swir/main/assets/power-divider-v4.svg" alt="SWIR electric divider" />
 
 <div align="center">
-
 ### `INSPECT • VERIFY • MOUNT • EVOLVE`
 
 ⭐ **If Dragon DiskForge is useful to you, consider leaving a star.**
