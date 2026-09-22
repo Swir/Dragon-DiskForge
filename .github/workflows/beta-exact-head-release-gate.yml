@@ -1,0 +1,32 @@
+name: Dragon DiskForge Beta Exact-Head Release Gate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: dragon-beta-exact-head-release-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: Fail-closed exact-head publish gate contract
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 exact-head gate self-test
+        shell: pwsh
+        run: ./scripts/beta-release-publish-gated.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 exact-head gate self-test
+        shell: powershell
+        run: .\scripts\beta-release-publish-gated.ps1 -Mode self-test
