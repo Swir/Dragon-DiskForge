@@ -34,6 +34,22 @@ jobs:
         shell: pwsh
         run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
 
+      - name: Export synchronized retained-candidate projection
+        uses: actions/upload-artifact@v4
+        with:
+          name: retained-candidate-docs-sync-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            README.md
+            CHANGELOG.md
+            docs/ROADMAP.md
+            docs/STATUS.md
+            docs/MILESTONES.md
+            docs/BETA-RELEASE.md
+            docs/BETA-CANDIDATE.md
+            docs/retained-beta-candidate.json
+
       - name: Verify active retained-candidate narrative
         shell: pwsh
         run: |
