@@ -53,6 +53,22 @@ The output reports `COMPLETE`, `PENDING` or `FAILED` separately for:
 - `uac` — 6 checks
 - `drag` — 6 checks
 
+## Show the next required observation
+
+To avoid hunting through all 14 checks, ask the standalone verifier for the highest-priority unresolved item:
+
+```powershell
+.\beta-manual-gate-status.ps1 `
+  -Mode next `
+  -EvidencePath .\beta-manual-qa.json `
+  -PackagePath .\DragonDiskForge-win-x64.zip `
+  -ChecksumFile .\DragonDiskForge-win-x64.zip.sha256
+```
+
+`next` never records or auto-passes anything. It verifies the exact package/evidence binding first, prioritizes an existing failed observation ahead of pending observations, then prints one canonical check ID, its acceptance statement and an example record command for the exact packaged `tools\beta-manual-qa.ps1`.
+
+A human must still perform the action, explicitly confirm the result and provide a real observation note in the same unelevated Windows session. The normal `status` mode also lists every unresolved check with its current state and acceptance statement.
+
 ## Verify one canonical group
 
 ```powershell

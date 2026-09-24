@@ -48,6 +48,7 @@ The project follows semantic versioning while it evolves toward 1.0.
 - fail-closed `scripts/accessibility-contract.ps1` regression contract for labels, live regions, collection/progress names and per-view access-key uniqueness
 - dedicated **Dragon DiskForge Accessibility Contract** workflow that validates the XAML contract and compiles the WinUI x64 Release app
 - fail-closed `scripts/beta-manual-qa.ps1` evidence workflow for exact-package clean-desktop, normal-user UAC and cross-process drag-out observations
+- retained-candidate manual-gate status tooling now lists unresolved observations and exposes a fail-closed `next` mode that points to the highest-priority real human check without auto-recording or claiming completion
 - dedicated **Dragon DiskForge Beta Manual QA Contract** workflow that self-tests the evidence contract under PowerShell 7 and Windows PowerShell 5.1
 - external `scripts/beta-qa-session.ps1` exact-candidate preparation helper that verifies retained-package identity/runtime completeness, enforces an interactive unelevated UAC-enabled session, initializes evidence through the candidate's own hash-bound QA tool, performs a non-authoritative liveness preflight and opens an isolated Explorer drop target without auto-passing any human gate
 - session-baseline binding for every passing interactive beta-QA observation, preventing evidence from mixing Windows desktop sessions while preserving exact package/tool/build/architecture/UAC bindings

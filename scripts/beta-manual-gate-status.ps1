@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("status", "verify-group", "self-test")]
+    [ValidateSet("status", "next", "verify-group", "self-test")]
     [string]$Mode = "status",
 
     [string]$EvidencePath = "artifacts/manual-qa/beta-manual-qa.json",
@@ -21,20 +21,20 @@ $Script:MaxObservationNoteLength = 1000
 
 function Get-RequiredChecks {
     return @(
-        [pscustomobject]@{ id = "desktop.clean-launch"; group = "desktop" },
-        [pscustomobject]@{ id = "desktop.basic-regression"; group = "desktop" },
-        [pscustomobject]@{ id = "uac.iso-no-prompt"; group = "uac" },
-        [pscustomobject]@{ id = "uac.vhd-cancel"; group = "uac" },
-        [pscustomobject]@{ id = "uac.vhd-approve-readonly"; group = "uac" },
-        [pscustomobject]@{ id = "uac.vhdx-cancel"; group = "uac" },
-        [pscustomobject]@{ id = "uac.vhdx-approve-readonly"; group = "uac" },
-        [pscustomobject]@{ id = "uac.unmount-refresh"; group = "uac" },
-        [pscustomobject]@{ id = "drag.file-explorer-copy"; group = "drag" },
-        [pscustomobject]@{ id = "drag.folder-explorer-copy"; group = "drag" },
-        [pscustomobject]@{ id = "drag.desktop-copy"; group = "drag" },
-        [pscustomobject]@{ id = "drag.cancel-no-mutation"; group = "drag" },
-        [pscustomobject]@{ id = "drag.reparse-blocked"; group = "drag" },
-        [pscustomobject]@{ id = "drag.stale-blocked"; group = "drag" }
+        [pscustomobject]@{ id = "desktop.clean-launch"; group = "desktop"; description = "Clean supported Windows desktop launch succeeds from the packaged app without developer tooling." },
+        [pscustomobject]@{ id = "desktop.basic-regression"; group = "desktop"; description = "Open, mount, explore, verify and analyze complete successfully in the packaged WinUI app." },
+        [pscustomobject]@{ id = "uac.iso-no-prompt"; group = "uac"; description = "ISO mount/unmount completes without an unnecessary administrator prompt." },
+        [pscustomobject]@{ id = "uac.vhd-cancel"; group = "uac"; description = "Cancelling VHD elevation leaves the image detached and reports cancellation cleanly." },
+        [pscustomobject]@{ id = "uac.vhd-approve-readonly"; group = "uac"; description = "Approving VHD elevation mounts read-only and refreshes the real mounted state." },
+        [pscustomobject]@{ id = "uac.vhdx-cancel"; group = "uac"; description = "Cancelling VHDX elevation leaves the image detached and reports cancellation cleanly." },
+        [pscustomobject]@{ id = "uac.vhdx-approve-readonly"; group = "uac"; description = "Approving VHDX elevation mounts read-only and refreshes the real mounted state." },
+        [pscustomobject]@{ id = "uac.unmount-refresh"; group = "uac"; description = "VHD/VHDX unmount requests elevation only when required and refreshes to the real detached state." },
+        [pscustomobject]@{ id = "drag.file-explorer-copy"; group = "drag"; description = "A file dragged from Dragon Explorer to Windows Explorer lands as Copy and source remains unchanged." },
+        [pscustomobject]@{ id = "drag.folder-explorer-copy"; group = "drag"; description = "A folder dragged from Dragon Explorer to Windows Explorer lands as Copy and source remains unchanged." },
+        [pscustomobject]@{ id = "drag.desktop-copy"; group = "drag"; description = "Drag-out to the Windows desktop behaves as Copy and preserves the mounted source." },
+        [pscustomobject]@{ id = "drag.cancel-no-mutation"; group = "drag"; description = "Cancelling an in-progress drag creates no destination item and no false success state." },
+        [pscustomobject]@{ id = "drag.reparse-blocked"; group = "drag"; description = "A reparse point or junction source is blocked from drag-out." },
+        [pscustomobject]@{ id = "drag.stale-blocked"; group = "drag"; description = "A stale or invalidated source cannot be dragged successfully after state refresh." }
     )
 }
 
@@ -259,6 +259,32 @@ function Get-GroupResult {
     }
 }
 
+function Get-UnresolvedChecks {
+    param([Parameter(Mandatory = $true)]$Evidence)
+
+    $catalog = @(Get-RequiredChecks)
+    $unresolved = @()
+    for ($index = 0; $index -lt $catalog.Count; $index++) {
+        $definition = $catalog[$index]
+        $record = @($Evidence.checks | Where-Object { [string]$_.id -eq [string]$definition.id })[0]
+        if ([string]$record.status -eq "pass") {
+            continue
+        }
+
+        $priority = if ([string]$record.status -eq "fail") { 0 } else { 1 }
+        $unresolved += [pscustomobject]@{
+            id = [string]$definition.id
+            group = [string]$definition.group
+            description = [string]$definition.description
+            status = [string]$record.status
+            priority = $priority
+            order = $index
+        }
+    }
+
+    return @($unresolved | Sort-Object priority, order)
+}
+
 function Copy-Object {
     param([Parameter(Mandatory = $true)]$Value)
     return ($Value | ConvertTo-Json -Depth 12 | ConvertFrom-Json)
@@ -337,6 +363,18 @@ function Invoke-SelfTest {
     if ((Get-GroupResult -Evidence $pending -GroupName "uac").complete) { throw "Self-test failed: pending UAC evidence was marked complete." }
     if (-not (Get-GroupResult -Evidence $pending -GroupName "desktop").complete) { throw "Self-test failed: independent desktop completion was lost." }
 
+    $nextPending = @(Get-UnresolvedChecks -Evidence $pending)
+    if ($nextPending.Count -ne 1 -or [string]$nextPending[0].id -ne "uac.vhd-cancel") {
+        throw "Self-test failed: next-action selection did not identify the only pending check."
+    }
+
+    $failedFirst = Copy-Object -Value $pending
+    ($failedFirst.checks | Where-Object { $_.id -eq "drag.desktop-copy" }).status = "fail"
+    $nextFailed = @(Get-UnresolvedChecks -Evidence $failedFirst)
+    if ($nextFailed.Count -ne 2 -or [string]$nextFailed[0].id -ne "drag.desktop-copy" -or [string]$nextFailed[0].status -ne "fail") {
+        throw "Self-test failed: failed observations were not prioritized ahead of pending observations."
+    }
+
     $shortNote = Copy-Object -Value $evidence
     ($shortNote.checks | Where-Object { $_.id -eq "drag.desktop-copy" }).note = "too short"
     Assert-Throws -Name "short pass note" -Action { Assert-EvidenceContract -Evidence $shortNote -PackageIdentity $package -Version $package.version }
@@ -377,11 +415,44 @@ $evidence = Get-Content -LiteralPath (Resolve-Path -LiteralPath $EvidencePath).P
 $identity = Get-PackageIdentity -ZipPath $PackagePath -SidecarPath $ChecksumFile -Version $ExpectedVersion
 Assert-EvidenceContract -Evidence $evidence -PackageIdentity $identity -Version $ExpectedVersion
 
+if ($Mode -eq "next") {
+    $unresolved = @(Get-UnresolvedChecks -Evidence $evidence)
+    if ($unresolved.Count -eq 0) {
+        Write-Host "All 14 interactive manual-QA checks are complete for this exact package/evidence set."
+        Write-Host "This does not by itself publish or authorize the beta release."
+        exit 0
+    }
+
+    $next = $unresolved[0]
+    Write-Host "NEXT MANUAL QA CHECK"
+    Write-Host "ID: $($next.id)"
+    Write-Host "Group: $($next.group)"
+    Write-Host "Current status: $($next.status)"
+    Write-Host "Observe: $($next.description)"
+    Write-Host ""
+    Write-Host "Record only after a real human observation, in the same unelevated Windows session, using the exact packaged tools\beta-manual-qa.ps1."
+    Write-Host "Example record command:"
+    Write-Host ".\tools\beta-manual-qa.ps1 -Mode record -EvidencePath <evidence.json> -PackagePath <DragonDiskForge-win-x64.zip> -ChecksumFile <DragonDiskForge-win-x64.zip.sha256> -Check '$($next.id)' -Result pass -HumanConfirmed -Note '<what you observed>'"
+    Write-Host ""
+    Write-Host "Remaining unresolved checks: $($unresolved.Count)"
+    exit 0
+}
+
 if ($Mode -eq "status") {
     foreach ($name in @("desktop", "uac", "drag")) {
         $result = Get-GroupResult -Evidence $evidence -GroupName $name
         $state = if ($result.complete) { "COMPLETE" } elseif ($result.failed -gt 0) { "FAILED" } else { "PENDING" }
         Write-Host ("{0,-8} {1,-8} {2}/{3} passed; {4} failed; {5} pending" -f $name, $state, $result.passed, $result.required, $result.failed, $result.pending)
+    }
+    $unresolved = @(Get-UnresolvedChecks -Evidence $evidence)
+    if ($unresolved.Count -gt 0) {
+        Write-Host "Unresolved checks:"
+        foreach ($item in $unresolved) {
+            Write-Host ("- [{0}] {1} ({2}) - {3}" -f $item.status.ToUpperInvariant(), $item.id, $item.group, $item.description)
+        }
+    }
+    else {
+        Write-Host "Unresolved checks: none"
     }
     Write-Host "Package SHA-256: $($identity.sha256)"
     Write-Host "Evidence SHA-256: $evidenceHash"
