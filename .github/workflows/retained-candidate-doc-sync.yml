@@ -2,14 +2,12 @@ name: Dragon DiskForge Retained Candidate Documentation Sync
 
 on:
   push:
-    branches:
-      - main
-      - automation/retain-candidate-266
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: dragon-retained-doc-sync-${{ github.workflow }}-${{ github.ref }}
@@ -35,46 +33,6 @@ jobs:
       - name: Apply deterministic retained-candidate projection
         shell: pwsh
         run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
-
-      - name: Export synchronized retained-candidate projection
-        uses: actions/upload-artifact@v4
-        with:
-          name: retained-candidate-docs-sync-${{ github.run_id }}
-          if-no-files-found: error
-          retention-days: 1
-          path: |
-            README.md
-            CHANGELOG.md
-            docs/ROADMAP.md
-            docs/STATUS.md
-            docs/MILESTONES.md
-            docs/BETA-RELEASE.md
-            docs/BETA-CANDIDATE.md
-            docs/retained-beta-candidate.json
-
-      - name: Commit synchronized retained-candidate projection
-        if: github.event_name == 'push' && github.ref_name == 'automation/retain-candidate-266'
-        shell: bash
-        run: |
-          paths=(
-            README.md
-            CHANGELOG.md
-            docs/ROADMAP.md
-            docs/STATUS.md
-            docs/MILESTONES.md
-            docs/BETA-RELEASE.md
-            docs/BETA-CANDIDATE.md
-            .github/workflows/beta-retained-explorer-currency.yml
-          )
-          if git diff --quiet -- "${paths[@]}"; then
-            echo "Retained-candidate projection is already synchronized."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "${paths[@]}"
-          git commit -m "docs: synchronize Candidate #266 projection"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Verify active retained-candidate narrative
         shell: pwsh
