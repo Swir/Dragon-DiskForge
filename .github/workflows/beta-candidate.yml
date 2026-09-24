@@ -172,6 +172,29 @@ jobs:
         shell: powershell
         run: .\artifacts\windows\beta-manual-gate-status.ps1 -Mode self-test
 
+      - name: Stage retained QA workspace router companion
+        shell: pwsh
+        run: |
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          $files = @(
+            @{ Source = 'scripts/beta-qa-operator.ps1'; Destination = 'artifacts/windows/beta-qa-operator.ps1' },
+            @{ Source = 'docs/BETA-QA-OPERATOR.md'; Destination = 'artifacts/windows/BETA-QA-OPERATOR.md' }
+          )
+          foreach ($file in $files) {
+            Copy-Item -LiteralPath $file.Source -Destination $file.Destination -Force
+            $hash = (Get-FileHash -LiteralPath $file.Destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            $leaf = [System.IO.Path]::GetFileName($file.Destination)
+            [System.IO.File]::WriteAllText("$($file.Destination).sha256", "$hash  $leaf$([Environment]::NewLine)", $utf8)
+          }
+          if (-not (Test-Path -LiteralPath 'artifacts/windows/beta-manual-gate-status.ps1' -PathType Leaf)) {
+            throw 'Retained QA workspace router is missing its colocated manual-gate verifier.'
+          }
+          ./artifacts/windows/beta-qa-operator.ps1 -Mode self-test
+
+      - name: Verify retained QA workspace router companion with Windows PowerShell 5.1
+        shell: powershell
+        run: .\artifacts\windows\beta-qa-operator.ps1 -Mode self-test
+
       - name: Build package-bound Explorer witness companion
         shell: pwsh
         run: ./scripts/beta-qa-explorer-kit.ps1 -Mode build
@@ -244,6 +267,10 @@ jobs:
             artifacts/windows/beta-manual-gate-status.ps1.sha256
             artifacts/windows/BETA-MANUAL-GATE-STATUS.md
             artifacts/windows/BETA-MANUAL-GATE-STATUS.md.sha256
+            artifacts/windows/beta-qa-operator.ps1
+            artifacts/windows/beta-qa-operator.ps1.sha256
+            artifacts/windows/BETA-QA-OPERATOR.md
+            artifacts/windows/BETA-QA-OPERATOR.md.sha256
             artifacts/windows/beta-qa-explorer-kit.json
             artifacts/windows/beta-qa-explorer-kit.json.sha256
             artifacts/windows/beta-qa-explorer-kit.ps1
@@ -283,5 +310,5 @@ jobs:
         if: steps.retention-policy.outputs.retain != 'true'
         shell: pwsh
         run: |
-          Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit, retained manual-gate status companion, package-bound Explorer witness companion, live-session companion, desktop-witness companion and portable evidence-archive kit build/verification passed."
+          Write-Host "Candidate package, metadata, schema-v2 hash-bound QA kit, retained manual-gate status companion, retained QA workspace-router companion, package-bound Explorer witness companion, live-session companion, desktop-witness companion and portable evidence-archive kit build/verification passed."
           Write-Host "No retained 160+ MiB artifact was uploaded because this run was not explicitly selected by the fail-closed retention policy."

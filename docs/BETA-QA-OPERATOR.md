@@ -8,13 +8,25 @@ It does **not** create observations, auto-pass a gate, modify evidence, change r
 
 The retained QA session already records the exact candidate package, checksum sidecar and schema-v3 manual-QA evidence file. Re-entering all three paths for every `status`, `next` or group-verification call adds avoidable operator error while the two 0.9 human gates remain open.
 
-The router turns the prepared workspace into the input contract:
+The router turns the prepared workspace into the input contract. From a repository checkout:
 
 ```powershell
 .\scripts\beta-qa-operator.ps1 -Mode next -WorkspacePath <session-workspace>
 ```
 
 It validates session schema 1, refuses missing package/checksum/evidence files and then lets `beta-manual-gate-status.ps1` perform the authoritative package/evidence binding checks.
+
+## Retained candidate artifact
+
+The beta-candidate workflow stages the router together with its delegated verifier in the root of an explicitly retained candidate artifact. Each companion file has its own SHA-256 sidecar, so the downloaded operator surface can be checked independently without modifying the immutable candidate ZIP.
+
+After downloading and extracting the retained artifact, run:
+
+```powershell
+.\beta-qa-operator.ps1 -Mode next -WorkspacePath <session-workspace>
+```
+
+The default verifier path resolves to the colocated `beta-manual-gate-status.ps1`; no repository checkout or path re-entry is required. The artifact-root helper still reads the exact package/checksum/evidence paths from the prepared session and cannot create acceptance evidence.
 
 ## Commands
 
@@ -37,6 +49,8 @@ Verify one group only after its real human observations are expected to be compl
 .\scripts\beta-qa-operator.ps1 -Mode verify-group -Group drag -WorkspacePath <session-workspace>
 .\scripts\beta-qa-operator.ps1 -Mode verify-group -Group desktop -WorkspacePath <session-workspace>
 ```
+
+When working from an extracted retained candidate artifact, use the same commands with `\.\beta-qa-operator.ps1` instead of `\.\scripts\beta-qa-operator.ps1`.
 
 Run the routing contract self-test:
 
