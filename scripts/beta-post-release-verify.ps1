@@ -336,7 +336,7 @@ function Assert-DownloadedReleaseBundle {
     if ($manifestInstallerHash -ne $actualInstallerHash) { throw 'Public release manifest installerSha256 does not match the downloaded installer.' }
     if ([string]$manifest.installerScope -ne 'per-user') { throw 'Public release manifest installerScope is not per-user.' }
 
-    foreach ($proofField in @('candidateMetadataSha256', 'qaKitManifestSha256', 'manualQaEvidenceSha256', 'releaseNotesSha256')) {
+    foreach ($proofField in @('candidateMetadataSha256', 'qaKitManifestSha256', 'retainedEvidenceSha256', 'manualQaEvidenceSha256', 'releaseNotesSha256')) {
         $null = Assert-HexSha256 -Value ([string]$manifest.$proofField) -Label "Public release manifest $proofField"
     }
 
@@ -568,6 +568,7 @@ function Invoke-SelfTest {
             candidateWorkflowRunId = '123456'
             candidateMetadataSha256 = ('1' * 64)
             qaKitManifestSha256 = ('2' * 64)
+            retainedEvidenceSha256 = ('5' * 64)
             manualQaEvidenceSha256 = ('3' * 64)
             packageFile = $packageName
             packageSha256 = $packageHash

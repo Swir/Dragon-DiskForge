@@ -53,6 +53,7 @@ function Read-RetainedEvidence {
     foreach ($item in @(
         @{ Value = [string]$e.artifactDigestSha256; Label = 'artifactDigestSha256' },
         @{ Value = [string]$e.packageSha256; Label = 'packageSha256' },
+        @{ Value = [string]$e.installerSha256; Label = 'installerSha256' },
         @{ Value = [string]$e.candidateMetadataSha256; Label = 'candidateMetadataSha256' },
         @{ Value = [string]$e.qaKitManifestSha256; Label = 'qaKitManifestSha256' },
         @{ Value = [string]$e.liveKitManifestSha256; Label = 'liveKitManifestSha256' },
@@ -73,6 +74,11 @@ function Read-RetainedEvidence {
         @{ Value = [string]$e.entryPointSha256; Label = 'entryPointSha256' },
         @{ Value = [string]$e.betaManualQaEntryPointSha256; Label = 'betaManualQaEntryPointSha256' }
     )) { $null = Assert-HexSha256 -Value $item.Value -Label $item.Label }
+
+    if ([string]$e.installerFile -ne "DragonDiskForge-$($e.version)-win-x64-setup.exe") {
+        throw 'installerFile does not match the versioned Windows x64 installer name.'
+    }
+    if ([string]$e.installerScope -ne 'per-user') { throw "installerScope must be 'per-user'." }
 
     $packageManifestSchema = [int]$e.packageManifestSchema
     if ($packageManifestSchema -ne 5 -and $packageManifestSchema -ne 6) { throw 'packageManifestSchema must be 5 or 6.' }
@@ -104,12 +110,12 @@ function New-RetainedBlock {
     param([Parameter(Mandatory = $true)]$Evidence, [Parameter(Mandatory = $true)][string]$Link, [switch]$Bullet)
     $prefix = if ($Bullet) { '- ' } else { '' }
     $binding = if ([int]$Evidence.packageManifestSchema -ge 6) {
-        'Evidence is witness-bound (schema v2), archive-bound, live-session-bound, Explorer-witness-bound and package-UAC-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity, package-specific real-Explorer witness, packaged normal-user UAC witness and packaged UAC before/after pair-verifier companions'
+        'Evidence is installer-bound, witness-bound (schema v2), archive-bound, live-session-bound, Explorer-witness-bound and package-UAC-witness-bound to the per-user setup executable, packaged desktop witness, portable evidence-archive, package-specific live continuity, package-specific real-Explorer witness, packaged normal-user UAC witness and packaged UAC before/after pair-verifier companions'
     }
     else {
-        'Evidence is witness-bound (schema v2), archive-bound, live-session-bound and Explorer-witness-bound to the packaged desktop witness, portable evidence-archive, package-specific live continuity and package-specific real-Explorer witness companions'
+        'Evidence is installer-bound, witness-bound (schema v2), archive-bound, live-session-bound and Explorer-witness-bound to the per-user setup executable, packaged desktop witness, portable evidence-archive, package-specific live continuity and package-specific real-Explorer witness companions'
     }
-    $line = "${prefix}Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) (``$($Evidence.workflowRunId)``), artifact ``$($Evidence.artifactName)``, built from ``main`` source commit ``$($Evidence.sourceCommit)``; nested package SHA-256 ``$($Evidence.packageSha256)``. $binding; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [``$Link``]($Link)."
+    $line = "${prefix}Current retained candidate: Beta Candidate run #$($Evidence.workflowRunNumber) (``$($Evidence.workflowRunId)``), artifact ``$($Evidence.artifactName)``, built from ``main`` source commit ``$($Evidence.sourceCommit)``; nested package SHA-256 ``$($Evidence.packageSha256)``; per-user installer ``$($Evidence.installerFile)`` SHA-256 ``$($Evidence.installerSha256)``. $binding; no human gate is claimed. It is a non-public engineering candidate, not a public release. Authoritative retained evidence: [``$Link``]($Link)."
     return "$StartMarker`n$line`n$EndMarker"
 }
 
@@ -147,11 +153,11 @@ function New-CandidateCheckpoint {
         return @"
 ### Current retained checkpoint
 
-The authoritative retained candidate is **Beta Candidate run #$($E.workflowRunNumber) (``$($E.workflowRunId)``)**, artifact ``$($E.artifactName)``, built from ``main`` commit ``$($E.sourceCommit)``. The nested package SHA-256 is ``$($E.packageSha256)``; the GitHub artifact SHA-256 is ``$($E.artifactDigestSha256)``.
+The authoritative retained candidate is **Beta Candidate run #$($E.workflowRunNumber) (``$($E.workflowRunId)``)**, artifact ``$($E.artifactName)``, built from ``main`` commit ``$($E.sourceCommit)``. The nested package SHA-256 is ``$($E.packageSha256)``; the per-user installer ``$($E.installerFile)`` is bound as ``$($E.installerSha256)``; the GitHub artifact SHA-256 is ``$($E.artifactDigestSha256)``.
 
 Independent artifact read-back verified every supplied SHA-256 sidecar, package manifest schema $($E.packageManifestSchema), x64 architecture, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop executable, no PDB payloads, the desktop entry-point hash ``$($E.entryPointSha256)``, the packaged manual-QA-tool hash ``$($E.betaManualQaEntryPointSha256)``, the packaged UAC-witness-tool hash ``$($E.betaUacWitnessEntryPointSha256)`` and the packaged UAC before/after pair-verifier hash ``$($E.betaUacPairVerifierEntryPointSha256)``.
 
-Canonical retained evidence remains schema v2. It is witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, live-session-bound to the package-specific live continuity manifest/verifier/helper/guide, Explorer-witness-bound to the package-specific verifier/helper/guide used to capture real File Explorer process/window/path evidence, and package-UAC-witness-bound to the exact normal-user UAC helper plus before/after pair verifier shipped inside the retained ZIP. None of these bindings claims a human gate.
+Canonical retained evidence remains schema v2. It is installer-bound to the verified per-user setup executable, witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, live-session-bound to the package-specific live continuity manifest/verifier/helper/guide, Explorer-witness-bound to the package-specific verifier/helper/guide used to capture real File Explorer process/window/path evidence, and package-UAC-witness-bound to the exact normal-user UAC helper plus before/after pair verifier shipped inside the retained ZIP. None of these bindings claims a human gate.
 
 The authoritative machine-readable record is [``retained-beta-candidate.json``](retained-beta-candidate.json). It deliberately keeps ``publicRelease=false`` and ``betaReady=false``.
 
@@ -181,7 +187,7 @@ This reselection does not complete or waive any manual release gate. Clean-deskt
 function New-ReleaseReadback {
     param([Parameter(Mandatory = $true)]$E)
     if ([int]$E.packageManifestSchema -ge 6) {
-        return "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($E.artifactDigestSha256)``, package manifest schema $($E.packageManifestSchema), x64, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA/UAC-witness/UAC-pair-verifier entry points. The nested package SHA-256 is ``$($E.packageSha256)``; the desktop entry point is bound as ``$($E.entryPointSha256)``, the packaged manual-QA tool as ``$($E.betaManualQaEntryPointSha256)``, the packaged UAC witness tool as ``$($E.betaUacWitnessEntryPointSha256)`` and the packaged UAC before/after pair verifier as ``$($E.betaUacPairVerifierEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($E.witnessKitManifestSha256)``, verifier ``$($E.witnessVerifierSha256)``, desktop witness helper ``$($E.desktopWitnessHelperSha256)`` and guide ``$($E.desktopWitnessGuideSha256)``. Archive binding additionally records archive-kit manifest SHA-256 ``$($E.archiveKitManifestSha256)``, verifier ``$($E.archiveVerifierSha256)``, helper ``$($E.archiveHelperSha256)`` and guide ``$($E.archiveGuideSha256)``. Live-session binding additionally records live-kit manifest SHA-256 ``$($E.liveKitManifestSha256)``, verifier ``$($E.liveVerifierSha256)``, live-session helper ``$($E.liveSessionHelperSha256)`` and guide ``$($E.liveSessionGuideSha256)``. Explorer-witness binding additionally records verifier ``$($E.explorerVerifierSha256)``, real-Explorer witness helper ``$($E.explorerWitnessHelperSha256)`` and guide ``$($E.explorerWitnessGuideSha256)``. The retained package also binds the exact normal-user UAC witness script and UAC pair verifier shipped inside the ZIP. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch, UAC or real Explorer drag-out gates."
+        return "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($E.artifactDigestSha256)``, package manifest schema $($E.packageManifestSchema), x64, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA/UAC-witness/UAC-pair-verifier entry points. The nested package SHA-256 is ``$($E.packageSha256)``; the per-user installer ``$($E.installerFile)`` is installer-bound as ``$($E.installerSha256)``; the desktop entry point is bound as ``$($E.entryPointSha256)``, the packaged manual-QA tool as ``$($E.betaManualQaEntryPointSha256)``, the packaged UAC witness tool as ``$($E.betaUacWitnessEntryPointSha256)`` and the packaged UAC before/after pair verifier as ``$($E.betaUacPairVerifierEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($E.witnessKitManifestSha256)``, verifier ``$($E.witnessVerifierSha256)``, desktop witness helper ``$($E.desktopWitnessHelperSha256)`` and guide ``$($E.desktopWitnessGuideSha256)``. Archive binding additionally records archive-kit manifest SHA-256 ``$($E.archiveKitManifestSha256)``, verifier ``$($E.archiveVerifierSha256)``, helper ``$($E.archiveHelperSha256)`` and guide ``$($E.archiveGuideSha256)``. Live-session binding additionally records live-kit manifest SHA-256 ``$($E.liveKitManifestSha256)``, verifier ``$($E.liveVerifierSha256)``, live-session helper ``$($E.liveSessionHelperSha256)`` and guide ``$($E.liveSessionGuideSha256)``. Explorer-witness binding additionally records verifier ``$($E.explorerVerifierSha256)``, real-Explorer witness helper ``$($E.explorerWitnessHelperSha256)`` and guide ``$($E.explorerWitnessGuideSha256)``. The retained package also binds the exact normal-user UAC witness script and UAC pair verifier shipped inside the ZIP. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch, UAC or real Explorer drag-out gates."
     }
 
     return "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($E.artifactDigestSha256)``, package manifest schema 5, x64, ``.NET=self-contained``, ``WindowsAppSDK=self-contained``, ``VisualCpp=app-local``, exactly one desktop entry point, no PDB payloads and SHA-256-bound desktop/manual-QA entry points. The nested package SHA-256 is ``$($E.packageSha256)``; the desktop entry point is bound as ``$($E.entryPointSha256)`` and the packaged manual-QA tool as ``$($E.betaManualQaEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($E.witnessKitManifestSha256)``, verifier ``$($E.witnessVerifierSha256)``, desktop witness helper ``$($E.desktopWitnessHelperSha256)`` and guide ``$($E.desktopWitnessGuideSha256)``. Archive binding additionally records archive-kit manifest SHA-256 ``$($E.archiveKitManifestSha256)``, verifier ``$($E.archiveVerifierSha256)``, helper ``$($E.archiveHelperSha256)`` and guide ``$($E.archiveGuideSha256)``. Live-session binding additionally records live-kit manifest SHA-256 ``$($E.liveKitManifestSha256)``, verifier ``$($E.liveVerifierSha256)``, live-session helper ``$($E.liveSessionHelperSha256)`` and guide ``$($E.liveSessionGuideSha256)``. Explorer-witness binding additionally records verifier ``$($E.explorerVerifierSha256)``, real-Explorer witness helper ``$($E.explorerWitnessHelperSha256)`` and guide ``$($E.explorerWitnessGuideSha256)``. Candidate #$($E.workflowRunNumber) carries the package-bound Explorer witness companion and remains fail-closed against stale retained Explorer tooling. The package-only clean-machine runtime matrix also exercises packaged CLI/shell/state/diagnostic paths after developer-toolchain paths are removed. These facts close the developer-SDK dependency gate for the verified packaged runtime paths, but **do not** substitute for the remaining human-confirmed WinUI launch, UAC or real Explorer drag-out gates."
@@ -345,7 +351,12 @@ function Invoke-SelfTest {
         $badPair | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $evidencePath -Encoding UTF8
         Assert-Rejected -Action { $null = Read-RetainedEvidence -Path $evidencePath } -FailureMessage 'Malformed schema-6 UAC pair-verifier SHA-256 was accepted.'
 
-        Write-Host 'Retained candidate documentation sync self-test passed for package manifest schemas 5 and 6, including UAC pair-verifier provenance.'
+        $missingInstaller = $schema6
+        $missingInstaller.PSObject.Properties.Remove('installerSha256')
+        $missingInstaller | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $evidencePath -Encoding UTF8
+        Assert-Rejected -Action { $null = Read-RetainedEvidence -Path $evidencePath } -FailureMessage 'Retained evidence without installer SHA-256 was accepted.'
+
+        Write-Host 'Retained candidate documentation sync self-test passed for package manifest schemas 5 and 6, including installer and UAC pair-verifier provenance.'
     }
     finally { Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }

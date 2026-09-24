@@ -75,6 +75,7 @@ function Test-RetainedCandidateEvidence {
     if ([int]$evidence.qaKitSchema -ne 2) { throw "Retained package evidence must bind beta QA kit schema 2." }
 
     $witnessBound = $false
+    $installerBound = $false
     if ($schemaVersion -eq 2) {
         if ([int]$evidence.witnessKitSchema -ne 1) { throw "Retained schema v2 must bind beta QA witness kit schema 1." }
         $null = Assert-HexSha256 -Value ([string]$evidence.witnessKitManifestSha256) -Label "witnessKitManifestSha256"
@@ -82,6 +83,16 @@ function Test-RetainedCandidateEvidence {
         $null = Assert-HexSha256 -Value ([string]$evidence.desktopWitnessHelperSha256) -Label "desktopWitnessHelperSha256"
         $null = Assert-HexSha256 -Value ([string]$evidence.desktopWitnessGuideSha256) -Label "desktopWitnessGuideSha256"
         $witnessBound = $true
+
+        $expectedInstallerName = "DragonDiskForge-$($evidence.version)-win-x64-setup.exe"
+        if ([string]$evidence.installerFile -ne $expectedInstallerName) {
+            throw "Retained schema v2 installerFile does not match the versioned Windows x64 installer name."
+        }
+        $null = Assert-HexSha256 -Value ([string]$evidence.installerSha256) -Label "installerSha256"
+        if ([string]$evidence.installerScope -ne 'per-user') {
+            throw "Retained schema v2 installerScope must be 'per-user'."
+        }
+        $installerBound = $true
     }
 
     if ([string]$evidence.runtimeDeployment.dotNet -ne "self-contained") { throw ".NET runtime deployment must be self-contained." }
@@ -139,6 +150,8 @@ function Test-RetainedCandidateEvidence {
         packageSha256 = ([string]$evidence.packageSha256).ToLowerInvariant()
         packageManifestSchema = $packageManifestSchema
         witnessBound = $witnessBound
+        installerBound = $installerBound
+        installerSha256 = if ($installerBound) { ([string]$evidence.installerSha256).ToLowerInvariant() } else { '' }
         uacWitnessBound = $uacWitnessBound
         publicRelease = [bool]$evidence.publicRelease
         betaReady = [bool]$evidence.betaReady
@@ -166,7 +179,19 @@ function Invoke-SelfTest {
         $data | Add-Member -NotePropertyName desktopWitnessGuideSha256 -NotePropertyValue ("4" * 64) -Force
         $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $goodV2 -Encoding UTF8
         $proofV2 = Test-RetainedCandidateEvidence -Path $goodV2
-        if (-not $proofV2.witnessBound -or $proofV2.schemaVersion -ne 2) { throw "Valid schema-v2 fixture did not produce witness-bound evidence." }
+        if (-not $proofV2.witnessBound -or -not $proofV2.installerBound -or $proofV2.schemaVersion -ne 2) { throw "Valid schema-v2 fixture did not produce witness- and installer-bound evidence." }
+
+        $missingInstaller = Join-Path $workspace "missing-installer.json"
+        $data = Get-Content -LiteralPath $goodV2 -Raw | ConvertFrom-Json
+        $data.PSObject.Properties.Remove('installerSha256')
+        $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $missingInstaller -Encoding UTF8
+        try { $null = Test-RetainedCandidateEvidence -Path $missingInstaller; throw "Schema-v2 fixture without installer SHA-256 was accepted." } catch { if ($_.Exception.Message -eq "Schema-v2 fixture without installer SHA-256 was accepted.") { throw } }
+
+        $badInstallerScope = Join-Path $workspace "bad-installer-scope.json"
+        $data = Get-Content -LiteralPath $goodV2 -Raw | ConvertFrom-Json
+        $data.installerScope = 'machine-wide'
+        $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badInstallerScope -Encoding UTF8
+        try { $null = Test-RetainedCandidateEvidence -Path $badInstallerScope; throw "Schema-v2 fixture with an unsafe installer scope was accepted." } catch { if ($_.Exception.Message -eq "Schema-v2 fixture with an unsafe installer scope was accepted.") { throw } }
 
         $goodSchema6 = Join-Path $workspace "good-schema6.json"
         $data = Get-Content -LiteralPath $goodV2 -Raw | ConvertFrom-Json
@@ -230,7 +255,7 @@ function Invoke-SelfTest {
         $data | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badGate -Encoding UTF8
         try { $null = Test-RetainedCandidateEvidence -Path $badGate; throw "Mutated interactive-gate fixture was accepted." } catch { if ($_.Exception.Message -eq "Mutated interactive-gate fixture was accepted.") { throw } }
 
-        Write-Host "Retained beta candidate evidence contract self-test passed, including witness-bound schema v2 and package-schema-6 UAC witness binding."
+        Write-Host "Retained beta candidate evidence contract self-test passed, including witness/installer-bound schema v2 and package-schema-6 UAC witness binding."
     }
     finally {
         Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue
@@ -243,4 +268,4 @@ if ($Mode -eq "self-test") {
 }
 
 $proof = Test-RetainedCandidateEvidence -Path $EvidencePath
-Write-Host ("Retained candidate evidence verified: schema {0} / {1} / run {2} / package SHA-256 {3} / package manifest schema {4} / witness-bound {5} / UAC-witness-bound {6} / interactive blockers {7}." -f $proof.schemaVersion, $proof.sourceCommit, $proof.workflowRunId, $proof.packageSha256, $proof.packageManifestSchema, $proof.witnessBound, $proof.uacWitnessBound, $proof.remainingInteractiveGateCount)
+Write-Host ("Retained candidate evidence verified: schema {0} / {1} / run {2} / package SHA-256 {3} / installer SHA-256 {4} / package manifest schema {5} / witness-bound {6} / installer-bound {7} / UAC-witness-bound {8} / interactive blockers {9}." -f $proof.schemaVersion, $proof.sourceCommit, $proof.workflowRunId, $proof.packageSha256, $proof.installerSha256, $proof.packageManifestSchema, $proof.witnessBound, $proof.installerBound, $proof.uacWitnessBound, $proof.remainingInteractiveGateCount)
