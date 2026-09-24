@@ -9,6 +9,8 @@ param(
     [string]$QaKitManifestChecksumFile = "",
     [string]$PackagePath = "artifacts/windows/DragonDiskForge-win-x64.zip",
     [string]$PackageChecksumFile = "",
+    [string]$InstallerPath = "artifacts/installer/DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe",
+    [string]$InstallerChecksumFile = "",
     [string]$EvidencePath = "artifacts/manual-qa/beta-manual-qa.json",
     [string]$EvidenceChecksumFile = "",
     [string]$ExpectedVersion = "0.5.0-beta.1",
@@ -29,7 +31,8 @@ $RequiredReleaseWorkflowNames = @(
     'Dragon DiskForge Build',
     'Dragon DiskForge Security Boundary',
     'Dragon DiskForge Beta Release Proof Contract',
-    'Dragon DiskForge Beta Release Publish Contract'
+    'Dragon DiskForge Beta Release Publish Contract',
+    'Dragon DiskForge Installer Contract'
 )
 
 function Assert-ExactCommit {
@@ -204,6 +207,7 @@ function Get-PublisherArguments {
         '-CandidateMetadataPath', $CandidateMetadataPath,
         '-QaKitManifestPath', $QaKitManifestPath,
         '-PackagePath', $PackagePath,
+        '-InstallerPath', $InstallerPath,
         '-EvidencePath', $EvidencePath,
         '-ExpectedVersion', $ExpectedVersion,
         '-ExpectedSourceCommit', $ExpectedSourceCommit,
@@ -224,6 +228,9 @@ function Get-PublisherArguments {
     if (-not [string]::IsNullOrWhiteSpace($PackageChecksumFile)) {
         $arguments += @('-PackageChecksumFile', $PackageChecksumFile)
     }
+    if (-not [string]::IsNullOrWhiteSpace($InstallerChecksumFile)) {
+        $arguments += @('-InstallerChecksumFile', $InstallerChecksumFile)
+    }
     if (-not [string]::IsNullOrWhiteSpace($EvidenceChecksumFile)) {
         $arguments += @('-EvidenceChecksumFile', $EvidenceChecksumFile)
     }
@@ -238,7 +245,8 @@ function Invoke-SelfTest {
         'Dragon DiskForge Build',
         'Dragon DiskForge Security Boundary',
         'Dragon DiskForge Beta Release Proof Contract',
-        'Dragon DiskForge Beta Release Publish Contract'
+        'Dragon DiskForge Beta Release Publish Contract',
+        'Dragon DiskForge Installer Contract'
     )
 
     $greenRuns = @(
@@ -246,11 +254,12 @@ function Invoke-SelfTest {
         [pscustomobject]@{ name = $required[1]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 2 },
         [pscustomobject]@{ name = $required[2]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 3 },
         [pscustomobject]@{ name = $required[3]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 4 },
-        [pscustomobject]@{ name = 'Dragon DiskForge Extra Contract'; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 5 }
+        [pscustomobject]@{ name = $required[4]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 5 },
+        [pscustomobject]@{ name = 'Dragon DiskForge Extra Contract'; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 6 }
     )
 
-    $proof = Assert-ExactHeadCiSnapshot -Runs $greenRuns -SourceCommit $commit -ExpectedTotal 5 -RequiredWorkflowNames $required
-    if ([string]$proof.state -ne 'green' -or [int]$proof.runCount -ne 5) {
+    $proof = Assert-ExactHeadCiSnapshot -Runs $greenRuns -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required
+    if ([string]$proof.state -ne 'green' -or [int]$proof.runCount -ne 6) {
         throw 'Self-test failed: a complete green exact-head workflow set was not accepted.'
     }
 
@@ -258,24 +267,24 @@ function Invoke-SelfTest {
     $pending[4].status = 'in_progress'
     $pending[4].conclusion = $null
     $rejected = $false
-    try { Assert-ExactHeadCiSnapshot -Runs $pending -SourceCommit $commit -ExpectedTotal 5 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    try { Assert-ExactHeadCiSnapshot -Runs $pending -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw 'Self-test failed: pending exact-head workflow was accepted.' }
 
     $failed = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
     $failed[1].conclusion = 'failure'
     $rejected = $false
-    try { Assert-ExactHeadCiSnapshot -Runs $failed -SourceCommit $commit -ExpectedTotal 5 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    try { Assert-ExactHeadCiSnapshot -Runs $failed -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw 'Self-test failed: failed exact-head workflow was accepted.' }
 
     $missingRequired = @($greenRuns | Where-Object { [string]$_.name -ne $required[2] })
     $rejected = $false
-    try { Assert-ExactHeadCiSnapshot -Runs $missingRequired -SourceCommit $commit -ExpectedTotal 4 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    try { Assert-ExactHeadCiSnapshot -Runs $missingRequired -SourceCommit $commit -ExpectedTotal 5 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw 'Self-test failed: missing required release-proof workflow was accepted.' }
 
     $foreignHead = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
     $foreignHead[4].head_sha = $otherCommit
     $rejected = $false
-    try { Assert-ExactHeadCiSnapshot -Runs $foreignHead -SourceCommit $commit -ExpectedTotal 5 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    try { Assert-ExactHeadCiSnapshot -Runs $foreignHead -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw 'Self-test failed: mixed-head workflow snapshot was accepted.' }
 
     $rejected = $false

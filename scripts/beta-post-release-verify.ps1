@@ -69,6 +69,8 @@ function Get-ExpectedAssetNames {
     return @(
         "DragonDiskForge-$Version-win-x64.zip",
         "DragonDiskForge-$Version-win-x64.zip.sha256",
+        "DragonDiskForge-$Version-win-x64-setup.exe",
+        "DragonDiskForge-$Version-win-x64-setup.exe.sha256",
         "release-manifest-$Version.json",
         "release-manifest-$Version.json.sha256",
         "SUPPORTED-CAPABILITIES-$Version.md"
@@ -280,13 +282,16 @@ function Assert-DownloadedReleaseBundle {
     $packageName = "DragonDiskForge-$Version-win-x64.zip"
     $packagePath = Join-Path $Directory $packageName
     $packageSidecarPath = "$packagePath.sha256"
+    $installerName = "DragonDiskForge-$Version-win-x64-setup.exe"
+    $installerPath = Join-Path $Directory $installerName
+    $installerSidecarPath = "$installerPath.sha256"
     $manifestName = "release-manifest-$Version.json"
     $manifestPath = Join-Path $Directory $manifestName
     $manifestSidecarPath = "$manifestPath.sha256"
     $capabilityName = "SUPPORTED-CAPABILITIES-$Version.md"
     $capabilityPath = Join-Path $Directory $capabilityName
 
-    foreach ($required in @($packagePath, $packageSidecarPath, $manifestPath, $manifestSidecarPath, $capabilityPath)) {
+    foreach ($required in @($packagePath, $packageSidecarPath, $installerPath, $installerSidecarPath, $manifestPath, $manifestSidecarPath, $capabilityPath)) {
         if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
             throw "Downloaded public release is missing '$required'."
         }
@@ -298,6 +303,12 @@ function Assert-DownloadedReleaseBundle {
         throw "Downloaded public package SHA-256 mismatch. Declared '$declaredPackageHash', actual '$actualPackageHash'."
     }
 
+    $declaredInstallerHash = Read-Sha256Sidecar -Path $installerSidecarPath -ExpectedFileName $installerName -Label 'Public installer SHA-256 sidecar'
+    $actualInstallerHash = Get-Sha256 -Path $installerPath
+    if ($declaredInstallerHash -ne $actualInstallerHash) {
+        throw "Downloaded public installer SHA-256 mismatch. Declared '$declaredInstallerHash', actual '$actualInstallerHash'."
+    }
+
     $declaredManifestHash = Read-Sha256Sidecar -Path $manifestSidecarPath -ExpectedFileName $manifestName -Label 'Public release-manifest SHA-256 sidecar'
     $actualManifestHash = Get-Sha256 -Path $manifestPath
     if ($declaredManifestHash -ne $actualManifestHash) {
@@ -305,7 +316,7 @@ function Assert-DownloadedReleaseBundle {
     }
 
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-    if ([int]$manifest.schemaVersion -ne 1) { throw "Unsupported public release manifest schema '$($manifest.schemaVersion)'." }
+    if ([int]$manifest.schemaVersion -ne 2) { throw "Unsupported public release manifest schema '$($manifest.schemaVersion)'." }
     if ([string]$manifest.kind -ne 'DragonDiskForgeBetaReleaseBundle') { throw "Unexpected public release manifest kind '$($manifest.kind)'." }
     if ([string]$manifest.product -ne 'Dragon DiskForge') { throw "Unexpected public release product '$($manifest.product)'." }
     if ([string]$manifest.version -ne $Version) { throw "Public release manifest version '$($manifest.version)' does not match '$Version'." }
@@ -320,6 +331,10 @@ function Assert-DownloadedReleaseBundle {
     if ([string]$manifest.packageFile -ne $packageName) { throw "Public release manifest packageFile '$($manifest.packageFile)' does not match '$packageName'." }
     $manifestPackageHash = Assert-HexSha256 -Value ([string]$manifest.packageSha256) -Label 'Public release manifest packageSha256'
     if ($manifestPackageHash -ne $actualPackageHash) { throw 'Public release manifest packageSha256 does not match the downloaded package.' }
+    if ([string]$manifest.installerFile -ne $installerName) { throw "Public release manifest installerFile '$($manifest.installerFile)' does not match '$installerName'." }
+    $manifestInstallerHash = Assert-HexSha256 -Value ([string]$manifest.installerSha256) -Label 'Public release manifest installerSha256'
+    if ($manifestInstallerHash -ne $actualInstallerHash) { throw 'Public release manifest installerSha256 does not match the downloaded installer.' }
+    if ([string]$manifest.installerScope -ne 'per-user') { throw 'Public release manifest installerScope is not per-user.' }
 
     foreach ($proofField in @('candidateMetadataSha256', 'qaKitManifestSha256', 'manualQaEvidenceSha256', 'releaseNotesSha256')) {
         $null = Assert-HexSha256 -Value ([string]$manifest.$proofField) -Label "Public release manifest $proofField"
@@ -337,6 +352,8 @@ function Assert-DownloadedReleaseBundle {
     return [pscustomobject]@{
         packagePath = $packagePath
         packageSha256 = $actualPackageHash
+        installerPath = $installerPath
+        installerSha256 = $actualInstallerHash
         manifestPath = $manifestPath
         manifestSha256 = $actualManifestHash
         capabilityMatrixPath = $capabilityPath
@@ -526,6 +543,12 @@ function Invoke-SelfTest {
         $packageHash = Get-Sha256 -Path $packagePath
         Write-Utf8NoBom -Path "$packagePath.sha256" -Text ("{0}  {1}{2}" -f $packageHash, $packageName, [Environment]::NewLine)
 
+        $installerName = "DragonDiskForge-$version-win-x64-setup.exe"
+        $installerPath = Join-Path $root $installerName
+        Write-Utf8NoBom -Path $installerPath -Text "public installer fixture`n"
+        $installerHash = Get-Sha256 -Path $installerPath
+        Write-Utf8NoBom -Path "$installerPath.sha256" -Text ("{0}  {1}{2}" -f $installerHash, $installerName, [Environment]::NewLine)
+
         $capabilityName = "SUPPORTED-CAPABILITIES-$version.md"
         $capabilityPath = Join-Path $root $capabilityName
         Write-Utf8NoBom -Path $capabilityPath -Text "# capability fixture`n"
@@ -534,7 +557,7 @@ function Invoke-SelfTest {
         $manifestName = "release-manifest-$version.json"
         $manifestPath = Join-Path $root $manifestName
         $manifest = [ordered]@{
-            schemaVersion = 1
+            schemaVersion = 2
             kind = 'DragonDiskForgeBetaReleaseBundle'
             product = 'Dragon DiskForge'
             version = $version
@@ -548,6 +571,9 @@ function Invoke-SelfTest {
             manualQaEvidenceSha256 = ('3' * 64)
             packageFile = $packageName
             packageSha256 = $packageHash
+            installerFile = $installerName
+            installerSha256 = $installerHash
+            installerScope = 'per-user'
             releaseNotesFile = "RELEASE-NOTES-$version.md"
             releaseNotesSha256 = ('4' * 64)
             capabilityMatrixRepositoryPath = 'docs/SUPPORTED-CAPABILITIES.md'
@@ -576,6 +602,12 @@ function Invoke-SelfTest {
         if (-not $rejected) { throw 'Self-test failed: tampered public package was accepted.' }
 
         Write-Utf8NoBom -Path $packagePath -Text "public package fixture`n"
+        Write-Utf8NoBom -Path $installerPath -Text "tampered public installer fixture`n"
+        $rejected = $false
+        try { $null = Assert-DownloadedReleaseBundle -Directory $root -Version $version -Tag $tag -SourceCommit $commit } catch { $rejected = $true }
+        if (-not $rejected) { throw 'Self-test failed: tampered public installer was accepted.' }
+
+        Write-Utf8NoBom -Path $installerPath -Text "public installer fixture`n"
         $rejected = $false
         try { $null = Assert-DownloadedReleaseBundle -Directory $root -Version $version -Tag $tag -SourceCommit ('b' * 40) } catch { $rejected = $true }
         if (-not $rejected) { throw 'Self-test failed: wrong expected source commit was accepted.' }
