@@ -45,6 +45,8 @@ Validated automated checkpoints include PR #35 / run #270, PR #36 / run #274, PR
 - [x] candidate package manifest records semantic version, ProductVersion/FileVersion, entry-point hash, icon and architecture
 - [x] independent CI verification reopens the ZIP and validates checksum/manifest/version/hash/icon/content policy before artifact upload
 - [x] canonical Dragon icon is included in the clean package root
+- [x] per-user Windows x64 installer definition and fail-closed build/verification contract exist
+- [ ] retained candidate includes an installer that passes silent install/uninstall verification
 - [x] candidate package contains the fail-closed `tools/beta-manual-qa.ps1` evidence tool and binds its SHA-256 in package manifest schema 5
 - [x] the manual-QA evidence contract self-tests under PowerShell 7 and Windows PowerShell 5.1, independently re-verifies the packaged tool hash, rejects evidence produced by a different running QA script and rejects underspecified passing observation notes
 - [x] retained independently downloadable `0.5.0-beta.1` Windows x64 candidate from green `main`
@@ -94,6 +96,7 @@ Passing records still require explicit human confirmation because hosted CI cann
 - [ ] `0.5.0-beta.1` tag
 - [ ] GitHub Release marked as pre-release
 - [ ] Windows x64 downloadable package
+- [ ] Windows x64 per-user installer and SHA-256 checksum file
 - [ ] SHA-256 checksum file
 - [ ] release notes with supported/tested capabilities
 - [ ] known limitations listed explicitly

@@ -50,6 +50,16 @@ The evidence file itself is not published as a release asset; its SHA-256 is ret
 
 ## Install / run
 
+### Installer
+
+1. Download `DragonDiskForge-{{VERSION}}-win-x64-setup.exe` and its `.sha256` file.
+2. Verify the SHA-256, then run the installer as your normal Windows user.
+3. Launch Dragon DiskForge from the Start menu.
+
+The installer is per-user, does not require administrator rights and includes an uninstaller. It does not silently enable Explorer shell integration.
+
+### Portable ZIP
+
 1. Download `DragonDiskForge-{{VERSION}}-win-x64.zip` and its `.sha256` file.
 2. Verify the SHA-256 before extraction.
 3. Extract the ZIP to a normal user-writable folder.
@@ -77,7 +87,7 @@ If shell integration was enabled, run:
 .\tools\dragon-diskforge-shell.exe unregister
 ```
 
-Then close Dragon DiskForge and delete the extracted folder. Application state/support data stored under the current user profile may be removed separately if desired.
+For an installed copy, use **Settings > Apps > Installed apps > Dragon DiskForge > Uninstall**. For a portable copy, close Dragon DiskForge and delete the extracted folder. Application state/support data stored under the current user profile may be removed separately if desired.
 
 ## Safety and known limitations
 
