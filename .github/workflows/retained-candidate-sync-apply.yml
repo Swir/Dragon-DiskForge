@@ -1,0 +1,56 @@
+name: Dragon DiskForge Retained Candidate Sync Apply
+
+on:
+  push:
+    branches:
+      - automation/retain-candidate-257
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dragon-retained-candidate-sync-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.repository == 'Swir/Dragon-DiskForge'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout branch head
+        uses: actions/checkout@v4
+        with:
+          ref: automation/retain-candidate-257
+          fetch-depth: 0
+
+      - name: Apply deterministic retained-candidate projection
+        shell: pwsh
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode apply
+
+      - name: Verify deterministic projection
+        shell: pwsh
+        run: ./scripts/sync-retained-candidate-docs.ps1 -Mode verify
+
+      - name: Commit synchronized projection when needed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(
+            'README.md',
+            'CHANGELOG.md',
+            'docs/ROADMAP.md',
+            'docs/STATUS.md',
+            'docs/MILESTONES.md',
+            'docs/BETA-RELEASE.md',
+            'docs/BETA-CANDIDATE.md',
+            '.github/workflows/beta-retained-explorer-currency.yml'
+          )
+          git add -- $paths
+          if (git diff --cached --quiet) {
+            Write-Host 'Retained-candidate projection already synchronized.'
+            exit 0
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: synchronize retained Candidate #257 projection'
+          git push origin HEAD:automation/retain-candidate-257
