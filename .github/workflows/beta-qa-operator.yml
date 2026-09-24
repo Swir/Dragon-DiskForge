@@ -1,0 +1,45 @@
+name: Dragon DiskForge Beta QA Operator Contract
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - scripts/beta-qa-operator.ps1
+      - scripts/beta-manual-gate-status.ps1
+      - docs/BETA-QA-OPERATOR.md
+      - .github/workflows/beta-qa-operator.yml
+  pull_request:
+    branches: [ main ]
+    paths:
+      - scripts/beta-qa-operator.ps1
+      - scripts/beta-manual-gate-status.ps1
+      - docs/BETA-QA-OPERATOR.md
+      - .github/workflows/beta-qa-operator.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  operator-contract:
+    name: Workspace routing contract
+    runs-on: windows-latest
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: PowerShell 7 router self-test
+        shell: pwsh
+        run: ./scripts/beta-qa-operator.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 router self-test
+        shell: powershell
+        run: .\scripts\beta-qa-operator.ps1 -Mode self-test
+
+      - name: PowerShell 7 delegated verifier self-test
+        shell: pwsh
+        run: ./scripts/beta-manual-gate-status.ps1 -Mode self-test
+
+      - name: Windows PowerShell 5.1 delegated verifier self-test
+        shell: powershell
+        run: .\scripts\beta-manual-gate-status.ps1 -Mode self-test
