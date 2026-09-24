@@ -93,9 +93,11 @@ beta-qa-explorer-witness.ps1
 beta-qa-explorer-witness.ps1.sha256
 BETA-QA-EXPLORER-WITNESS.md
 BETA-QA-EXPLORER-WITNESS.md.sha256
+installer/DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe
+installer/DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe.sha256
 ```
 
-`beta-candidate.json` records the exact source commit, workflow run id, beta version, architecture, package SHA-256, package-manifest schema, desktop entry-point SHA-256 and packaged manual-QA-tool SHA-256. `publicRelease` is explicitly `false`.
+`beta-candidate.json` records the exact source commit, workflow run id, beta version, architecture, package SHA-256, package-manifest schema, desktop entry-point SHA-256 and packaged manual-QA-tool SHA-256. Canonical `retained-beta-candidate.json` additionally binds the versioned per-user installer filename and SHA-256. `publicRelease` is explicitly `false`.
 
 A green beta-candidate workflow proves that the source commit can produce a correctly versioned and independently verified `0.5.0-beta.1` package. It does **not** prove the remaining interactive Windows checks and does **not** authorize publication. A retained artifact is only a selected engineering candidate; it is still not a release.
 
@@ -109,11 +111,11 @@ Before starting manual QA, confirm that the retained artifact's `beta-candidate.
 
 ### Current retained checkpoint
 
-The authoritative retained candidate is **Beta Candidate run #278 (`36045422063`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-36045422063`, built from `main` commit `0b7ff27adc97790508f23023234ebeff1412fe61`. The nested package SHA-256 is `e229760388eb6ab3108b6f1fd3d23428344cddc7ba580dd9760507a0a4074e55`; the GitHub artifact SHA-256 is `9adefec4d0c60e10de5709b9c4e41741c3eb0844c36c3fbfa26b592a33ffe389`.
+The authoritative retained candidate is **Beta Candidate run #278 (`36045422063`)**, artifact `DragonDiskForge-0.5.0-beta.1-win-x64-candidate-36045422063`, built from `main` commit `0b7ff27adc97790508f23023234ebeff1412fe61`. The nested package SHA-256 is `e229760388eb6ab3108b6f1fd3d23428344cddc7ba580dd9760507a0a4074e55`; the per-user installer `DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe` is bound as `1d198d927d83b88f6aeb3e351ebff37685283148ac32d1464adae36277cfb31f`; the GitHub artifact SHA-256 is `9adefec4d0c60e10de5709b9c4e41741c3eb0844c36c3fbfa26b592a33ffe389`.
 
 Independent artifact read-back verified every supplied SHA-256 sidecar, package manifest schema 6, x64 architecture, `.NET=self-contained`, `WindowsAppSDK=self-contained`, `VisualCpp=app-local`, exactly one desktop executable, no PDB payloads, the desktop entry-point hash `50b5da1e2f675819aead01ba07e055790d53a7fa69d6d47a1418f4cc5bf9d039`, the packaged manual-QA-tool hash `525f632943ece5e2ae72ca350015bab49d2a8149a54aa98e9a8e1fd1788a6d94`, the packaged UAC-witness-tool hash `19897638afa6015b94355927ae07001b9ae6750242e510339966f0a2d288e431` and the packaged UAC before/after pair-verifier hash `e3e7f08cb278bf35e38bc425e5b4006f9da90da18a8bef2e718363b190833500`.
 
-Canonical retained evidence remains schema v2. It is witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, live-session-bound to the package-specific live continuity manifest/verifier/helper/guide, Explorer-witness-bound to the package-specific verifier/helper/guide used to capture real File Explorer process/window/path evidence, and package-UAC-witness-bound to the exact normal-user UAC helper plus before/after pair verifier shipped inside the retained ZIP. None of these bindings claims a human gate.
+Canonical retained evidence remains schema v2. It is installer-bound to the verified per-user setup executable, witness-bound to the packaged desktop witness companion, archive-bound to the portable evidence-archive companion, live-session-bound to the package-specific live continuity manifest/verifier/helper/guide, Explorer-witness-bound to the package-specific verifier/helper/guide used to capture real File Explorer process/window/path evidence, and package-UAC-witness-bound to the exact normal-user UAC helper plus before/after pair verifier shipped inside the retained ZIP. None of these bindings claims a human gate.
 
 The authoritative machine-readable record is [`retained-beta-candidate.json`](retained-beta-candidate.json). It deliberately keeps `publicRelease=false` and `betaReady=false`.
 

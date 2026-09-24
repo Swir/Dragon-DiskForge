@@ -61,6 +61,11 @@ function Read-CanonicalEvidence {
     Assert-HexSha256 -Value ([string]$evidence.witnessKitManifestSha256) -Label 'witnessKitManifestSha256'
     if ([int]$evidence.liveKitSchema -ne 1) { throw 'Retained beta read-back requires live kit schema 1.' }
     Assert-HexSha256 -Value ([string]$evidence.liveKitManifestSha256) -Label 'liveKitManifestSha256'
+    if ([string]$evidence.installerFile -ne 'DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe') {
+        throw 'Retained beta read-back requires the versioned Windows x64 installer filename.'
+    }
+    Assert-HexSha256 -Value ([string]$evidence.installerSha256) -Label 'installerSha256'
+    if ([string]$evidence.installerScope -ne 'per-user') { throw "Retained beta read-back requires installerScope 'per-user'." }
 
     $packageManifestSchema = [int]$evidence.packageManifestSchema
     if ($packageManifestSchema -ne 5 -and $packageManifestSchema -ne 6) {
@@ -112,6 +117,15 @@ function Test-BetaReleaseReadback {
     }
     if ($live -ne $expectedLive) {
         throw "docs/BETA-RELEASE.md live-kit manifest digest is stale: expected $expectedLive, found $live."
+    }
+
+    $expectedInstaller = ([string]$Evidence.installerSha256).ToLowerInvariant()
+    if ($paragraph.IndexOf([string]$Evidence.installerFile, [System.StringComparison]::Ordinal) -lt 0 -or
+        $paragraph.IndexOf($expectedInstaller, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        throw "docs/BETA-RELEASE.md retained read-back is missing or stale for installer '$($Evidence.installerFile)' SHA-256 $expectedInstaller."
+    }
+    if ($paragraph -notmatch '(?i)installer-bound|per-user installer') {
+        throw 'docs/BETA-RELEASE.md retained read-back must explicitly identify the per-user installer binding.'
     }
 
     if ([int]$Evidence.packageManifestSchema -eq 6) {
@@ -172,6 +186,9 @@ function Invoke-SelfTest {
             witnessKitManifestSha256 = ('2' * 64)
             liveKitSchema = 1
             liveKitManifestSha256 = ('3' * 64)
+            installerFile = 'DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe'
+            installerSha256 = ('6' * 64)
+            installerScope = 'per-user'
             packageManifestSchema = 5
             publicRelease = $false
             betaReady = $false
@@ -181,7 +198,7 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         $parsed = Read-CanonicalEvidence -Path $evidencePath
 
-        $good = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed.artifactDigestSha256)``, package manifest schema 5. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed.liveKitManifestSha256)``, verifier evidence."
+        $good = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed.artifactDigestSha256)``, package manifest schema 5. The per-user installer ``$($parsed.installerFile)`` is installer-bound as ``$($parsed.installerSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed.liveKitManifestSha256)``, verifier evidence."
         Write-Utf8NoBom -Path $releasePath -Text ($good + [Environment]::NewLine)
         Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed
 
@@ -201,6 +218,9 @@ function Invoke-SelfTest {
             witnessKitManifestSha256 = ('2' * 64)
             liveKitSchema = 1
             liveKitManifestSha256 = ('3' * 64)
+            installerFile = 'DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe'
+            installerSha256 = ('6' * 64)
+            installerScope = 'per-user'
             packageManifestSchema = 6
             betaUacWitnessEntryPointSha256 = ('4' * 64)
             betaUacPairVerifierEntryPointSha256 = ('5' * 64)
@@ -209,7 +229,7 @@ function Invoke-SelfTest {
         }
         Write-Utf8NoBom -Path $evidencePath -Text (($schema6 | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         $parsed6 = Read-CanonicalEvidence -Path $evidencePath
-        $good6 = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed6.artifactDigestSha256)``, package manifest schema 6 and packaged normal-user UAC witness SHA-256 ``$($parsed6.betaUacWitnessEntryPointSha256)`` plus packaged UAC before/after pair verifier SHA-256 ``$($parsed6.betaUacPairVerifierEntryPointSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed6.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed6.liveKitManifestSha256)``, verifier evidence. The retained package binds the exact packaged normal-user UAC witness and UAC pair verifier."
+        $good6 = "Independent retained-artifact read-back confirms GitHub artifact SHA-256 ``$($parsed6.artifactDigestSha256)``, package manifest schema 6 and packaged normal-user UAC witness SHA-256 ``$($parsed6.betaUacWitnessEntryPointSha256)`` plus packaged UAC before/after pair verifier SHA-256 ``$($parsed6.betaUacPairVerifierEntryPointSha256)``. The per-user installer ``$($parsed6.installerFile)`` is installer-bound as ``$($parsed6.installerSha256)``. Schema-v2 retained evidence also binds witness-kit manifest SHA-256 ``$($parsed6.witnessKitManifestSha256)``, verifier evidence. Live-session binding additionally records live-kit manifest SHA-256 ``$($parsed6.liveKitManifestSha256)``, verifier evidence. The retained package binds the exact packaged normal-user UAC witness and UAC pair verifier."
         Write-Utf8NoBom -Path $releasePath -Text ($good6 + [Environment]::NewLine)
         Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed6
 
@@ -236,12 +256,17 @@ function Invoke-SelfTest {
         Write-Utf8NoBom -Path $evidencePath -Text (($badPairEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: malformed packaged UAC pair verifier SHA-256 was accepted.'
 
+        $missingInstallerEvidence = Copy-JsonObject -Value $schema6
+        $missingInstallerEvidence.PSObject.Properties.Remove('installerSha256')
+        Write-Utf8NoBom -Path $evidencePath -Text (($missingInstallerEvidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
+        Assert-Rejected -Action { $null = Read-CanonicalEvidence -Path $evidencePath } -FailureMessage 'Self-test failed: evidence without installer SHA-256 was accepted.'
+
         Write-Utf8NoBom -Path $releasePath -Text "No retained read-back paragraph.`n"
         Write-Utf8NoBom -Path $evidencePath -Text (($evidence | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
         $parsed = Read-CanonicalEvidence -Path $evidencePath
         Assert-Rejected -Action { Test-BetaReleaseReadback -BetaReleasePath $releasePath -Evidence $parsed } -FailureMessage 'Self-test failed: missing retained read-back paragraph was accepted.'
 
-        Write-Host 'Dragon DiskForge retained beta read-back contract self-test passed for package manifest schemas 5 and 6, including the schema-6 UAC pair verifier binding.'
+        Write-Host 'Dragon DiskForge retained beta read-back contract self-test passed for package manifest schemas 5 and 6, including installer and schema-6 UAC pair verifier bindings.'
     }
     finally {
         Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
@@ -258,8 +283,8 @@ $evidenceFile = if ([System.IO.Path]::IsPathRooted($EvidencePath)) { $EvidencePa
 $evidence = Read-CanonicalEvidence -Path $evidenceFile
 Test-BetaReleaseReadback -BetaReleasePath (Join-Path $root 'docs/BETA-RELEASE.md') -Evidence $evidence
 if ([int]$evidence.packageManifestSchema -eq 6) {
-    Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}; live manifest {2}; package manifest schema 6; UAC witness {3}; UAC pair verifier {4}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.betaUacWitnessEntryPointSha256, $evidence.betaUacPairVerifierEntryPointSha256)
+    Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; installer {1}; witness manifest {2}; live manifest {3}; package manifest schema 6; UAC witness {4}; UAC pair verifier {5}." -f $evidence.artifactDigestSha256, $evidence.installerSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.betaUacWitnessEntryPointSha256, $evidence.betaUacPairVerifierEntryPointSha256)
 }
 else {
-    Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; witness manifest {1}; live manifest {2}; package manifest schema {3}." -f $evidence.artifactDigestSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.packageManifestSchema)
+    Write-Host ("Retained beta read-back matches canonical evidence: artifact {0}; installer {1}; witness manifest {2}; live manifest {3}; package manifest schema {4}." -f $evidence.artifactDigestSha256, $evidence.installerSha256, $evidence.witnessKitManifestSha256, $evidence.liveKitManifestSha256, $evidence.packageManifestSchema)
 }

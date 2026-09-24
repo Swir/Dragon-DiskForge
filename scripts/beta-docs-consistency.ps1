@@ -84,6 +84,11 @@ function Read-RetainedCandidateEvidence {
         Assert-HexSha256 -Value ([string]$evidence.witnessVerifierSha256) -Label "witnessVerifierSha256"
         Assert-HexSha256 -Value ([string]$evidence.desktopWitnessHelperSha256) -Label "desktopWitnessHelperSha256"
         Assert-HexSha256 -Value ([string]$evidence.desktopWitnessGuideSha256) -Label "desktopWitnessGuideSha256"
+        if ([string]$evidence.installerFile -ne "DragonDiskForge-$($evidence.version)-win-x64-setup.exe") {
+            throw "Retained schema v2 installerFile does not match the versioned Windows x64 installer name."
+        }
+        Assert-HexSha256 -Value ([string]$evidence.installerSha256) -Label "installerSha256"
+        if ([string]$evidence.installerScope -ne 'per-user') { throw "Retained schema v2 installerScope must be 'per-user'." }
     }
 
     if ([string]$evidence.runtimeDeployment.dotNet -ne "self-contained") { throw ".NET runtime deployment must be self-contained." }
@@ -98,7 +103,7 @@ function Read-RetainedCandidateEvidence {
 function Get-CanonicalTokens {
     param([Parameter(Mandatory = $true)]$Evidence)
 
-    return @(
+    $tokens = @(
         [string]$Evidence.version,
         ("Beta Candidate run #{0}" -f [int64]$Evidence.workflowRunNumber),
         [string]$Evidence.workflowRunId,
@@ -106,6 +111,11 @@ function Get-CanonicalTokens {
         ([string]$Evidence.sourceCommit).ToLowerInvariant(),
         ([string]$Evidence.packageSha256).ToLowerInvariant()
     )
+    if ([int]$Evidence.schemaVersion -eq 2) {
+        $tokens += [string]$Evidence.installerFile
+        $tokens += ([string]$Evidence.installerSha256).ToLowerInvariant()
+    }
+    return $tokens
 }
 
 function Get-SingleCandidateBlock {
@@ -161,6 +171,9 @@ function Test-DocumentationSet {
         if ([int]$Evidence.schemaVersion -eq 2 -and $block -notmatch '(?i)witness-bound|witness companion') {
             throw "$($spec.Path) retained-candidate block must state that schema-v2 evidence is witness-bound."
         }
+        if ([int]$Evidence.schemaVersion -eq 2 -and $block -notmatch '(?i)installer-bound|installer SHA-256') {
+            throw "$($spec.Path) retained-candidate block must state that schema-v2 evidence is installer-bound."
+        }
         if ([int]$Evidence.packageManifestSchema -eq 6 -and $block -notmatch '(?i)package-UAC-witness-bound|UAC witness') {
             throw "$($spec.Path) retained-candidate block must state that package schema 6 is bound to the packaged UAC witness."
         }
@@ -177,7 +190,7 @@ function Write-Utf8NoBom {
 
 function New-SelfTestBlock {
     param([Parameter(Mandatory = $true)]$Evidence, [Parameter(Mandatory = $true)][string]$EvidenceLink)
-    $witnessText = if ([int]$Evidence.schemaVersion -eq 2) { ' Evidence is witness-bound to the packaged desktop witness companion.' } else { '' }
+    $witnessText = if ([int]$Evidence.schemaVersion -eq 2) { " Evidence is witness-bound to the packaged desktop witness companion and installer-bound to $($Evidence.installerFile) with installer SHA-256 $($Evidence.installerSha256)." } else { '' }
     $uacWitnessText = if ([int]$Evidence.packageManifestSchema -eq 6) { ' Evidence is package-UAC-witness-bound to the packaged normal-user UAC witness companion.' } else { '' }
     return @"
 $StartMarker
@@ -228,6 +241,9 @@ function New-SelfTestEvidence {
         $evidence.witnessVerifierSha256 = ('3' * 64)
         $evidence.desktopWitnessHelperSha256 = ('4' * 64)
         $evidence.desktopWitnessGuideSha256 = ('5' * 64)
+        $evidence.installerFile = 'DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe'
+        $evidence.installerSha256 = ('7' * 64)
+        $evidence.installerScope = 'per-user'
     }
     if ($PackageManifestSchema -eq 6) {
         $evidence.betaUacWitnessEntryPointSha256 = ('6' * 64)
@@ -265,6 +281,13 @@ function Invoke-SelfTest {
         $rejected = $false
         try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
         if (-not $rejected) { throw "Self-test failed: invalid witness SHA-256 was accepted." }
+
+        $missingInstaller = New-SelfTestEvidence -SchemaVersion 2
+        $missingInstaller.Remove('installerSha256')
+        Write-Utf8NoBom -Path (Join-Path $root 'docs/retained-beta-candidate.json') -Text (($missingInstaller | ConvertTo-Json -Depth 8) + [Environment]::NewLine)
+        $rejected = $false
+        try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
+        if (-not $rejected) { throw "Self-test failed: schema-v2 evidence without installer SHA-256 was accepted." }
 
         $schema6 = New-SelfTestEvidence -SchemaVersion 2 -PackageManifestSchema 6
         Write-Utf8NoBom -Path (Join-Path $root 'docs/retained-beta-candidate.json') -Text (($schema6 | ConvertTo-Json -Depth 8) + [Environment]::NewLine)

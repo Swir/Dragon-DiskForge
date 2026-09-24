@@ -11,6 +11,7 @@ param(
     [string]$PackageChecksumFile = "",
     [string]$InstallerPath = "artifacts/installer/DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe",
     [string]$InstallerChecksumFile = "",
+    [string]$RetainedEvidencePath = "docs/retained-beta-candidate.json",
     [string]$EvidencePath = "artifacts/manual-qa/beta-manual-qa.json",
     [string]$EvidenceChecksumFile = "",
     [string]$ExpectedVersion = "0.5.0-beta.1",
@@ -248,6 +249,45 @@ function Get-CandidateSummary {
     }
 }
 
+function Get-RetainedCandidateSummary {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Version,
+        [Parameter(Mandatory = $true)][string]$SourceCommit,
+        [Parameter(Mandatory = $true)][string]$WorkflowRunId,
+        [Parameter(Mandatory = $true)][string]$PackageSha256,
+        [Parameter(Mandatory = $true)][string]$InstallerSha256
+    )
+
+    $proof = Get-PlainFileProof -FilePath $Path -Label 'Canonical retained candidate evidence'
+    $evidence = Get-Content -LiteralPath $proof.path -Raw | ConvertFrom-Json
+    if ([int]$evidence.schemaVersion -ne 2 -or [string]$evidence.kind -ne 'DragonDiskForgeRetainedBetaCandidateEvidence') {
+        throw 'Canonical retained candidate evidence must use schema 2 and the expected kind.'
+    }
+    if ([string]$evidence.version -ne $Version -or [string]$evidence.architecture -ne 'x64') {
+        throw 'Canonical retained candidate version or architecture does not match the release.'
+    }
+    if ((Assert-ExactCommit -Commit ([string]$evidence.sourceCommit) -Label 'Retained sourceCommit') -ne $SourceCommit) {
+        throw 'Canonical retained candidate source commit does not match the release.'
+    }
+    if ([string]$evidence.workflowRunId -ne $WorkflowRunId) {
+        throw 'Canonical retained candidate workflow run does not match candidate metadata.'
+    }
+    if ([string]$evidence.packageFile -ne 'DragonDiskForge-win-x64.zip' -or [string]$evidence.packageSha256 -ne $PackageSha256) {
+        throw 'Canonical retained candidate package identity does not match the supplied package.'
+    }
+    $expectedInstaller = "DragonDiskForge-$Version-win-x64-setup.exe"
+    if ([string]$evidence.installerFile -ne $expectedInstaller -or [string]$evidence.installerSha256 -ne $InstallerSha256) {
+        throw 'Canonical retained candidate installer identity does not match the supplied installer.'
+    }
+    if ([string]$evidence.installerScope -ne 'per-user') { throw "Canonical retained installer scope must be 'per-user'." }
+    if ([bool]$evidence.publicRelease -or [bool]$evidence.betaReady) {
+        throw 'Canonical retained candidate must remain non-public and not beta-ready before publication proof completes.'
+    }
+
+    return [pscustomobject]@{ path = $proof.path; sha256 = $proof.sha256 }
+}
+
 function Expand-ReleaseNotesTemplate {
     param(
         [Parameter(Mandatory = $true)][string]$TemplatePath,
@@ -298,6 +338,7 @@ function Prepare-ReleaseBundle {
         [string]$PackageChecksumPath,
         [Parameter(Mandatory = $true)][string]$InstallerFile,
         [string]$InstallerChecksumPath,
+        [Parameter(Mandatory = $true)][string]$RetainedEvidenceFile,
         [Parameter(Mandatory = $true)][string]$EvidenceFile,
         [string]$EvidenceChecksumPath,
         [Parameter(Mandatory = $true)][string]$Version,
@@ -323,6 +364,7 @@ function Prepare-ReleaseBundle {
     $evidenceProof = Get-FileProof -FilePath $EvidenceFile -SidecarPath $EvidenceChecksumPath -Label 'Manual QA evidence'
     $capabilitiesProof = Get-PlainFileProof -FilePath $CapabilitiesPath -Label 'Supported capability matrix'
     $candidate = Get-CandidateSummary -CandidateProof $candidateProof -Version $Version -SourceCommit $commit -PackageSha256 $packageProof.sha256
+    $retained = Get-RetainedCandidateSummary -Path $RetainedEvidenceFile -Version $Version -SourceCommit $commit -WorkflowRunId $candidate.workflowRunId -PackageSha256 $packageProof.sha256 -InstallerSha256 $installerProof.sha256
 
     $root = [System.IO.Path]::GetFullPath($OutputRoot)
     $releaseDirectory = Join-Path $root $Version
@@ -394,6 +436,7 @@ function Prepare-ReleaseBundle {
             installerFile = $releaseInstallerName
             installerSha256 = $releaseInstallerHash
             installerScope = 'per-user'
+            retainedEvidenceSha256 = $retained.sha256
             releaseNotesFile = $notesFileName
             releaseNotesSha256 = $notesHash
             capabilityMatrixRepositoryPath = 'docs/SUPPORTED-CAPABILITIES.md'
@@ -425,6 +468,7 @@ function Prepare-ReleaseBundle {
             installerPath = Join-Path $releaseDirectory $releaseInstallerName
             installerChecksumPath = Join-Path $releaseDirectory "$releaseInstallerName.sha256"
             installerSha256 = $releaseInstallerHash
+            retainedEvidenceSha256 = $retained.sha256
             notesPath = Join-Path $releaseDirectory $notesFileName
             notesSha256 = $notesHash
             manifestPath = Join-Path $releaseDirectory $manifestFileName
@@ -587,6 +631,24 @@ function Invoke-SelfTest {
         }
         Write-TestFileWithSidecar -Path $candidatePath -Text (($candidate | ConvertTo-Json -Depth 5) + [Environment]::NewLine) | Out-Null
 
+        $retainedPath = Join-Path $tempRoot 'retained-beta-candidate.json'
+        $retained = [ordered]@{
+            schemaVersion = 2
+            kind = 'DragonDiskForgeRetainedBetaCandidateEvidence'
+            version = $version
+            architecture = 'x64'
+            sourceCommit = $commit
+            workflowRunId = '123456789'
+            packageFile = 'DragonDiskForge-win-x64.zip'
+            packageSha256 = $packageHash
+            installerFile = "DragonDiskForge-$version-win-x64-setup.exe"
+            installerSha256 = $installerHash
+            installerScope = 'per-user'
+            publicRelease = $false
+            betaReady = $false
+        }
+        Write-Utf8NoBom -Path $retainedPath -Text (($retained | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
+
         $qaKitPath = Join-Path $tempRoot 'beta-qa-kit.json'
         Write-TestFileWithSidecar -Path $qaKitPath -Text "{`"schemaVersion`":2}`n" | Out-Null
         $evidencePath = Join-Path $tempRoot 'beta-manual-qa.json'
@@ -628,12 +690,13 @@ exit 0
 '@
 
         $outputRoot = Join-Path $tempRoot 'release'
-        $bundle = Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot $outputRoot -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript
+        $bundle = Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -RetainedEvidenceFile $retainedPath -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot $outputRoot -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript
 
         if (-not (Test-Path -LiteralPath $bundle.packagePath -PathType Leaf)) { throw 'Self-test failed: release package was not prepared.' }
         if ((Get-FileHash -LiteralPath $bundle.packagePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $packageHash) { throw 'Self-test failed: prepared package hash changed.' }
         $manifest = Get-Content -LiteralPath $bundle.manifestPath -Raw | ConvertFrom-Json
-        if ([int]$manifest.schemaVersion -ne 2 -or [string]$manifest.sourceCommit -ne $commit -or [string]$manifest.packageSha256 -ne $packageHash -or [string]$manifest.installerSha256 -ne $installerHash -or [string]$manifest.proofState -ne 'verified') {
+        $retainedHash = (Get-FileHash -LiteralPath $retainedPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ([int]$manifest.schemaVersion -ne 2 -or [string]$manifest.sourceCommit -ne $commit -or [string]$manifest.packageSha256 -ne $packageHash -or [string]$manifest.installerSha256 -ne $installerHash -or [string]$manifest.retainedEvidenceSha256 -ne $retainedHash -or [string]$manifest.proofState -ne 'verified') {
             throw 'Self-test failed: release manifest lost verified source/package identity.'
         }
         $notes = Get-Content -LiteralPath $bundle.notesPath -Raw
@@ -646,10 +709,21 @@ exit 0
             throw 'Self-test failed: GitHub pre-release arguments lost prerelease/source/asset binding.'
         }
 
+        $retained.installerSha256 = ('f' * 64)
+        Write-Utf8NoBom -Path $retainedPath -Text (($retained | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
+        $retainedMismatchRejected = $false
+        try {
+            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -RetainedEvidenceFile $retainedPath -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'retained-installer-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
+        }
+        catch { $retainedMismatchRejected = $true }
+        if (-not $retainedMismatchRejected) { throw 'Self-test failed: installer mismatched with canonical retained evidence was accepted.' }
+        $retained.installerSha256 = $installerHash
+        Write-Utf8NoBom -Path $retainedPath -Text (($retained | ConvertTo-Json -Depth 5) + [Environment]::NewLine)
+
         $env:DRAGON_DISKFORGE_RELEASE_PROOF_FAIL = '1'
         $proofRejected = $false
         try {
-            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'proof-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
+            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -RetainedEvidenceFile $retainedPath -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'proof-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
         }
         catch {
             $proofRejected = $true
@@ -662,7 +736,7 @@ exit 0
         Add-Content -LiteralPath $packagePath -Value 'tamper'
         $tamperRejected = $false
         try {
-            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'tamper-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
+            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $packagePath -PackageChecksumPath "$packagePath.sha256" -InstallerFile $installerPath -InstallerChecksumPath "$installerPath.sha256" -RetainedEvidenceFile $retainedPath -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'tamper-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
         }
         catch {
             $tamperRejected = $true
@@ -673,7 +747,7 @@ exit 0
         Write-TestFileWithSidecar -Path $candidatePath -Text (($candidate | ConvertTo-Json -Depth 5) + [Environment]::NewLine) | Out-Null
         $sourceRejected = $false
         try {
-            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $bundle.packagePath -PackageChecksumPath $bundle.packageChecksumPath -InstallerFile $bundle.installerPath -InstallerChecksumPath $bundle.installerChecksumPath -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'source-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
+            Prepare-ReleaseBundle -CandidatePath $candidatePath -CandidateChecksumPath "$candidatePath.sha256" -QaKitPath $qaKitPath -QaKitChecksumPath "$qaKitPath.sha256" -PackageFile $bundle.packagePath -PackageChecksumPath $bundle.packageChecksumPath -InstallerFile $bundle.installerPath -InstallerChecksumPath $bundle.installerChecksumPath -RetainedEvidenceFile $retainedPath -EvidenceFile $evidencePath -EvidenceChecksumPath "$evidencePath.sha256" -Version $version -SourceCommit $commit -TemplatePath $templatePath -CapabilitiesPath $capabilitiesPath -OutputRoot (Join-Path $tempRoot 'source-fail') -Tag $version -Repo 'Swir/Dragon-DiskForge' -ReleaseProofScript $proofScript | Out-Null
         }
         catch {
             $sourceRejected = $true
@@ -701,7 +775,7 @@ switch ($Mode) {
     }
 
     'prepare' {
-        $bundle = Prepare-ReleaseBundle -CandidatePath $CandidateMetadataPath -CandidateChecksumPath $CandidateMetadataChecksumFile -QaKitPath $QaKitManifestPath -QaKitChecksumPath $QaKitManifestChecksumFile -PackageFile $PackagePath -PackageChecksumPath $PackageChecksumFile -InstallerFile $InstallerPath -InstallerChecksumPath $InstallerChecksumFile -EvidenceFile $EvidencePath -EvidenceChecksumPath $EvidenceChecksumFile -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -TemplatePath $ReleaseNotesTemplatePath -CapabilitiesPath $CapabilityMatrixPath -OutputRoot $OutputDirectory -Tag $TagName -Repo $Repository -ReleaseProofScript $ProofScriptPath
+        $bundle = Prepare-ReleaseBundle -CandidatePath $CandidateMetadataPath -CandidateChecksumPath $CandidateMetadataChecksumFile -QaKitPath $QaKitManifestPath -QaKitChecksumPath $QaKitManifestChecksumFile -PackageFile $PackagePath -PackageChecksumPath $PackageChecksumFile -InstallerFile $InstallerPath -InstallerChecksumPath $InstallerChecksumFile -RetainedEvidenceFile $RetainedEvidencePath -EvidenceFile $EvidencePath -EvidenceChecksumPath $EvidenceChecksumFile -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -TemplatePath $ReleaseNotesTemplatePath -CapabilitiesPath $CapabilityMatrixPath -OutputRoot $OutputDirectory -Tag $TagName -Repo $Repository -ReleaseProofScript $ProofScriptPath
         Write-Host "Dragon DiskForge beta release bundle is prepared after exact release-proof verification."
         Write-Host "Directory: $($bundle.directory)"
         Write-Host "Source commit: $($bundle.sourceCommit)"
@@ -713,7 +787,7 @@ switch ($Mode) {
     }
 
     'publish' {
-        $bundle = Prepare-ReleaseBundle -CandidatePath $CandidateMetadataPath -CandidateChecksumPath $CandidateMetadataChecksumFile -QaKitPath $QaKitManifestPath -QaKitChecksumPath $QaKitManifestChecksumFile -PackageFile $PackagePath -PackageChecksumPath $PackageChecksumFile -InstallerFile $InstallerPath -InstallerChecksumPath $InstallerChecksumFile -EvidenceFile $EvidencePath -EvidenceChecksumPath $EvidenceChecksumFile -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -TemplatePath $ReleaseNotesTemplatePath -CapabilitiesPath $CapabilityMatrixPath -OutputRoot $OutputDirectory -Tag $TagName -Repo $Repository -ReleaseProofScript $ProofScriptPath
+        $bundle = Prepare-ReleaseBundle -CandidatePath $CandidateMetadataPath -CandidateChecksumPath $CandidateMetadataChecksumFile -QaKitPath $QaKitManifestPath -QaKitChecksumPath $QaKitManifestChecksumFile -PackageFile $PackagePath -PackageChecksumPath $PackageChecksumFile -InstallerFile $InstallerPath -InstallerChecksumPath $InstallerChecksumFile -RetainedEvidenceFile $RetainedEvidencePath -EvidenceFile $EvidencePath -EvidenceChecksumPath $EvidenceChecksumFile -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -TemplatePath $ReleaseNotesTemplatePath -CapabilitiesPath $CapabilityMatrixPath -OutputRoot $OutputDirectory -Tag $TagName -Repo $Repository -ReleaseProofScript $ProofScriptPath
         $published = Publish-ReleaseBundle -Bundle $bundle -Repo $Repository -Version $ExpectedVersion
         Write-Host "Dragon DiskForge public beta prerelease was published only after exact proof verification."
         Write-Host "URL: $($published.url)"
