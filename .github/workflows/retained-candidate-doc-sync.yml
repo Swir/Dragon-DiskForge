@@ -2,12 +2,14 @@ name: Dragon DiskForge Retained Candidate Documentation Sync
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - automation/retain-candidate-266
   pull_request:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: dragon-retained-doc-sync-${{ github.workflow }}-${{ github.ref }}
@@ -49,6 +51,30 @@ jobs:
             docs/BETA-RELEASE.md
             docs/BETA-CANDIDATE.md
             docs/retained-beta-candidate.json
+
+      - name: Commit synchronized retained-candidate projection
+        if: github.event_name == 'push' && github.ref_name == 'automation/retain-candidate-266'
+        shell: bash
+        run: |
+          paths=(
+            README.md
+            CHANGELOG.md
+            docs/ROADMAP.md
+            docs/STATUS.md
+            docs/MILESTONES.md
+            docs/BETA-RELEASE.md
+            docs/BETA-CANDIDATE.md
+            .github/workflows/beta-retained-explorer-currency.yml
+          )
+          if git diff --quiet -- "${paths[@]}"; then
+            echo "Retained-candidate projection is already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "${paths[@]}"
+          git commit -m "docs: synchronize Candidate #266 projection"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Verify active retained-candidate narrative
         shell: pwsh
