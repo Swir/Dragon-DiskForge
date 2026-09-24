@@ -1,0 +1,28 @@
+name: Dragon DiskForge Installer Contract
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  installer-contract:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell 7 packaging contract
+        shell: pwsh
+        run: ./scripts/package-installer.ps1 -Mode self-test
+      - name: Windows PowerShell 5.1 packaging contract
+        shell: powershell
+        run: .\scripts\package-installer.ps1 -Mode self-test
+      - name: PowerShell 7 verification contract
+        shell: pwsh
+        run: ./scripts/verify-installer.ps1 -Mode self-test
+      - name: Windows PowerShell 5.1 verification contract
+        shell: powershell
+        run: .\scripts\verify-installer.ps1 -Mode self-test
