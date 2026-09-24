@@ -50,7 +50,7 @@ Verify one group only after its real human observations are expected to be compl
 .\scripts\beta-qa-operator.ps1 -Mode verify-group -Group desktop -WorkspacePath <session-workspace>
 ```
 
-When working from an extracted retained candidate artifact, use the same commands with `\.\beta-qa-operator.ps1` instead of `\.\scripts\beta-qa-operator.ps1`.
+When working from an extracted retained candidate artifact, use the same commands with `.\beta-qa-operator.ps1` instead of `.\scripts\beta-qa-operator.ps1`.
 
 Run the routing contract self-test:
 
