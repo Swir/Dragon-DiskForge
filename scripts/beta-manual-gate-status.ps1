@@ -448,7 +448,7 @@ if ($Mode -eq "status") {
     if ($unresolved.Count -gt 0) {
         Write-Host "Unresolved checks:"
         foreach ($item in $unresolved) {
-            Write-Host ("- [{0}] {1} ({2}) — {3}" -f $item.status.ToUpperInvariant(), $item.id, $item.group, $item.description)
+            Write-Host ("- [{0}] {1} ({2}) - {3}" -f $item.status.ToUpperInvariant(), $item.id, $item.group, $item.description)
         }
     }
     else {
