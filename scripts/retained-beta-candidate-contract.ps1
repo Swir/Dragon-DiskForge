@@ -88,8 +88,30 @@ function Test-RetainedCandidateEvidence {
     if ([string]$evidence.runtimeDeployment.windowsAppSdk -ne "self-contained") { throw "Windows App SDK runtime deployment must be self-contained." }
     if ([string]$evidence.runtimeDeployment.visualCpp -ne "app-local") { throw "Visual C++ runtime deployment must be app-local." }
 
-    $created = [DateTimeOffset]::Parse([string]$evidence.artifactCreatedAtUtc)
-    $expires = [DateTimeOffset]::Parse([string]$evidence.artifactExpiresAtUtc)
+    $created = if ($evidence.artifactCreatedAtUtc -is [DateTimeOffset]) {
+        [DateTimeOffset]$evidence.artifactCreatedAtUtc
+    }
+    elseif ($evidence.artifactCreatedAtUtc -is [DateTime]) {
+        [DateTimeOffset]([DateTime]$evidence.artifactCreatedAtUtc)
+    }
+    else {
+        [DateTimeOffset]::Parse(
+            [string]$evidence.artifactCreatedAtUtc,
+            [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::RoundtripKind)
+    }
+    $expires = if ($evidence.artifactExpiresAtUtc -is [DateTimeOffset]) {
+        [DateTimeOffset]$evidence.artifactExpiresAtUtc
+    }
+    elseif ($evidence.artifactExpiresAtUtc -is [DateTime]) {
+        [DateTimeOffset]([DateTime]$evidence.artifactExpiresAtUtc)
+    }
+    else {
+        [DateTimeOffset]::Parse(
+            [string]$evidence.artifactExpiresAtUtc,
+            [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::RoundtripKind)
+    }
     if ($expires -le $created) { throw "Artifact expiry must be later than creation time." }
 
     if ([bool]$evidence.publicRelease) { throw "Retained candidate evidence must not claim a public release." }
