@@ -180,6 +180,37 @@ function Test-DocumentationSet {
     }
 }
 
+function Test-ReleaseNotesTemplateContract {
+    param([Parameter(Mandatory = $true)][string]$Root)
+
+    $path = Join-Path $Root 'docs/release-notes/0.5.0-beta.1.md.tmpl'
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw 'Beta release notes template is missing.'
+    }
+
+    $text = Get-Content -LiteralPath $path -Raw
+    foreach ($required in @(
+        'DragonDiskForge-{{VERSION}}-win-x64.zip',
+        '{{PACKAGE_SHA256}}',
+        'DragonDiskForge-{{VERSION}}-win-x64-setup.exe',
+        '{{INSTALLER_SHA256}}'
+    )) {
+        if ($text.IndexOf($required, [System.StringComparison]::Ordinal) -lt 0) {
+            throw "Beta release notes template is missing required package/installer token '$required'."
+        }
+    }
+
+    if ($text -notmatch '(?i)\bper-user\b') {
+        throw 'Beta release notes template must describe the installer as per-user.'
+    }
+    if ($text -notmatch '(?i)\buninstall') {
+        throw 'Beta release notes template must include uninstall/removal guidance.'
+    }
+    if ($text -match '(?i)\bno installer (is|will be) used\b') {
+        throw 'Beta release notes template contradicts the retained installer asset.'
+    }
+}
+
 function Write-Utf8NoBom {
     param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$Text)
     $directory = Split-Path -Parent $Path
@@ -311,6 +342,22 @@ function Invoke-SelfTest {
         try { $null = Read-RetainedCandidateEvidence -Path (Join-Path $root 'docs/retained-beta-candidate.json') } catch { $rejected = $true }
         if (-not $rejected) { throw "Self-test failed: invalid package UAC witness SHA-256 was accepted." }
 
+        $releaseNotesPath = Join-Path $root 'docs/release-notes/0.5.0-beta.1.md.tmpl'
+        Write-Utf8NoBom -Path $releaseNotesPath -Text @'
+# Dragon DiskForge {{VERSION}}
+Package: DragonDiskForge-{{VERSION}}-win-x64.zip
+Package SHA-256: {{PACKAGE_SHA256}}
+Installer: DragonDiskForge-{{VERSION}}-win-x64-setup.exe (per-user)
+Installer SHA-256: {{INSTALLER_SHA256}}
+Uninstall from Windows Settings.
+'@
+        Test-ReleaseNotesTemplateContract -Root $root
+
+        Add-Content -LiteralPath $releaseNotesPath -Value 'No installer is used for this beta package.'
+        $releaseNotesRejected = $false
+        try { Test-ReleaseNotesTemplateContract -Root $root } catch { $releaseNotesRejected = $true }
+        if (-not $releaseNotesRejected) { throw 'Self-test failed: contradictory installer release notes were accepted.' }
+
         Write-Host "Dragon DiskForge beta documentation consistency self-test passed for retained evidence schemas v1/v2 and package manifest schemas 5/6."
     }
     finally {
@@ -327,4 +374,5 @@ $root = Resolve-RepositoryRoot -RequestedRoot $RepositoryRoot
 $evidenceFile = if ([System.IO.Path]::IsPathRooted($EvidencePath)) { $EvidencePath } else { Join-Path $root $EvidencePath }
 $evidence = Read-RetainedCandidateEvidence -Path $evidenceFile
 Test-DocumentationSet -Root $root -Evidence $evidence
+Test-ReleaseNotesTemplateContract -Root $root
 Write-Host ("Beta documentation is synchronized to retained candidate schema {0}, run #{1} ({2}), source {3}, package SHA-256 {4}." -f $evidence.schemaVersion, $evidence.workflowRunNumber, $evidence.workflowRunId, $evidence.sourceCommit, $evidence.packageSha256)
