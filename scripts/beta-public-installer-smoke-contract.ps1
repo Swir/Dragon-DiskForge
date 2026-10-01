@@ -18,7 +18,7 @@ function Get-PublicInstallerSmokeArguments {
         [Parameter(Mandatory = $true)][string]$Version
     )
 
-    if ($Version -notmatch '^0\\.[0-9]+\\.[0-9]+-beta\\.[0-9]+$') {
+    if ($Version -notmatch '^0\.[0-9]+\.[0-9]+-beta\.[0-9]+$') {
         throw "ExpectedVersion '$Version' is invalid."
     }
     if ([System.IO.Path]::GetFileName($VerifierPath) -ne 'verify-installer.ps1') {
