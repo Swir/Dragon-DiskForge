@@ -9,6 +9,7 @@ param(
     [string]$ExpectedSourceCommit = '',
     [string]$ExpectedVerifierCommit = '',
     [string]$VerifyPackageScriptPath = 'scripts/verify-package.ps1',
+    [string]$VerifyInstallerScriptPath = 'scripts/verify-installer.ps1',
     [switch]$KeepDownloads
 )
 
@@ -204,15 +205,18 @@ function Assert-ToolingProvenance {
         [Parameter(Mandatory = $true)][string]$RepositoryName,
         [Parameter(Mandatory = $true)][string]$ToolingCommit,
         [Parameter(Mandatory = $true)][string]$LocalVerifierPath,
-        [Parameter(Mandatory = $true)][string]$LocalPackageVerifierPath
+        [Parameter(Mandatory = $true)][string]$LocalPackageVerifierPath,
+        [Parameter(Mandatory = $true)][string]$LocalInstallerVerifierPath
     )
 
     $repo = Assert-RepositoryName -Value $RepositoryName
     $commit = Assert-ExactCommit -Commit $ToolingCommit -Label 'ExpectedVerifierCommit'
     $localVerifier = (Resolve-Path -LiteralPath $LocalVerifierPath -ErrorAction Stop).Path
     $localPackageVerifier = (Resolve-Path -LiteralPath $LocalPackageVerifierPath -ErrorAction Stop).Path
+    $localInstallerVerifier = (Resolve-Path -LiteralPath $LocalInstallerVerifierPath -ErrorAction Stop).Path
     $localVerifierHash = Get-Sha256 -Path $localVerifier
     $localPackageVerifierHash = Get-Sha256 -Path $localPackageVerifier
+    $localInstallerVerifierHash = Get-Sha256 -Path $localInstallerVerifier
 
     $headers = @{
         'Accept' = 'application/vnd.github+json'
@@ -242,6 +246,13 @@ function Assert-ToolingProvenance {
                 localHash = $localPackageVerifierHash
                 destination = Join-Path $root 'verify-package.ps1'
                 label = 'package verifier'
+            },
+            [pscustomobject]@{
+                repositoryPath = 'scripts/verify-installer.ps1'
+                localPath = $localInstallerVerifier
+                localHash = $localInstallerVerifierHash
+                destination = Join-Path $root 'verify-installer.ps1'
+                label = 'installer verifier'
             }
         )
 
@@ -261,6 +272,7 @@ function Assert-ToolingProvenance {
             verifierCommit = $commit
             postReleaseVerifierSha256 = $localVerifierHash
             packageVerifierSha256 = $localPackageVerifierHash
+            installerVerifierSha256 = $localInstallerVerifierHash
             exactPublicToolingReadBack = $true
         }
     }
@@ -410,13 +422,14 @@ function Invoke-PublicReleaseVerification {
         [Parameter(Mandatory = $true)][string]$ToolingCommit,
         [Parameter(Mandatory = $true)][string]$VerifierScriptPath,
         [Parameter(Mandatory = $true)][string]$PackageVerifier,
+        [Parameter(Mandatory = $true)][string]$InstallerVerifier,
         [bool]$PreserveDownloads
     )
 
     $repo = Assert-RepositoryName -Value $RepositoryName
     Assert-VersionAndTag -Version $Version -Tag $Tag | Out-Null
     $commit = Assert-ExactCommit -Commit $SourceCommit -Label 'ExpectedSourceCommit'
-    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier
+    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier -LocalInstallerVerifierPath $InstallerVerifier
 
     $encodedTag = [Uri]::EscapeDataString($Tag)
     $headers = @{
@@ -461,6 +474,7 @@ function Invoke-PublicReleaseVerification {
             verifierCommit = $tooling.verifierCommit
             postReleaseVerifierSha256 = $tooling.postReleaseVerifierSha256
             packageVerifierSha256 = $tooling.packageVerifierSha256
+            installerVerifierSha256 = $tooling.installerVerifierSha256
             releaseUrl = [string]$release.html_url
             publishedAt = [string]$release.published_at
             packageSha256 = $bundle.packageSha256
@@ -638,13 +652,14 @@ if ([string]::IsNullOrWhiteSpace($ExpectedVerifierCommit)) {
     throw 'ExpectedVerifierCommit is required in verify mode; post-release verification tooling must be bound to an exact public repository commit.'
 }
 
-$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -PreserveDownloads $KeepDownloads.IsPresent
+$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -InstallerVerifier $VerifyInstallerScriptPath -PreserveDownloads $KeepDownloads.IsPresent
 Write-Host 'Dragon DiskForge public beta post-release verification passed.'
 Write-Host ("Release: {0}" -f $result.releaseUrl)
 Write-Host ("Tag/source: {0} -> {1}" -f $result.tag, $result.sourceCommit)
 Write-Host ("Verifier tooling commit: {0}" -f $result.verifierCommit)
 Write-Host ("Post-release verifier SHA-256: {0}" -f $result.postReleaseVerifierSha256)
 Write-Host ("Package verifier SHA-256: {0}" -f $result.packageVerifierSha256)
+Write-Host ("Installer verifier SHA-256: {0}" -f $result.installerVerifierSha256)
 Write-Host ("Package SHA-256: {0}" -f $result.packageSha256)
 Write-Host ("Release manifest SHA-256: {0}" -f $result.releaseManifestSha256)
 Write-Host ("Capability matrix SHA-256: {0}" -f $result.capabilityMatrixSha256)
