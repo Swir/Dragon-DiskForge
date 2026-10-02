@@ -46,7 +46,7 @@ function Assert-PostReleaseBaselineContract {
     foreach ($path in $requiredPaths) {
         $property = $Baseline.requiredToolingBlobs.PSObject.Properties[[string]$path]
         if ($null -eq $property) { throw "Missing tooling blob pin for '$path'." }
-        $null = Assert-ExactHex -Value ([string]$property.Value -Length 40 -Label "Tooling blob pin '$path'"
+        $null = Assert-ExactHex -Value ([string]$property.Value) -Length 40 -Label "Tooling blob pin '$path'"
     }
 
     foreach ($flag in @('retainedIdentityMatched', 'runtimeInstallerVerified')) {
