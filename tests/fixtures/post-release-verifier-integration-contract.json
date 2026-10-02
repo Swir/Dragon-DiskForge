@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgePostReleaseVerifierIntegrationContract",
+  "version": "0.5.0-beta.1",
+  "retainedCandidate": {
+    "workflowRunNumber": 278,
+    "workflowRunId": "36045422063",
+    "sourceCommit": "0b7ff27adc97790508f23023234ebeff1412fe61"
+  },
+  "requiredExactCommitTooling": [
+    "scripts/beta-post-release-verify.ps1",
+    "scripts/verify-package.ps1",
+    "scripts/verify-installer.ps1",
+    "scripts/beta-retained-release-identity.ps1",
+    "scripts/beta-retained-public-binding.ps1",
+    "scripts/beta-public-installer-smoke-contract.ps1"
+  ],
+  "requiredBindings": [
+    "sourceCommit",
+    "packageSha256",
+    "installerSha256",
+    "candidateWorkflowRunId",
+    "retainedEvidenceSha256"
+  ],
+  "publicInstallerVerification": {
+    "mode": "verify",
+    "smokeInstall": true,
+    "requiresInstall": true,
+    "requiresUninstall": true
+  },
+  "requiredResultFlags": {
+    "retainedIdentityMatched": true,
+    "runtimeInstallerVerified": true
+  },
+  "postUninstallForbiddenProductMarkers": [
+    "DragonDiskForge.App.exe",
+    "package-manifest.json",
+    "unins000.exe"
+  ],
+  "benignResidueAllowed": true,
+  "compatibility": {
+    "powershell7": true,
+    "windowsPowerShell51": true
+  }
+}
