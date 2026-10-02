@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "DragonDiskForgePostReleaseAcceptanceBaseline",
   "product": "Dragon DiskForge",
   "version": "0.5.0-beta.1",
@@ -9,8 +9,24 @@
     "sourceCommit": "0b7ff27adc97790508f23023234ebeff1412fe61",
     "packageSha256": "e229760388eb6ab3108b6f1fd3d23428344cddc7ba580dd9760507a0a4074e55",
     "installerSha256": "1d198d927d83b88f6aeb3e351ebff37685283148ac32d1464adae36277cfb31f",
-    "evidencePath": "docs/retained-beta-candidate.json"
+    "evidencePath": "docs/retained-beta-candidate.json",
+    "retainedEvidenceSha256": "3dda1d7b11dac44df6243467adfc92acc38e9c611d95b0218f267819c77bc012"
   },
+  "requiredToolingPaths": [
+    "scripts/beta-post-release-verify.ps1",
+    "scripts/verify-package.ps1",
+    "scripts/verify-installer.ps1",
+    "scripts/beta-retained-release-identity.ps1",
+    "scripts/beta-retained-public-binding.ps1",
+    "scripts/beta-public-installer-smoke-contract.ps1"
+  ],
+  "verificationSequence": [
+    "retainedCandidateIdentity",
+    "publicPackageAndInstallerHashes",
+    "exactCommitToolingReadBack",
+    "publicInstallerSmokeInstallUninstall",
+    "postUninstallProductResidue"
+  ],
   "requiredResultFlags": [
     "retainedIdentityMatched",
     "runtimeInstallerVerified"
