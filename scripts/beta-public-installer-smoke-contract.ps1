@@ -103,3 +103,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host 'Dragon DiskForge public installer smoke verification passed.'
+Write-Host 'runtimeInstallerVerified=true'
