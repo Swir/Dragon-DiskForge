@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgePostReleaseExactHelperReadbackContract",
+  "version": "0.5.0-beta.1",
+  "requiredHelpers": [
+    {
+      "path": "scripts/beta-retained-release-identity.ps1",
+      "blobSha1": "071a71f4bb04f3529d801b19db5d1e6629250cc7"
+    },
+    {
+      "path": "scripts/beta-retained-public-binding.ps1",
+      "blobSha1": "58df9f57b4f90003454140404fb6fa67573e8091"
+    },
+    {
+      "path": "scripts/beta-public-installer-smoke-contract.ps1",
+      "blobSha1": "2f853f3c2c7ca2b672c453af2f5bd2bbd980a870"
+    }
+  ],
+  "requiredSequence": [
+    "resolveExactVerifierCommit",
+    "fetchEachHelperFromExactCommit",
+    "verifyFetchedHelperBlobSha1",
+    "rejectBranchOrMovingRefReadback",
+    "requireAllHelperReadbacksMatched"
+  ],
+  "failClosed": {
+    "missingHelper": true,
+    "helperBlobMismatch": true,
+    "movingRefUsed": true,
+    "exactCommitReadbackFailure": true
+  },
+  "requiredResultFlags": {
+    "exactPublicHelperReadBack": true
+  },
+  "compatibility": {
+    "powershell7": true,
+    "windowsPowerShell51": true
+  }
+}

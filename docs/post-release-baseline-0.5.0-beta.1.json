@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 3,
+  "kind": "DragonDiskForgePostReleaseAcceptanceBaseline",
+  "product": "Dragon DiskForge",
+  "version": "0.5.0-beta.1",
+  "retainedCandidate": {
+    "workflowRunNumber": 278,
+    "workflowRunId": "36045422063",
+    "sourceCommit": "0b7ff27adc97790508f23023234ebeff1412fe61",
+    "packageSha256": "e229760388eb6ab3108b6f1fd3d23428344cddc7ba580dd9760507a0a4074e55",
+    "installerSha256": "1d198d927d83b88f6aeb3e351ebff37685283148ac32d1464adae36277cfb31f",
+    "evidencePath": "docs/retained-beta-candidate.json",
+    "retainedEvidenceSha256": "3dda1d7b11dac44df6243467adfc92acc38e9c611d95b0218f267819c77bc012"
+  },
+  "requiredToolingPaths": [
+    "scripts/beta-post-release-verify.ps1",
+    "scripts/verify-package.ps1",
+    "scripts/verify-installer.ps1",
+    "scripts/beta-retained-release-identity.ps1",
+    "scripts/beta-retained-public-binding.ps1",
+    "scripts/beta-public-installer-smoke-contract.ps1"
+  ],
+  "verificationSequence": [
+    "retainedCandidateIdentity",
+    "publicPackageAndInstallerHashes",
+    "exactCommitToolingReadBack",
+    "publicInstallerSmokeInstallUninstall",
+    "postUninstallProductResidue"
+  ],
+  "requiredResultFlags": [
+    "retainedIdentityMatched",
+    "runtimeInstallerVerified"
+  ],
+  "requiredHumanPhysicalGates": [
+    "clean-desktop WinUI regression",
+    "normal-user UAC",
+    "Explorer drag-out",
+    "disposable-media writer"
+  ],
+  "requiredToolingBlobs": {
+    "scripts/beta-post-release-verify.ps1": "b6ef0cf951d6df5de89665524fd612d35c40e964",
+    "scripts/verify-package.ps1": "dd40d32edfddcd6f9b36dc4128e20f0965e4e0ba",
+    "scripts/verify-installer.ps1": "96c0132d0ab20ddbe43d883d1d805c7595d21351",
+    "scripts/beta-retained-release-identity.ps1": "071a71f4bb04f3529d801b19db5d1e6629250cc7",
+    "scripts/beta-retained-public-binding.ps1": "58df9f57b4f90003454140404fb6fa67573e8091",
+    "scripts/beta-public-installer-smoke-contract.ps1": "2f853f3c2c7ca2b672c453af2f5bd2bbd980a870"
+  },
+  "toolingPinPolicy": {
+    "mode": "exact-commit-plus-blob",
+    "failClosed": true,
+    "requirePublicReadBack": true
+  }
+}
