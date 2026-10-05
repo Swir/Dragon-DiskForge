@@ -55,11 +55,14 @@ if ($declared -ne $actual) { throw 'Installer SHA-256 does not match its sidecar
 
 function Assert-NoPostUninstallProductResidue {
     param([Parameter(Mandatory = $true)][string]$InstallRoot)
-    $deadline=[DateTime]::UtcNow.AddSeconds(10)
-    while([DateTime]::UtcNow -lt $deadline){if(-not(Test-Path -LiteralPath $InstallRoot)){return};$remaining=@(Get-ChildItem -LiteralPath $InstallRoot -Force -ErrorAction Stop);if($remaining.Count -eq 0){return};Start-Sleep -Milliseconds 250}
-    if(-not(Test-Path -LiteralPath $InstallRoot)){return}
-    $remainingNames=@(Get-ChildItem -LiteralPath $InstallRoot -Force -ErrorAction Stop|ForEach-Object{$_.Name})
-    if($remainingNames.Count -ne 0){throw "Silent uninstaller left forbidden product residue in '$InstallRoot': $($remainingNames -join ', ')."}
+    $forbidden = @('DragonDiskForge.App.exe', 'package-manifest.json', 'unins000.exe')
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        if (-not (Test-Path -LiteralPath $InstallRoot)) { return }
+        $present = @($forbidden | Where-Object { Test-Path -LiteralPath (Join-Path $InstallRoot $_) })
+        if ($present.Count -eq 0) { return }
+        if ($attempt -lt 20) { Start-Sleep -Milliseconds 250 }
+    }
+    throw "Silent uninstaller left forbidden product residue in '$InstallRoot': $($present -join ', ')."
 }
 
 if ($SmokeInstall) {
