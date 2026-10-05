@@ -29,6 +29,7 @@
     "requiresUninstall": true
   },
   "requiredResultFlags": {
+    "exactPublicHelperReadBack": true,
     "retainedIdentityMatched": true,
     "runtimeInstallerVerified": true
   },
