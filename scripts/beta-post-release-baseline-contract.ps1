@@ -49,7 +49,7 @@ function Assert-PostReleaseBaselineContract {
         $null = Assert-ExactHex -Value ([string]$property.Value) -Length 40 -Label "Tooling blob pin '$path'"
     }
 
-    foreach ($flag in @('retainedIdentityMatched', 'runtimeInstallerVerified')) {
+    foreach ($flag in @('exactPublicHelperReadBack', 'retainedIdentityMatched', 'runtimeInstallerVerified')) {
         if (@($Baseline.requiredResultFlags) -notcontains $flag) { throw "Missing required result flag '$flag'." }
     }
     foreach ($step in @('retainedCandidateIdentity', 'publicPackageAndInstallerHashes', 'exactCommitToolingReadBack', 'publicInstallerSmokeInstallUninstall', 'postUninstallProductResidue')) {
@@ -103,7 +103,7 @@ function Invoke-SelfTest {
             failClosed = $true
             requirePublicReadBack = $true
         }
-        requiredResultFlags = @('retainedIdentityMatched', 'runtimeInstallerVerified')
+        requiredResultFlags = @('exactPublicHelperReadBack', 'retainedIdentityMatched', 'runtimeInstallerVerified')
         verificationSequence = @(
             'retainedCandidateIdentity',
             'publicPackageAndInstallerHashes',
@@ -115,6 +115,12 @@ function Invoke-SelfTest {
 
     $valid = Assert-PostReleaseBaselineContract -Baseline $baseline
     if (-not [bool]$valid.failClosed) { throw 'Self-test failed: valid baseline was rejected.' }
+
+    $missingHelperFlag = $baseline.PSObject.Copy()
+    $missingHelperFlag.requiredResultFlags = @('retainedIdentityMatched', 'runtimeInstallerVerified')
+    $rejected = $false
+    try { Assert-PostReleaseBaselineContract -Baseline $missingHelperFlag | Out-Null } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Self-test failed: missing exactPublicHelperReadBack flag was accepted.' }
 
     $bad = $baseline.PSObject.Copy()
     $bad.toolingPinPolicy = [pscustomobject]@{
