@@ -408,6 +408,7 @@ function Assert-DownloadedReleaseBundle {
         capabilityMatrixPath = $capabilityPath
         capabilityMatrixSha256 = $actualCapabilityHash
         candidateWorkflowRunId = [string]$manifest.candidateWorkflowRunId
+        retainedEvidenceSha256 = ([string]$manifest.retainedEvidenceSha256).ToLowerInvariant()
         manualQaEvidenceSha256 = ([string]$manifest.manualQaEvidenceSha256).ToLowerInvariant()
     }
 }
@@ -448,6 +449,42 @@ function Invoke-RuntimePackageVerification {
     finally {
         Pop-Location
     }
+}
+
+
+function Assert-RetainedIdentityBinding {
+    param([Parameter(Mandatory = $true)][string]$EvidencePath,[Parameter(Mandatory = $true)][string]$BaselineFile,[Parameter(Mandatory = $true)][string]$ExpectedVersion,[Parameter(Mandatory = $true)][string]$ExpectedSourceCommit,[Parameter(Mandatory = $true)][string]$PublicPackageSha256,[Parameter(Mandatory = $true)][string]$PublicInstallerSha256,[Parameter(Mandatory = $true)][string]$ManifestCandidateWorkflowRunId,[Parameter(Mandatory = $true)][string]$ManifestRetainedEvidenceSha256,[Parameter(Mandatory = $true)][string]$BindingScriptPath)
+    $baselinePath=(Resolve-Path -LiteralPath $BaselineFile -ErrorAction Stop).Path;$baseline=Get-Content -LiteralPath $baselinePath -Raw|ConvertFrom-Json
+    if([int]$baseline.schemaVersion -ne 3 -or [string]$baseline.kind -ne 'DragonDiskForgePostReleaseAcceptanceBaseline' -or [string]$baseline.version -ne $ExpectedVersion){throw 'Canonical post-release baseline identity is invalid.'}
+    $candidate=$baseline.retainedCandidate;if($null -eq $candidate){throw 'Canonical post-release baseline is missing retainedCandidate.'}
+    $canonicalEvidencePath=[string]$candidate.evidencePath;if($canonicalEvidencePath -ne 'docs/retained-beta-candidate.json'){throw 'Canonical retainedCandidate evidencePath is invalid.'}
+    $repoRoot=Split-Path -Parent (Split-Path -Parent $baselinePath);$expectedEvidencePath=[System.IO.Path]::GetFullPath((Join-Path $repoRoot ($canonicalEvidencePath.Replace('/',[System.IO.Path]::DirectorySeparatorChar))))
+    $path=(Resolve-Path -LiteralPath $EvidencePath -ErrorAction Stop).Path;$comparison=if($env:OS -eq 'Windows_NT'){[System.StringComparison]::OrdinalIgnoreCase}else{[System.StringComparison]::Ordinal};if(-not [string]::Equals($expectedEvidencePath,[System.IO.Path]::GetFullPath($path),$comparison)){throw 'Retained evidence path does not match baseline retainedCandidate evidencePath.'}
+    [int64]$canonicalRunId=0;if(-not [int64]::TryParse([string]$candidate.workflowRunId,[ref]$canonicalRunId)-or $canonicalRunId -le 0){throw 'Baseline retainedCandidate workflowRunId must be a positive integer.'}
+    $canonicalSource=Assert-ExactCommit -Commit ([string]$candidate.sourceCommit) -Label 'Baseline retainedCandidate sourceCommit';if($canonicalSource -ne $ExpectedSourceCommit){throw 'Baseline retainedCandidate sourceCommit does not match public sourceCommit.'}
+    $canonicalPackage=Assert-HexSha256 -Value ([string]$candidate.packageSha256) -Label 'Baseline retainedCandidate packageSha256';$canonicalInstaller=Assert-HexSha256 -Value ([string]$candidate.installerSha256) -Label 'Baseline retainedCandidate installerSha256';$canonicalEvidenceSha=Assert-HexSha256 -Value ([string]$candidate.retainedEvidenceSha256) -Label 'Baseline retainedCandidate retainedEvidenceSha256'
+    $evidence=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json
+    if([int]$evidence.schemaVersion -ne 2 -or [string]$evidence.kind -ne 'DragonDiskForgeRetainedBetaCandidateEvidence'){throw 'Canonical retained evidence identity is invalid.'}
+    if([string]$evidence.product -ne 'Dragon DiskForge' -or [string]$evidence.version -ne $ExpectedVersion -or [string]$evidence.architecture -ne 'x64'){throw 'Canonical retained evidence product/version/architecture is invalid.'}
+    if([string]$evidence.installerScope -ne 'per-user' -or [bool]$evidence.publicRelease -or [bool]$evidence.betaReady){throw 'Canonical retained evidence must remain per-user, non-public, and not beta-ready.'}
+    $source=Assert-ExactCommit -Commit ([string]$evidence.sourceCommit) -Label 'Retained sourceCommit';[int64]$runId=0;if(-not [int64]::TryParse([string]$evidence.workflowRunId,[ref]$runId)-or $runId -le 0){throw 'Retained workflowRunId must be a positive integer.'}
+    $packageSha=Assert-HexSha256 -Value ([string]$evidence.packageSha256) -Label 'Retained packageSha256';$installerSha=Assert-HexSha256 -Value ([string]$evidence.installerSha256) -Label 'Retained installerSha256';$evidenceSha=Get-Sha256 -Path $path
+    if($source -ne $canonicalSource -or $runId -ne $canonicalRunId -or $packageSha -ne $canonicalPackage -or $installerSha -ne $canonicalInstaller -or $evidenceSha -ne $canonicalEvidenceSha){throw 'Retained evidence identity does not exactly match baseline retainedCandidate Candidate #278.'}
+    $manifestEvidenceSha=Assert-HexSha256 -Value $ManifestRetainedEvidenceSha256 -Label 'Manifest retainedEvidenceSha256';if($evidenceSha -ne $manifestEvidenceSha){throw "Canonical retained evidence SHA-256 '$evidenceSha' does not match manifest '$manifestEvidenceSha'."}
+    $bindingPath=(Resolve-Path -LiteralPath $BindingScriptPath -ErrorAction Stop).Path;. $bindingPath -Mode library
+    if($null -eq (Get-Command Assert-RetainedPublicBinding -CommandType Function -ErrorAction SilentlyContinue)){throw 'Retained/public binding helper did not expose Assert-RetainedPublicBinding.'}
+    $identity=[pscustomobject]@{sourceCommit=$source;workflowRunId=$runId;packageSha256=$packageSha;installerSha256=$installerSha;retainedEvidenceSha256=$evidenceSha}
+    $binding=Assert-RetainedPublicBinding -RetainedIdentity $identity -PublicSourceCommit $ExpectedSourceCommit -PublicPackageSha256 $PublicPackageSha256 -PublicInstallerSha256 $PublicInstallerSha256 -ManifestCandidateWorkflowRunId $ManifestCandidateWorkflowRunId -ManifestRetainedEvidenceSha256 $manifestEvidenceSha
+    if(-not [bool]$binding.retainedIdentityMatched){throw 'Retained/public identity binding did not produce retainedIdentityMatched=true.'};return $binding
+}
+
+function Invoke-RuntimeInstallerVerification {
+    param([Parameter(Mandatory = $true)][string]$DownloadedInstallerPath,[Parameter(Mandatory = $true)][string]$Version,[Parameter(Mandatory = $true)][string]$SmokeScriptPath,[Parameter(Mandatory = $true)][string]$InstallerVerifierPath)
+    if($env:OS -ne 'Windows_NT'){throw 'Post-release runtime installer verification must run on Windows.'}
+    $smoke=(Resolve-Path -LiteralPath $SmokeScriptPath -ErrorAction Stop).Path;$installerVerifier=(Resolve-Path -LiteralPath $InstallerVerifierPath -ErrorAction Stop).Path;$powershell=Get-Command powershell.exe -ErrorAction SilentlyContinue
+    if($null -eq $powershell){throw 'Windows PowerShell is required to execute the public installer smoke contract.'}
+    & $powershell.Source -NoLogo -NoProfile -ExecutionPolicy Bypass -File $smoke -Mode verify -InstallerPath $DownloadedInstallerPath -InstallerVerifierPath $installerVerifier -ExpectedVersion $Version
+    if($LASTEXITCODE -ne 0){throw "Downloaded public installer failed runtime smoke verification with exit code $LASTEXITCODE."};return $true
 }
 
 function Invoke-PublicReleaseVerification {
