@@ -257,83 +257,67 @@ function Assert-ToolingProvenance {
     param(
         [Parameter(Mandatory = $true)][string]$RepositoryName,
         [Parameter(Mandatory = $true)][string]$ToolingCommit,
+        [Parameter(Mandatory = $true)][string]$BaselineFile,
         [Parameter(Mandatory = $true)][string]$LocalVerifierPath,
         [Parameter(Mandatory = $true)][string]$LocalPackageVerifierPath,
-        [Parameter(Mandatory = $true)][string]$LocalInstallerVerifierPath
+        [Parameter(Mandatory = $true)][string]$LocalInstallerVerifierPath,
+        [Parameter(Mandatory = $true)][string]$LocalRetainedIdentityPath,
+        [Parameter(Mandatory = $true)][string]$LocalRetainedBindingPath,
+        [Parameter(Mandatory = $true)][string]$LocalInstallerSmokePath
     )
 
     $repo = Assert-RepositoryName -Value $RepositoryName
     $commit = Assert-ExactCommit -Commit $ToolingCommit -Label 'ExpectedVerifierCommit'
-    $localVerifier = (Resolve-Path -LiteralPath $LocalVerifierPath -ErrorAction Stop).Path
-    $localPackageVerifier = (Resolve-Path -LiteralPath $LocalPackageVerifierPath -ErrorAction Stop).Path
-    $localInstallerVerifier = (Resolve-Path -LiteralPath $LocalInstallerVerifierPath -ErrorAction Stop).Path
-    $localVerifierHash = Get-Sha256 -Path $localVerifier
-    $localPackageVerifierHash = Get-Sha256 -Path $localPackageVerifier
-    $localInstallerVerifierHash = Get-Sha256 -Path $localInstallerVerifier
+    $gitContext = Resolve-GitRepositoryRoot -Path $LocalVerifierPath
+    $git = [string]$gitContext.git
+    $repositoryRoot = [string]$gitContext.root
+    $head = Assert-ExactCommit -Commit (Invoke-GitSingleLine -GitExecutable $git -RepositoryRoot $repositoryRoot -Arguments @('rev-parse','HEAD') -Label 'Checked-out HEAD read-back') -Label 'Checked-out HEAD'
+    if ($head -ne $commit) { throw "Checked-out HEAD '$head' does not match exact verifier tooling commit '$commit'." }
 
-    $headers = @{
-        'Accept' = 'application/vnd.github+json'
-        'User-Agent' = 'DragonDiskForge-PostReleaseVerifier'
-        'X-GitHub-Api-Version' = '2022-11-28'
-    }
-    $commitResponse = Invoke-RestMethod -Method Get -Uri "https://api.github.com/repos/$repo/commits/$commit" -Headers $headers
-    $resolvedCommit = Assert-ExactCommit -Commit ([string]$commitResponse.sha) -Label 'Verifier tooling commit read-back'
-    if ($resolvedCommit -ne $commit) {
-        throw "Verifier tooling commit read-back resolved '$resolvedCommit' instead of '$commit'."
-    }
+    $baseline = Get-Content -LiteralPath (Resolve-Path -LiteralPath $BaselineFile -ErrorAction Stop).Path -Raw | ConvertFrom-Json
+    if ([int]$baseline.schemaVersion -ne 3 -or [string]$baseline.kind -ne 'DragonDiskForgePostReleaseAcceptanceBaseline' -or [string]$baseline.version -ne '0.5.0-beta.1') { throw 'Post-release baseline identity is invalid.' }
+    if ([string]$baseline.toolingPinPolicy.mode -ne 'exact-commit-plus-blob' -or -not [bool]$baseline.toolingPinPolicy.failClosed -or -not [bool]$baseline.toolingPinPolicy.requirePublicReadBack) { throw 'Post-release baseline tooling pin policy is invalid.' }
 
-    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-verifier-provenance-' + [guid]::NewGuid().ToString('N'))
+    $expected = @(
+        [pscustomobject]@{ repositoryPath='scripts/beta-post-release-verify.ps1';localPath=(Resolve-Path -LiteralPath $LocalVerifierPath -ErrorAction Stop).Path;label='post-release verifier';resultName='postReleaseVerifierSha256';helper=$false },
+        [pscustomobject]@{ repositoryPath='scripts/verify-package.ps1';localPath=(Resolve-Path -LiteralPath $LocalPackageVerifierPath -ErrorAction Stop).Path;label='package verifier';resultName='packageVerifierSha256';helper=$false },
+        [pscustomobject]@{ repositoryPath='scripts/verify-installer.ps1';localPath=(Resolve-Path -LiteralPath $LocalInstallerVerifierPath -ErrorAction Stop).Path;label='installer verifier';resultName='installerVerifierSha256';helper=$false },
+        [pscustomobject]@{ repositoryPath='scripts/beta-retained-release-identity.ps1';localPath=(Resolve-Path -LiteralPath $LocalRetainedIdentityPath -ErrorAction Stop).Path;label='retained identity helper';resultName='retainedReleaseIdentitySha256';helper=$true },
+        [pscustomobject]@{ repositoryPath='scripts/beta-retained-public-binding.ps1';localPath=(Resolve-Path -LiteralPath $LocalRetainedBindingPath -ErrorAction Stop).Path;label='retained binding helper';resultName='retainedPublicBindingSha256';helper=$true },
+        [pscustomobject]@{ repositoryPath='scripts/beta-public-installer-smoke-contract.ps1';localPath=(Resolve-Path -LiteralPath $LocalInstallerSmokePath -ErrorAction Stop).Path;label='public installer smoke helper';resultName='publicInstallerSmokeSha256';helper=$true }
+    )
+
+    $headers=@{'Accept'='application/vnd.github+json';'User-Agent'='DragonDiskForge-PostReleaseVerifier';'X-GitHub-Api-Version'='2022-11-28'}
+    $commitResponse=Invoke-RestMethod -Method Get -Uri "https://api.github.com/repos/$repo/commits/$commit" -Headers $headers
+    if ((Assert-ExactCommit -Commit ([string]$commitResponse.sha) -Label 'Verifier tooling commit read-back') -ne $commit) { throw 'Verifier tooling commit read-back mismatch.' }
+
+    $root=Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-verifier-provenance-'+[guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
+    $hashes=@{};$helperCount=0
     try {
-        $expected = @(
-            [pscustomobject]@{
-                repositoryPath = 'scripts/beta-post-release-verify.ps1'
-                localPath = $localVerifier
-                localHash = $localVerifierHash
-                destination = Join-Path $root 'beta-post-release-verify.ps1'
-                label = 'post-release verifier'
-            },
-            [pscustomobject]@{
-                repositoryPath = 'scripts/verify-package.ps1'
-                localPath = $localPackageVerifier
-                localHash = $localPackageVerifierHash
-                destination = Join-Path $root 'verify-package.ps1'
-                label = 'package verifier'
-            },
-            [pscustomobject]@{
-                repositoryPath = 'scripts/verify-installer.ps1'
-                localPath = $localInstallerVerifier
-                localHash = $localInstallerVerifierHash
-                destination = Join-Path $root 'verify-installer.ps1'
-                label = 'installer verifier'
-            }
-        )
-
-        foreach ($tool in $expected) {
-            $url = Get-PublicRawToolUrl -RepositoryName $repo -Commit $commit -RepositoryPath $tool.repositoryPath
-            Invoke-WebRequest -UseBasicParsing -Uri $url -Headers @{ 'User-Agent' = 'DragonDiskForge-PostReleaseVerifier' } -OutFile $tool.destination
-            if (-not (Test-Path -LiteralPath $tool.destination -PathType Leaf) -or (Get-Item -LiteralPath $tool.destination).Length -le 0) {
-                throw "Public read-back of $($tool.label) did not produce a non-empty file."
-            }
-            $publicHash = Get-Sha256 -Path $tool.destination
-            if ($publicHash -ne $tool.localHash) {
-                throw "Local $($tool.label) SHA-256 '$($tool.localHash)' does not match exact public tooling commit '$commit' SHA-256 '$publicHash'."
-            }
+        foreach($tool in $expected){
+            $property=$baseline.requiredToolingBlobs.PSObject.Properties[$tool.repositoryPath]
+            if($null -eq $property){throw "Post-release baseline is missing required tooling blob pin '$($tool.repositoryPath)'."}
+            $pin=Assert-GitSha1 -Value ([string]$property.Value) -Label "Baseline blob pin for $($tool.repositoryPath)"
+            $expectedLocal=[System.IO.Path]::GetFullPath((Join-Path $repositoryRoot ($tool.repositoryPath.Replace('/',[System.IO.Path]::DirectorySeparatorChar))))
+            $actualLocal=[System.IO.Path]::GetFullPath([string]$tool.localPath)
+            $comparison=if($env:OS -eq 'Windows_NT'){[System.StringComparison]::OrdinalIgnoreCase}else{[System.StringComparison]::Ordinal}
+            if(-not [string]::Equals($expectedLocal,$actualLocal,$comparison)){throw "Local tooling path '$actualLocal' does not match repository path '$($tool.repositoryPath)'."}
+            $commitBlob=Get-GitCommitBlobSha -GitExecutable $git -RepositoryRoot $repositoryRoot -Commit $commit -RepositoryPath $tool.repositoryPath
+            $workingBlob=Get-GitWorkingTreeBlobSha -GitExecutable $git -RepositoryRoot $repositoryRoot -RepositoryPath $tool.repositoryPath -LocalPath $actualLocal
+            if($commitBlob -ne $pin -or $workingBlob -ne $pin){throw "Exact/local Git blob mismatch for $($tool.repositoryPath): baseline=$pin exact=$commitBlob working=$workingBlob."}
+            $destination=Join-Path $root ([System.IO.Path]::GetFileName($tool.repositoryPath))
+            Invoke-WebRequest -UseBasicParsing -Uri (Get-PublicRawToolUrl -RepositoryName $repo -Commit $commit -RepositoryPath $tool.repositoryPath) -Headers @{'User-Agent'='DragonDiskForge-PostReleaseVerifier'} -OutFile $destination
+            if(-not(Test-Path -LiteralPath $destination -PathType Leaf)-or(Get-Item -LiteralPath $destination).Length -le 0){throw "Public read-back of $($tool.label) did not produce a non-empty file."}
+            $publicBlob=Get-GitRawFileBlobSha -GitExecutable $git -RepositoryRoot $repositoryRoot -Path $destination -Label "Public exact-commit Git blob for $($tool.repositoryPath)"
+            if($publicBlob -ne $pin){throw "Public exact-commit Git blob '$publicBlob' for $($tool.repositoryPath) does not match baseline pin '$pin'."}
+            $hashes[[string]$tool.resultName]=Get-Sha256 -Path $actualLocal
+            if([bool]$tool.helper){$helperCount++}
         }
-
-        return [pscustomobject]@{
-            verifierCommit = $commit
-            postReleaseVerifierSha256 = $localVerifierHash
-            packageVerifierSha256 = $localPackageVerifierHash
-            installerVerifierSha256 = $localInstallerVerifierHash
-            exactPublicToolingReadBack = $true
-        }
+        if($helperCount -ne 3){throw "Exact public helper read-back expected 3 helpers, observed $helperCount."}
+        return [pscustomobject]@{verifierCommit=$commit;postReleaseVerifierSha256=[string]$hashes.postReleaseVerifierSha256;packageVerifierSha256=[string]$hashes.packageVerifierSha256;installerVerifierSha256=[string]$hashes.installerVerifierSha256;retainedReleaseIdentitySha256=[string]$hashes.retainedReleaseIdentitySha256;retainedPublicBindingSha256=[string]$hashes.retainedPublicBindingSha256;publicInstallerSmokeSha256=[string]$hashes.publicInstallerSmokeSha256;exactPublicToolingReadBack=$true;exactPublicHelperReadBack=$true}
     }
-    finally {
-        if (Test-Path -LiteralPath $root) {
-            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
+    finally {if(Test-Path -LiteralPath $root){Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue}}
 }
 
 function Assert-DownloadedReleaseBundle {
