@@ -52,6 +52,16 @@ $declared = Read-Checksum -Path $checksum -ExpectedName $expectedName
 $actual = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($declared -ne $actual) { throw 'Installer SHA-256 does not match its sidecar.' }
 
+
+function Assert-NoPostUninstallProductResidue {
+    param([Parameter(Mandatory = $true)][string]$InstallRoot)
+    $deadline=[DateTime]::UtcNow.AddSeconds(10)
+    while([DateTime]::UtcNow -lt $deadline){if(-not(Test-Path -LiteralPath $InstallRoot)){return};$remaining=@(Get-ChildItem -LiteralPath $InstallRoot -Force -ErrorAction Stop);if($remaining.Count -eq 0){return};Start-Sleep -Milliseconds 250}
+    if(-not(Test-Path -LiteralPath $InstallRoot)){return}
+    $remainingNames=@(Get-ChildItem -LiteralPath $InstallRoot -Force -ErrorAction Stop|ForEach-Object{$_.Name})
+    if($remainingNames.Count -ne 0){throw "Silent uninstaller left forbidden product residue in '$InstallRoot': $($remainingNames -join ', ')."}
+}
+
 if ($SmokeInstall) {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-installer-smoke-' + [guid]::NewGuid().ToString('N'))
     try {
@@ -66,6 +76,7 @@ if ($SmokeInstall) {
         }
         $uninstall = Start-Process -FilePath (Join-Path $root 'unins000.exe') -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
         if ($uninstall.ExitCode -ne 0) { throw "Silent uninstaller failed with exit code $($uninstall.ExitCode)." }
+        Assert-NoPostUninstallProductResidue -InstallRoot $root
     }
     finally {
         if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
