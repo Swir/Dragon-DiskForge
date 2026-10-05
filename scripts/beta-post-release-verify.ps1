@@ -10,6 +10,11 @@ param(
     [string]$ExpectedVerifierCommit = '',
     [string]$VerifyPackageScriptPath = 'scripts/verify-package.ps1',
     [string]$VerifyInstallerScriptPath = 'scripts/verify-installer.ps1',
+    [string]$BaselinePath = 'docs/post-release-baseline-0.5.0-beta.1.json',
+    [string]$RetainedEvidencePath = 'docs/retained-beta-candidate.json',
+    [string]$RetainedPublicBindingScriptPath = 'scripts/beta-retained-public-binding.ps1',
+    [string]$RetainedReleaseIdentityScriptPath = 'scripts/beta-retained-release-identity.ps1',
+    [string]$PublicInstallerSmokeScriptPath = 'scripts/beta-public-installer-smoke-contract.ps1',
     [switch]$KeepDownloads
 )
 
@@ -85,6 +90,54 @@ function Get-Sha256 {
         throw "Required file is missing: $Path"
     }
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+
+function Assert-GitSha1 {
+    param([Parameter(Mandatory = $true)][string]$Value,[Parameter(Mandatory = $true)][string]$Label)
+    if ($Value -notmatch '^[0-9a-fA-F]{40}$') { throw "$Label must be a 40-character Git SHA-1 value." }
+    return $Value.ToLowerInvariant()
+}
+
+function Get-GitExecutable {
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($null -eq $git -or [string]::IsNullOrWhiteSpace([string]$git.Source)) { throw 'Git is required for exact tooling blob verification.' }
+    return $git.Source
+}
+
+function Invoke-GitSingleLine {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string[]]$Arguments,[Parameter(Mandatory = $true)][string]$Label)
+    $output = @(& $GitExecutable -C $RepositoryRoot @Arguments 2>$null)
+    if ($LASTEXITCODE -ne 0) { throw "$Label failed with Git exit code $LASTEXITCODE." }
+    $lines = @($output | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($lines.Count -ne 1) { throw "$Label must return exactly one non-empty line." }
+    return $lines[0].Trim()
+}
+
+function Resolve-GitRepositoryRoot {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).Path
+    $start = if (Test-Path -LiteralPath $resolved -PathType Leaf) { Split-Path -Parent $resolved } else { $resolved }
+    $git = Get-GitExecutable
+    $root = Invoke-GitSingleLine -GitExecutable $git -RepositoryRoot $start -Arguments @('rev-parse','--show-toplevel') -Label 'Git repository-root resolution'
+    if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw "Git repository root does not exist: $root" }
+    return [pscustomobject]@{ git = $git; root = (Resolve-Path -LiteralPath $root).Path }
+}
+
+function Get-GitCommitBlobSha {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string]$Commit,[Parameter(Mandatory = $true)][string]$RepositoryPath)
+    $spec = ('{0}:{1}' -f $Commit,$RepositoryPath)
+    return Assert-GitSha1 -Value (Invoke-GitSingleLine -GitExecutable $GitExecutable -RepositoryRoot $RepositoryRoot -Arguments @('rev-parse',$spec) -Label "Exact-commit blob lookup for $RepositoryPath") -Label "Exact-commit blob for $RepositoryPath"
+}
+
+function Get-GitWorkingTreeBlobSha {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string]$RepositoryPath,[Parameter(Mandatory = $true)][string]$LocalPath)
+    return Assert-GitSha1 -Value (Invoke-GitSingleLine -GitExecutable $GitExecutable -RepositoryRoot $RepositoryRoot -Arguments @('hash-object',"--path=$RepositoryPath",'--',$LocalPath) -Label "Git-filtered working-tree blob for $RepositoryPath") -Label "Git-filtered working-tree blob for $RepositoryPath"
+}
+
+function Get-GitRawFileBlobSha {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string]$Path,[Parameter(Mandatory = $true)][string]$Label)
+    return Assert-GitSha1 -Value (Invoke-GitSingleLine -GitExecutable $GitExecutable -RepositoryRoot $RepositoryRoot -Arguments @('hash-object','--no-filters','--',$Path) -Label $Label) -Label $Label
 }
 
 function Read-Sha256Sidecar {
