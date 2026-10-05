@@ -497,13 +497,18 @@ function Invoke-PublicReleaseVerification {
         [Parameter(Mandatory = $true)][string]$VerifierScriptPath,
         [Parameter(Mandatory = $true)][string]$PackageVerifier,
         [Parameter(Mandatory = $true)][string]$InstallerVerifier,
+        [Parameter(Mandatory = $true)][string]$BaselineFile,
+        [Parameter(Mandatory = $true)][string]$RetainedEvidenceFile,
+        [Parameter(Mandatory = $true)][string]$RetainedBindingScript,
+        [Parameter(Mandatory = $true)][string]$RetainedIdentityScript,
+        [Parameter(Mandatory = $true)][string]$InstallerSmokeScript,
         [bool]$PreserveDownloads
     )
 
     $repo = Assert-RepositoryName -Value $RepositoryName
     Assert-VersionAndTag -Version $Version -Tag $Tag | Out-Null
     $commit = Assert-ExactCommit -Commit $SourceCommit -Label 'ExpectedSourceCommit'
-    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier -LocalInstallerVerifierPath $InstallerVerifier
+    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -BaselineFile $BaselineFile -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier -LocalInstallerVerifierPath $InstallerVerifier -LocalRetainedIdentityPath $RetainedIdentityScript -LocalRetainedBindingPath $RetainedBindingScript -LocalInstallerSmokePath $InstallerSmokeScript
 
     $encodedTag = [Uri]::EscapeDataString($Tag)
     $headers = @{
@@ -538,6 +543,8 @@ function Invoke-PublicReleaseVerification {
 
         $bundle = Assert-DownloadedReleaseBundle -Directory $downloadRoot -Version $Version -Tag $Tag -SourceCommit $commit
         Invoke-RuntimePackageVerification -DownloadedPackagePath $bundle.packagePath -PackageSha256 $bundle.packageSha256 -Version $Version -VerifierPath $PackageVerifier -TemporaryRoot $downloadRoot
+        $retainedBinding = Assert-RetainedIdentityBinding -EvidencePath $RetainedEvidenceFile -BaselineFile $BaselineFile -ExpectedVersion $Version -ExpectedSourceCommit $commit -PublicPackageSha256 $bundle.packageSha256 -PublicInstallerSha256 $bundle.installerSha256 -ManifestCandidateWorkflowRunId $bundle.candidateWorkflowRunId -ManifestRetainedEvidenceSha256 $bundle.retainedEvidenceSha256 -BindingScriptPath $RetainedBindingScript
+        $runtimeInstallerVerified = Invoke-RuntimeInstallerVerification -DownloadedInstallerPath $bundle.installerPath -Version $Version -SmokeScriptPath $InstallerSmokeScript -InstallerVerifierPath $InstallerVerifier
         $succeeded = $true
 
         return [pscustomobject]@{
@@ -556,9 +563,13 @@ function Invoke-PublicReleaseVerification {
             capabilityMatrixSha256 = $bundle.capabilityMatrixSha256
             candidateWorkflowRunId = $bundle.candidateWorkflowRunId
             manualQaEvidenceSha256 = $bundle.manualQaEvidenceSha256
+            retainedEvidenceSha256 = $bundle.retainedEvidenceSha256
             downloadedFromPublicRelease = $true
             runtimePackageVerified = $true
-            exactPublicToolingReadBack = $true
+            runtimeInstallerVerified = [bool]$runtimeInstallerVerified
+            exactPublicToolingReadBack = [bool]$tooling.exactPublicToolingReadBack
+            exactPublicHelperReadBack = [bool]$tooling.exactPublicHelperReadBack
+            retainedIdentityMatched = [bool]$retainedBinding.retainedIdentityMatched
         }
     }
     finally {
@@ -726,7 +737,7 @@ if ([string]::IsNullOrWhiteSpace($ExpectedVerifierCommit)) {
     throw 'ExpectedVerifierCommit is required in verify mode; post-release verification tooling must be bound to an exact public repository commit.'
 }
 
-$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -InstallerVerifier $VerifyInstallerScriptPath -PreserveDownloads $KeepDownloads.IsPresent
+$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -InstallerVerifier $VerifyInstallerScriptPath -BaselineFile $BaselinePath -RetainedEvidenceFile $RetainedEvidencePath -RetainedBindingScript $RetainedPublicBindingScriptPath -RetainedIdentityScript $RetainedReleaseIdentityScriptPath -InstallerSmokeScript $PublicInstallerSmokeScriptPath -PreserveDownloads $KeepDownloads.IsPresent
 Write-Host 'Dragon DiskForge public beta post-release verification passed.'
 Write-Host ("Release: {0}" -f $result.releaseUrl)
 Write-Host ("Tag/source: {0} -> {1}" -f $result.tag, $result.sourceCommit)
@@ -737,3 +748,6 @@ Write-Host ("Installer verifier SHA-256: {0}" -f $result.installerVerifierSha256
 Write-Host ("Package SHA-256: {0}" -f $result.packageSha256)
 Write-Host ("Release manifest SHA-256: {0}" -f $result.releaseManifestSha256)
 Write-Host ("Capability matrix SHA-256: {0}" -f $result.capabilityMatrixSha256)
+Write-Host ("exactPublicHelperReadBack={0}" -f ([bool]$result.exactPublicHelperReadBack).ToString().ToLowerInvariant())
+Write-Host ("retainedIdentityMatched={0}" -f ([bool]$result.retainedIdentityMatched).ToString().ToLowerInvariant())
+Write-Host ("runtimeInstallerVerified={0}" -f ([bool]$result.runtimeInstallerVerified).ToString().ToLowerInvariant())
