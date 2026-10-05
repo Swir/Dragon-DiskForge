@@ -13,7 +13,7 @@
     },
     {
       "path": "scripts/beta-public-installer-smoke-contract.ps1",
-      "blobSha1": "2f853f3c2c7ca2b672c453af2f5bd2bbd980a870"
+      "blobSha1": "11a5125b406f9dd21af28cd99af25cec252759be"
     }
   ],
   "requiredSequence": [
