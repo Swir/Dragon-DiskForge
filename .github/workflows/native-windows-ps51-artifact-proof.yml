@@ -1,0 +1,108 @@
+name: Dragon DiskForge Native Windows PS5.1 Artifact Proof
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dragon-native-ps51-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-native-artifacts:
+    name: Fresh beta ZIP and installer under Windows PowerShell 5.1
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      BETA_VERSION: 0.5.0-beta.1
+      SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+          persist-credentials: false
+
+      - name: Prove exact checkout and safe runner
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1 -or $PSVersionTable.PSEdition -ne 'Desktop') {
+            throw 'This qualification requires native Windows PowerShell 5.1 Desktop.'
+          }
+          $actual = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:SOURCE_COMMIT.ToLowerInvariant()) {
+            throw 'Checked-out source does not match the exact event HEAD.'
+          }
+          if ($env:DDF_DISPOSABLE_WRITE_OPT_IN -or $env:DDF_DISPOSABLE_EVIDENCE_PATH) {
+            throw 'Real disposable-media testing is forbidden in this CI job.'
+          }
+          Write-Host "Windows PowerShell $($PSVersionTable.PSVersion): exact source $actual"
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Prepare exact beta identity
+        shell: pwsh
+        run: ./scripts/beta-candidate.ps1 -Mode prepare
+
+      - name: Restore beta solution
+        run: msbuild DragonDiskForge.sln /restore /p:Configuration=Release /p:Platform=x64
+
+      - name: Build beta solution
+        run: msbuild DragonDiskForge.sln /m /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=false
+
+      - name: Build actual beta ZIP and SHA-256 sidecar
+        shell: pwsh
+        run: ./scripts/package-windows.ps1 -ExpectedVersion $env:BETA_VERSION
+
+      - name: Verify actual ZIP in native Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) {
+            throw 'ZIP verifier was not launched with native Windows PowerShell 5.1.'
+          }
+          .\scripts\verify-package.ps1 -ExpectedVersion $env:BETA_VERSION
+
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build actual per-user beta installer
+        shell: pwsh
+        run: ./scripts/package-installer.ps1 -Mode build -ExpectedVersion $env:BETA_VERSION
+
+      - name: Verify actual installer and silent install-uninstall in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) {
+            throw 'Installer verifier was not launched with native Windows PowerShell 5.1.'
+          }
+          .\scripts\verify-installer.ps1 -Mode verify -ExpectedVersion $env:BETA_VERSION -SmokeInstall
+
+      - name: Print exact artifact digests from native Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $zip = 'artifacts/windows/DragonDiskForge-win-x64.zip'
+          $installer = "artifacts/installer/DragonDiskForge-$env:BETA_VERSION-win-x64-setup.exe"
+          foreach ($item in @($zip, $installer)) {
+            if (-not (Test-Path -LiteralPath $item -PathType Leaf)) {
+              throw "Qualified artifact is missing: $item"
+            }
+            if (-not (Test-Path -LiteralPath "$item.sha256" -PathType Leaf)) {
+              throw "Qualified artifact sidecar is missing: $item"
+            }
+            $digest = (Get-FileHash -LiteralPath $item -Algorithm SHA256).Hash.ToLowerInvariant()
+            Write-Host "Qualified artifact $([System.IO.Path]::GetFileName($item)): SHA256=$digest"
+          }
+          Write-Host 'Native Windows PowerShell 5.1 completed both full production verifiers.'

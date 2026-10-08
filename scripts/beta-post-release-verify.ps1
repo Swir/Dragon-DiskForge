@@ -9,6 +9,12 @@ param(
     [string]$ExpectedSourceCommit = '',
     [string]$ExpectedVerifierCommit = '',
     [string]$VerifyPackageScriptPath = 'scripts/verify-package.ps1',
+    [string]$VerifyInstallerScriptPath = 'scripts/verify-installer.ps1',
+    [string]$BaselinePath = 'docs/post-release-baseline-0.5.0-beta.1.json',
+    [string]$RetainedEvidencePath = 'docs/retained-beta-candidate.json',
+    [string]$RetainedPublicBindingScriptPath = 'scripts/beta-retained-public-binding.ps1',
+    [string]$RetainedReleaseIdentityScriptPath = 'scripts/beta-retained-release-identity.ps1',
+    [string]$PublicInstallerSmokeScriptPath = 'scripts/beta-public-installer-smoke-contract.ps1',
     [switch]$KeepDownloads
 )
 
@@ -84,6 +90,54 @@ function Get-Sha256 {
         throw "Required file is missing: $Path"
     }
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+
+function Assert-GitSha1 {
+    param([Parameter(Mandatory = $true)][string]$Value,[Parameter(Mandatory = $true)][string]$Label)
+    if ($Value -notmatch '^[0-9a-fA-F]{40}$') { throw "$Label must be a 40-character Git SHA-1 value." }
+    return $Value.ToLowerInvariant()
+}
+
+function Get-GitExecutable {
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($null -eq $git -or [string]::IsNullOrWhiteSpace([string]$git.Source)) { throw 'Git is required for exact tooling blob verification.' }
+    return $git.Source
+}
+
+function Invoke-GitSingleLine {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string[]]$Arguments,[Parameter(Mandatory = $true)][string]$Label)
+    $output = @(& $GitExecutable -C $RepositoryRoot @Arguments 2>$null)
+    if ($LASTEXITCODE -ne 0) { throw "$Label failed with Git exit code $LASTEXITCODE." }
+    $lines = @($output | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($lines.Count -ne 1) { throw "$Label must return exactly one non-empty line." }
+    return $lines[0].Trim()
+}
+
+function Resolve-GitRepositoryRoot {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).Path
+    $start = if (Test-Path -LiteralPath $resolved -PathType Leaf) { Split-Path -Parent $resolved } else { $resolved }
+    $git = Get-GitExecutable
+    $root = Invoke-GitSingleLine -GitExecutable $git -RepositoryRoot $start -Arguments @('rev-parse','--show-toplevel') -Label 'Git repository-root resolution'
+    if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw "Git repository root does not exist: $root" }
+    return [pscustomobject]@{ git = $git; root = (Resolve-Path -LiteralPath $root).Path }
+}
+
+function Get-GitCommitBlobSha {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string]$Commit,[Parameter(Mandatory = $true)][string]$RepositoryPath)
+    $spec = ('{0}:{1}' -f $Commit,$RepositoryPath)
+    return Assert-GitSha1 -Value (Invoke-GitSingleLine -GitExecutable $GitExecutable -RepositoryRoot $RepositoryRoot -Arguments @('rev-parse',$spec) -Label "Exact-commit blob lookup for $RepositoryPath") -Label "Exact-commit blob for $RepositoryPath"
+}
+
+function Get-GitWorkingTreeBlobSha {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string]$RepositoryPath,[Parameter(Mandatory = $true)][string]$LocalPath)
+    return Assert-GitSha1 -Value (Invoke-GitSingleLine -GitExecutable $GitExecutable -RepositoryRoot $RepositoryRoot -Arguments @('hash-object',"--path=$RepositoryPath",'--',$LocalPath) -Label "Git-filtered working-tree blob for $RepositoryPath") -Label "Git-filtered working-tree blob for $RepositoryPath"
+}
+
+function Get-GitRawFileBlobSha {
+    param([Parameter(Mandatory = $true)][string]$GitExecutable,[Parameter(Mandatory = $true)][string]$RepositoryRoot,[Parameter(Mandatory = $true)][string]$Path,[Parameter(Mandatory = $true)][string]$Label)
+    return Assert-GitSha1 -Value (Invoke-GitSingleLine -GitExecutable $GitExecutable -RepositoryRoot $RepositoryRoot -Arguments @('hash-object','--no-filters','--',$Path) -Label $Label) -Label $Label
 }
 
 function Read-Sha256Sidecar {
@@ -203,72 +257,67 @@ function Assert-ToolingProvenance {
     param(
         [Parameter(Mandatory = $true)][string]$RepositoryName,
         [Parameter(Mandatory = $true)][string]$ToolingCommit,
+        [Parameter(Mandatory = $true)][string]$BaselineFile,
         [Parameter(Mandatory = $true)][string]$LocalVerifierPath,
-        [Parameter(Mandatory = $true)][string]$LocalPackageVerifierPath
+        [Parameter(Mandatory = $true)][string]$LocalPackageVerifierPath,
+        [Parameter(Mandatory = $true)][string]$LocalInstallerVerifierPath,
+        [Parameter(Mandatory = $true)][string]$LocalRetainedIdentityPath,
+        [Parameter(Mandatory = $true)][string]$LocalRetainedBindingPath,
+        [Parameter(Mandatory = $true)][string]$LocalInstallerSmokePath
     )
 
     $repo = Assert-RepositoryName -Value $RepositoryName
     $commit = Assert-ExactCommit -Commit $ToolingCommit -Label 'ExpectedVerifierCommit'
-    $localVerifier = (Resolve-Path -LiteralPath $LocalVerifierPath -ErrorAction Stop).Path
-    $localPackageVerifier = (Resolve-Path -LiteralPath $LocalPackageVerifierPath -ErrorAction Stop).Path
-    $localVerifierHash = Get-Sha256 -Path $localVerifier
-    $localPackageVerifierHash = Get-Sha256 -Path $localPackageVerifier
+    $gitContext = Resolve-GitRepositoryRoot -Path $LocalVerifierPath
+    $git = [string]$gitContext.git
+    $repositoryRoot = [string]$gitContext.root
+    $head = Assert-ExactCommit -Commit (Invoke-GitSingleLine -GitExecutable $git -RepositoryRoot $repositoryRoot -Arguments @('rev-parse','HEAD') -Label 'Checked-out HEAD read-back') -Label 'Checked-out HEAD'
+    if ($head -ne $commit) { throw "Checked-out HEAD '$head' does not match exact verifier tooling commit '$commit'." }
 
-    $headers = @{
-        'Accept' = 'application/vnd.github+json'
-        'User-Agent' = 'DragonDiskForge-PostReleaseVerifier'
-        'X-GitHub-Api-Version' = '2022-11-28'
-    }
-    $commitResponse = Invoke-RestMethod -Method Get -Uri "https://api.github.com/repos/$repo/commits/$commit" -Headers $headers
-    $resolvedCommit = Assert-ExactCommit -Commit ([string]$commitResponse.sha) -Label 'Verifier tooling commit read-back'
-    if ($resolvedCommit -ne $commit) {
-        throw "Verifier tooling commit read-back resolved '$resolvedCommit' instead of '$commit'."
-    }
+    $baseline = Get-Content -LiteralPath (Resolve-Path -LiteralPath $BaselineFile -ErrorAction Stop).Path -Raw | ConvertFrom-Json
+    if ([int]$baseline.schemaVersion -ne 3 -or [string]$baseline.kind -ne 'DragonDiskForgePostReleaseAcceptanceBaseline' -or [string]$baseline.version -ne '0.5.0-beta.1') { throw 'Post-release baseline identity is invalid.' }
+    if ([string]$baseline.toolingPinPolicy.mode -ne 'exact-commit-plus-blob' -or -not [bool]$baseline.toolingPinPolicy.failClosed -or -not [bool]$baseline.toolingPinPolicy.requirePublicReadBack) { throw 'Post-release baseline tooling pin policy is invalid.' }
 
-    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-verifier-provenance-' + [guid]::NewGuid().ToString('N'))
+    $expected = @(
+        [pscustomobject]@{ repositoryPath='scripts/beta-post-release-verify.ps1';localPath=(Resolve-Path -LiteralPath $LocalVerifierPath -ErrorAction Stop).Path;label='post-release verifier';resultName='postReleaseVerifierSha256';helper=$false },
+        [pscustomobject]@{ repositoryPath='scripts/verify-package.ps1';localPath=(Resolve-Path -LiteralPath $LocalPackageVerifierPath -ErrorAction Stop).Path;label='package verifier';resultName='packageVerifierSha256';helper=$false },
+        [pscustomobject]@{ repositoryPath='scripts/verify-installer.ps1';localPath=(Resolve-Path -LiteralPath $LocalInstallerVerifierPath -ErrorAction Stop).Path;label='installer verifier';resultName='installerVerifierSha256';helper=$false },
+        [pscustomobject]@{ repositoryPath='scripts/beta-retained-release-identity.ps1';localPath=(Resolve-Path -LiteralPath $LocalRetainedIdentityPath -ErrorAction Stop).Path;label='retained identity helper';resultName='retainedReleaseIdentitySha256';helper=$true },
+        [pscustomobject]@{ repositoryPath='scripts/beta-retained-public-binding.ps1';localPath=(Resolve-Path -LiteralPath $LocalRetainedBindingPath -ErrorAction Stop).Path;label='retained binding helper';resultName='retainedPublicBindingSha256';helper=$true },
+        [pscustomobject]@{ repositoryPath='scripts/beta-public-installer-smoke-contract.ps1';localPath=(Resolve-Path -LiteralPath $LocalInstallerSmokePath -ErrorAction Stop).Path;label='public installer smoke helper';resultName='publicInstallerSmokeSha256';helper=$true }
+    )
+
+    $headers=@{'Accept'='application/vnd.github+json';'User-Agent'='DragonDiskForge-PostReleaseVerifier';'X-GitHub-Api-Version'='2022-11-28'}
+    $commitResponse=Invoke-RestMethod -Method Get -Uri "https://api.github.com/repos/$repo/commits/$commit" -Headers $headers
+    if ((Assert-ExactCommit -Commit ([string]$commitResponse.sha) -Label 'Verifier tooling commit read-back') -ne $commit) { throw 'Verifier tooling commit read-back mismatch.' }
+
+    $root=Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-verifier-provenance-'+[guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $root -Force | Out-Null
+    $hashes=@{};$helperCount=0
     try {
-        $expected = @(
-            [pscustomobject]@{
-                repositoryPath = 'scripts/beta-post-release-verify.ps1'
-                localPath = $localVerifier
-                localHash = $localVerifierHash
-                destination = Join-Path $root 'beta-post-release-verify.ps1'
-                label = 'post-release verifier'
-            },
-            [pscustomobject]@{
-                repositoryPath = 'scripts/verify-package.ps1'
-                localPath = $localPackageVerifier
-                localHash = $localPackageVerifierHash
-                destination = Join-Path $root 'verify-package.ps1'
-                label = 'package verifier'
-            }
-        )
-
-        foreach ($tool in $expected) {
-            $url = Get-PublicRawToolUrl -RepositoryName $repo -Commit $commit -RepositoryPath $tool.repositoryPath
-            Invoke-WebRequest -UseBasicParsing -Uri $url -Headers @{ 'User-Agent' = 'DragonDiskForge-PostReleaseVerifier' } -OutFile $tool.destination
-            if (-not (Test-Path -LiteralPath $tool.destination -PathType Leaf) -or (Get-Item -LiteralPath $tool.destination).Length -le 0) {
-                throw "Public read-back of $($tool.label) did not produce a non-empty file."
-            }
-            $publicHash = Get-Sha256 -Path $tool.destination
-            if ($publicHash -ne $tool.localHash) {
-                throw "Local $($tool.label) SHA-256 '$($tool.localHash)' does not match exact public tooling commit '$commit' SHA-256 '$publicHash'."
-            }
+        foreach($tool in $expected){
+            $property=$baseline.requiredToolingBlobs.PSObject.Properties[$tool.repositoryPath]
+            if($null -eq $property){throw "Post-release baseline is missing required tooling blob pin '$($tool.repositoryPath)'."}
+            $pin=Assert-GitSha1 -Value ([string]$property.Value) -Label "Baseline blob pin for $($tool.repositoryPath)"
+            $expectedLocal=[System.IO.Path]::GetFullPath((Join-Path $repositoryRoot ($tool.repositoryPath.Replace('/',[System.IO.Path]::DirectorySeparatorChar))))
+            $actualLocal=[System.IO.Path]::GetFullPath([string]$tool.localPath)
+            $comparison=if($env:OS -eq 'Windows_NT'){[System.StringComparison]::OrdinalIgnoreCase}else{[System.StringComparison]::Ordinal}
+            if(-not [string]::Equals($expectedLocal,$actualLocal,$comparison)){throw "Local tooling path '$actualLocal' does not match repository path '$($tool.repositoryPath)'."}
+            $commitBlob=Get-GitCommitBlobSha -GitExecutable $git -RepositoryRoot $repositoryRoot -Commit $commit -RepositoryPath $tool.repositoryPath
+            $workingBlob=Get-GitWorkingTreeBlobSha -GitExecutable $git -RepositoryRoot $repositoryRoot -RepositoryPath $tool.repositoryPath -LocalPath $actualLocal
+            if($commitBlob -ne $pin -or $workingBlob -ne $pin){throw "Exact/local Git blob mismatch for $($tool.repositoryPath): baseline=$pin exact=$commitBlob working=$workingBlob."}
+            $destination=Join-Path $root ([System.IO.Path]::GetFileName($tool.repositoryPath))
+            Invoke-WebRequest -UseBasicParsing -Uri (Get-PublicRawToolUrl -RepositoryName $repo -Commit $commit -RepositoryPath $tool.repositoryPath) -Headers @{'User-Agent'='DragonDiskForge-PostReleaseVerifier'} -OutFile $destination
+            if(-not(Test-Path -LiteralPath $destination -PathType Leaf)-or(Get-Item -LiteralPath $destination).Length -le 0){throw "Public read-back of $($tool.label) did not produce a non-empty file."}
+            $publicBlob=Get-GitRawFileBlobSha -GitExecutable $git -RepositoryRoot $repositoryRoot -Path $destination -Label "Public exact-commit Git blob for $($tool.repositoryPath)"
+            if($publicBlob -ne $pin){throw "Public exact-commit Git blob '$publicBlob' for $($tool.repositoryPath) does not match baseline pin '$pin'."}
+            $hashes[[string]$tool.resultName]=Get-Sha256 -Path $actualLocal
+            if([bool]$tool.helper){$helperCount++}
         }
-
-        return [pscustomobject]@{
-            verifierCommit = $commit
-            postReleaseVerifierSha256 = $localVerifierHash
-            packageVerifierSha256 = $localPackageVerifierHash
-            exactPublicToolingReadBack = $true
-        }
+        if($helperCount -ne 3){throw "Exact public helper read-back expected 3 helpers, observed $helperCount."}
+        return [pscustomobject]@{verifierCommit=$commit;postReleaseVerifierSha256=[string]$hashes.postReleaseVerifierSha256;packageVerifierSha256=[string]$hashes.packageVerifierSha256;installerVerifierSha256=[string]$hashes.installerVerifierSha256;retainedReleaseIdentitySha256=[string]$hashes.retainedReleaseIdentitySha256;retainedPublicBindingSha256=[string]$hashes.retainedPublicBindingSha256;publicInstallerSmokeSha256=[string]$hashes.publicInstallerSmokeSha256;exactPublicToolingReadBack=$true;exactPublicHelperReadBack=$true}
     }
-    finally {
-        if (Test-Path -LiteralPath $root) {
-            Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
+    finally {if(Test-Path -LiteralPath $root){Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue}}
 }
 
 function Assert-DownloadedReleaseBundle {
@@ -359,6 +408,7 @@ function Assert-DownloadedReleaseBundle {
         capabilityMatrixPath = $capabilityPath
         capabilityMatrixSha256 = $actualCapabilityHash
         candidateWorkflowRunId = [string]$manifest.candidateWorkflowRunId
+        retainedEvidenceSha256 = ([string]$manifest.retainedEvidenceSha256).ToLowerInvariant()
         manualQaEvidenceSha256 = ([string]$manifest.manualQaEvidenceSha256).ToLowerInvariant()
     }
 }
@@ -401,6 +451,42 @@ function Invoke-RuntimePackageVerification {
     }
 }
 
+
+function Assert-RetainedIdentityBinding {
+    param([Parameter(Mandatory = $true)][string]$EvidencePath,[Parameter(Mandatory = $true)][string]$BaselineFile,[Parameter(Mandatory = $true)][string]$ExpectedVersion,[Parameter(Mandatory = $true)][string]$ExpectedSourceCommit,[Parameter(Mandatory = $true)][string]$PublicPackageSha256,[Parameter(Mandatory = $true)][string]$PublicInstallerSha256,[Parameter(Mandatory = $true)][string]$ManifestCandidateWorkflowRunId,[Parameter(Mandatory = $true)][string]$ManifestRetainedEvidenceSha256,[Parameter(Mandatory = $true)][string]$BindingScriptPath)
+    $baselinePath=(Resolve-Path -LiteralPath $BaselineFile -ErrorAction Stop).Path;$baseline=Get-Content -LiteralPath $baselinePath -Raw|ConvertFrom-Json
+    if([int]$baseline.schemaVersion -ne 3 -or [string]$baseline.kind -ne 'DragonDiskForgePostReleaseAcceptanceBaseline' -or [string]$baseline.version -ne $ExpectedVersion){throw 'Canonical post-release baseline identity is invalid.'}
+    $candidate=$baseline.retainedCandidate;if($null -eq $candidate){throw 'Canonical post-release baseline is missing retainedCandidate.'}
+    $canonicalEvidencePath=[string]$candidate.evidencePath;if($canonicalEvidencePath -ne 'docs/retained-beta-candidate.json'){throw 'Canonical retainedCandidate evidencePath is invalid.'}
+    $repoRoot=Split-Path -Parent (Split-Path -Parent $baselinePath);$expectedEvidencePath=[System.IO.Path]::GetFullPath((Join-Path $repoRoot ($canonicalEvidencePath.Replace('/',[System.IO.Path]::DirectorySeparatorChar))))
+    $path=(Resolve-Path -LiteralPath $EvidencePath -ErrorAction Stop).Path;$comparison=if($env:OS -eq 'Windows_NT'){[System.StringComparison]::OrdinalIgnoreCase}else{[System.StringComparison]::Ordinal};if(-not [string]::Equals($expectedEvidencePath,[System.IO.Path]::GetFullPath($path),$comparison)){throw 'Retained evidence path does not match baseline retainedCandidate evidencePath.'}
+    [int64]$canonicalRunId=0;if(-not [int64]::TryParse([string]$candidate.workflowRunId,[ref]$canonicalRunId)-or $canonicalRunId -le 0){throw 'Baseline retainedCandidate workflowRunId must be a positive integer.'}
+    $canonicalSource=Assert-ExactCommit -Commit ([string]$candidate.sourceCommit) -Label 'Baseline retainedCandidate sourceCommit';if($canonicalSource -ne $ExpectedSourceCommit){throw 'Baseline retainedCandidate sourceCommit does not match public sourceCommit.'}
+    $canonicalPackage=Assert-HexSha256 -Value ([string]$candidate.packageSha256) -Label 'Baseline retainedCandidate packageSha256';$canonicalInstaller=Assert-HexSha256 -Value ([string]$candidate.installerSha256) -Label 'Baseline retainedCandidate installerSha256';$canonicalEvidenceSha=Assert-HexSha256 -Value ([string]$candidate.retainedEvidenceSha256) -Label 'Baseline retainedCandidate retainedEvidenceSha256'
+    $evidence=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json
+    if([int]$evidence.schemaVersion -ne 2 -or [string]$evidence.kind -ne 'DragonDiskForgeRetainedBetaCandidateEvidence'){throw 'Canonical retained evidence identity is invalid.'}
+    if([string]$evidence.product -ne 'Dragon DiskForge' -or [string]$evidence.version -ne $ExpectedVersion -or [string]$evidence.architecture -ne 'x64'){throw 'Canonical retained evidence product/version/architecture is invalid.'}
+    if([string]$evidence.installerScope -ne 'per-user' -or [bool]$evidence.publicRelease -or [bool]$evidence.betaReady){throw 'Canonical retained evidence must remain per-user, non-public, and not beta-ready.'}
+    $source=Assert-ExactCommit -Commit ([string]$evidence.sourceCommit) -Label 'Retained sourceCommit';[int64]$runId=0;if(-not [int64]::TryParse([string]$evidence.workflowRunId,[ref]$runId)-or $runId -le 0){throw 'Retained workflowRunId must be a positive integer.'}
+    $packageSha=Assert-HexSha256 -Value ([string]$evidence.packageSha256) -Label 'Retained packageSha256';$installerSha=Assert-HexSha256 -Value ([string]$evidence.installerSha256) -Label 'Retained installerSha256';$evidenceSha=Get-Sha256 -Path $path
+    if($source -ne $canonicalSource -or $runId -ne $canonicalRunId -or $packageSha -ne $canonicalPackage -or $installerSha -ne $canonicalInstaller -or $evidenceSha -ne $canonicalEvidenceSha){throw 'Retained evidence identity does not exactly match baseline retainedCandidate Candidate #278.'}
+    $manifestEvidenceSha=Assert-HexSha256 -Value $ManifestRetainedEvidenceSha256 -Label 'Manifest retainedEvidenceSha256';if($evidenceSha -ne $manifestEvidenceSha){throw "Canonical retained evidence SHA-256 '$evidenceSha' does not match manifest '$manifestEvidenceSha'."}
+    $bindingPath=(Resolve-Path -LiteralPath $BindingScriptPath -ErrorAction Stop).Path;. $bindingPath -Mode library
+    if($null -eq (Get-Command Assert-RetainedPublicBinding -CommandType Function -ErrorAction SilentlyContinue)){throw 'Retained/public binding helper did not expose Assert-RetainedPublicBinding.'}
+    $identity=[pscustomobject]@{sourceCommit=$source;workflowRunId=$runId;packageSha256=$packageSha;installerSha256=$installerSha;retainedEvidenceSha256=$evidenceSha}
+    $binding=Assert-RetainedPublicBinding -RetainedIdentity $identity -PublicSourceCommit $ExpectedSourceCommit -PublicPackageSha256 $PublicPackageSha256 -PublicInstallerSha256 $PublicInstallerSha256 -ManifestCandidateWorkflowRunId $ManifestCandidateWorkflowRunId -ManifestRetainedEvidenceSha256 $manifestEvidenceSha
+    if(-not [bool]$binding.retainedIdentityMatched){throw 'Retained/public identity binding did not produce retainedIdentityMatched=true.'};return $binding
+}
+
+function Invoke-RuntimeInstallerVerification {
+    param([Parameter(Mandatory = $true)][string]$DownloadedInstallerPath,[Parameter(Mandatory = $true)][string]$Version,[Parameter(Mandatory = $true)][string]$SmokeScriptPath,[Parameter(Mandatory = $true)][string]$InstallerVerifierPath)
+    if($env:OS -ne 'Windows_NT'){throw 'Post-release runtime installer verification must run on Windows.'}
+    $smoke=(Resolve-Path -LiteralPath $SmokeScriptPath -ErrorAction Stop).Path;$installerVerifier=(Resolve-Path -LiteralPath $InstallerVerifierPath -ErrorAction Stop).Path;$powershell=Get-Command powershell.exe -ErrorAction SilentlyContinue
+    if($null -eq $powershell){throw 'Windows PowerShell is required to execute the public installer smoke contract.'}
+    & $powershell.Source -NoLogo -NoProfile -ExecutionPolicy Bypass -File $smoke -Mode verify -InstallerPath $DownloadedInstallerPath -InstallerVerifierPath $installerVerifier -ExpectedVersion $Version
+    if($LASTEXITCODE -ne 0){throw "Downloaded public installer failed runtime smoke verification with exit code $LASTEXITCODE."};return $true
+}
+
 function Invoke-PublicReleaseVerification {
     param(
         [Parameter(Mandatory = $true)][string]$RepositoryName,
@@ -410,13 +496,19 @@ function Invoke-PublicReleaseVerification {
         [Parameter(Mandatory = $true)][string]$ToolingCommit,
         [Parameter(Mandatory = $true)][string]$VerifierScriptPath,
         [Parameter(Mandatory = $true)][string]$PackageVerifier,
+        [Parameter(Mandatory = $true)][string]$InstallerVerifier,
+        [Parameter(Mandatory = $true)][string]$BaselineFile,
+        [Parameter(Mandatory = $true)][string]$RetainedEvidenceFile,
+        [Parameter(Mandatory = $true)][string]$RetainedBindingScript,
+        [Parameter(Mandatory = $true)][string]$RetainedIdentityScript,
+        [Parameter(Mandatory = $true)][string]$InstallerSmokeScript,
         [bool]$PreserveDownloads
     )
 
     $repo = Assert-RepositoryName -Value $RepositoryName
     Assert-VersionAndTag -Version $Version -Tag $Tag | Out-Null
     $commit = Assert-ExactCommit -Commit $SourceCommit -Label 'ExpectedSourceCommit'
-    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier
+    $tooling = Assert-ToolingProvenance -RepositoryName $repo -ToolingCommit $ToolingCommit -BaselineFile $BaselineFile -LocalVerifierPath $VerifierScriptPath -LocalPackageVerifierPath $PackageVerifier -LocalInstallerVerifierPath $InstallerVerifier -LocalRetainedIdentityPath $RetainedIdentityScript -LocalRetainedBindingPath $RetainedBindingScript -LocalInstallerSmokePath $InstallerSmokeScript
 
     $encodedTag = [Uri]::EscapeDataString($Tag)
     $headers = @{
@@ -451,6 +543,8 @@ function Invoke-PublicReleaseVerification {
 
         $bundle = Assert-DownloadedReleaseBundle -Directory $downloadRoot -Version $Version -Tag $Tag -SourceCommit $commit
         Invoke-RuntimePackageVerification -DownloadedPackagePath $bundle.packagePath -PackageSha256 $bundle.packageSha256 -Version $Version -VerifierPath $PackageVerifier -TemporaryRoot $downloadRoot
+        $retainedBinding = Assert-RetainedIdentityBinding -EvidencePath $RetainedEvidenceFile -BaselineFile $BaselineFile -ExpectedVersion $Version -ExpectedSourceCommit $commit -PublicPackageSha256 $bundle.packageSha256 -PublicInstallerSha256 $bundle.installerSha256 -ManifestCandidateWorkflowRunId $bundle.candidateWorkflowRunId -ManifestRetainedEvidenceSha256 $bundle.retainedEvidenceSha256 -BindingScriptPath $RetainedBindingScript
+        $runtimeInstallerVerified = Invoke-RuntimeInstallerVerification -DownloadedInstallerPath $bundle.installerPath -Version $Version -SmokeScriptPath $InstallerSmokeScript -InstallerVerifierPath $InstallerVerifier
         $succeeded = $true
 
         return [pscustomobject]@{
@@ -461,6 +555,7 @@ function Invoke-PublicReleaseVerification {
             verifierCommit = $tooling.verifierCommit
             postReleaseVerifierSha256 = $tooling.postReleaseVerifierSha256
             packageVerifierSha256 = $tooling.packageVerifierSha256
+            installerVerifierSha256 = $tooling.installerVerifierSha256
             releaseUrl = [string]$release.html_url
             publishedAt = [string]$release.published_at
             packageSha256 = $bundle.packageSha256
@@ -468,9 +563,13 @@ function Invoke-PublicReleaseVerification {
             capabilityMatrixSha256 = $bundle.capabilityMatrixSha256
             candidateWorkflowRunId = $bundle.candidateWorkflowRunId
             manualQaEvidenceSha256 = $bundle.manualQaEvidenceSha256
+            retainedEvidenceSha256 = $bundle.retainedEvidenceSha256
             downloadedFromPublicRelease = $true
             runtimePackageVerified = $true
-            exactPublicToolingReadBack = $true
+            runtimeInstallerVerified = [bool]$runtimeInstallerVerified
+            exactPublicToolingReadBack = [bool]$tooling.exactPublicToolingReadBack
+            exactPublicHelperReadBack = [bool]$tooling.exactPublicHelperReadBack
+            retainedIdentityMatched = [bool]$retainedBinding.retainedIdentityMatched
         }
     }
     finally {
@@ -638,13 +737,17 @@ if ([string]::IsNullOrWhiteSpace($ExpectedVerifierCommit)) {
     throw 'ExpectedVerifierCommit is required in verify mode; post-release verification tooling must be bound to an exact public repository commit.'
 }
 
-$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -PreserveDownloads $KeepDownloads.IsPresent
+$result = Invoke-PublicReleaseVerification -RepositoryName $Repository -Tag $TagName -Version $ExpectedVersion -SourceCommit $ExpectedSourceCommit -ToolingCommit $ExpectedVerifierCommit -VerifierScriptPath $PSCommandPath -PackageVerifier $VerifyPackageScriptPath -InstallerVerifier $VerifyInstallerScriptPath -BaselineFile $BaselinePath -RetainedEvidenceFile $RetainedEvidencePath -RetainedBindingScript $RetainedPublicBindingScriptPath -RetainedIdentityScript $RetainedReleaseIdentityScriptPath -InstallerSmokeScript $PublicInstallerSmokeScriptPath -PreserveDownloads $KeepDownloads.IsPresent
 Write-Host 'Dragon DiskForge public beta post-release verification passed.'
 Write-Host ("Release: {0}" -f $result.releaseUrl)
 Write-Host ("Tag/source: {0} -> {1}" -f $result.tag, $result.sourceCommit)
 Write-Host ("Verifier tooling commit: {0}" -f $result.verifierCommit)
 Write-Host ("Post-release verifier SHA-256: {0}" -f $result.postReleaseVerifierSha256)
 Write-Host ("Package verifier SHA-256: {0}" -f $result.packageVerifierSha256)
+Write-Host ("Installer verifier SHA-256: {0}" -f $result.installerVerifierSha256)
 Write-Host ("Package SHA-256: {0}" -f $result.packageSha256)
 Write-Host ("Release manifest SHA-256: {0}" -f $result.releaseManifestSha256)
 Write-Host ("Capability matrix SHA-256: {0}" -f $result.capabilityMatrixSha256)
+Write-Host ("exactPublicHelperReadBack={0}" -f ([bool]$result.exactPublicHelperReadBack).ToString().ToLowerInvariant())
+Write-Host ("retainedIdentityMatched={0}" -f ([bool]$result.retainedIdentityMatched).ToString().ToLowerInvariant())
+Write-Host ("runtimeInstallerVerified={0}" -f ([bool]$result.runtimeInstallerVerified).ToString().ToLowerInvariant())

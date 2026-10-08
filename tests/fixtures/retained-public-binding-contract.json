@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgeRetainedPublicBindingContract",
+  "candidateWorkflowRunNumber": 278,
+  "requiredComparisons": [
+    "sourceCommit",
+    "packageSha256",
+    "installerSha256",
+    "candidateWorkflowRunId",
+    "retainedEvidenceSha256"
+  ],
+  "expectedResult": {
+    "retainedIdentityMatched": true
+  },
+  "compatibility": {
+    "powershell7": true,
+    "windowsPowerShell51": true
+  },
+  "negativeCases": [
+    "sourceCommit mismatch",
+    "packageSha256 mismatch",
+    "installerSha256 mismatch",
+    "candidateWorkflowRunId mismatch",
+    "retainedEvidenceSha256 mismatch"
+  ]
+}
