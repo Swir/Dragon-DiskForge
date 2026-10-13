@@ -210,6 +210,8 @@ public sealed class PhysicalMediaWriteExecutionService
         return null;
     }
 
+    // Preserve the confirmed target capacity across a planned write and the actual sink.
+    // Device number and serial-derived identity alone do not prove the media did not change.
     private static bool SameDestinationIdentity(PhysicalDiskInfo planned, PhysicalDiskInfo current)
     {
         return planned.DiskNumber == current.DiskNumber
@@ -217,7 +219,10 @@ public sealed class PhysicalMediaWriteExecutionService
             && planned.HasStableIdentity
             && current.HasStableIdentity
             && !string.IsNullOrWhiteSpace(planned.StableId)
-            && string.Equals(planned.StableId, current.StableId, StringComparison.Ordinal);
+            && string.Equals(planned.StableId, current.StableId, StringComparison.Ordinal)
+            && planned.CapacityBytes is > 0
+            && current.CapacityBytes == planned.CapacityBytes
+            && planned.IsSystemDisk == current.IsSystemDisk;
     }
 
     private static PhysicalMediaWriteExecutionResult Result(
