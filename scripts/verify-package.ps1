@@ -26,9 +26,15 @@ $checksum = "$zip.sha256"
 if (-not (Test-Path $zip -PathType Leaf)) { throw "Package ZIP was not found: $zip" }
 if (-not (Test-Path $checksum -PathType Leaf)) { throw "Package checksum was not found: $checksum" }
 
-$checksumLine = (Get-Content -Path $checksum -Raw).Trim()
-$declaredHash = ($checksumLine -split '\s+')[0].ToLowerInvariant()
-$actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+# A matching digest alone is insufficient: the sidecar must name this exact artifact.
+# package-windows.ps1 writes lowercase hex, two spaces and the ZIP leaf name.
+$checksumLine = (Get-Content -LiteralPath $checksum -Raw).TrimEnd("`r`, `n")
+$expectedLeaf = [regex]::Escape([System.IO.Path]::GetFileName($zip))
+if (-not ($checksumLine -cmatch "^([0-9a-f]{64})  $expectedLeaf$")) {
+    throw "Package SHA-256 sidecar is not a canonical digest and exact ZIP filename."
+}
+$declaredHash = $Matches[1]
+$actualHash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($declaredHash -ne $actualHash) { throw "Package SHA-256 mismatch. Expected '$declaredHash', actual '$actualHash'." }
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("DragonDiskForge-package-verify-" + [guid]::NewGuid().ToString("N"))
@@ -37,8 +43,16 @@ try {
     Expand-Archive -Path $zip -DestinationPath $tempRoot -Force
     $manifestPath = Join-Path $tempRoot "package-manifest.json"
     if (-not (Test-Path $manifestPath -PathType Leaf)) { throw "Package manifest is missing." }
-    $manifest = Get-Content -Path $manifestPath -Raw | ConvertFrom-Json
-    if ([int]$manifest.schemaVersion -lt 6) { throw "Package manifest schema is too old for the packaged UAC-witness-enabled beta contract: $($manifest.schemaVersion)." }
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    # Exact v6, not a coerced string or an incompatible, unreviewed schema.
+    if ((($manifest.schemaVersion -isnot [int]) -and ($manifest.schemaVersion -isnot [long])) -or
+        ($manifest.schemaVersion -ne 6)) {
+        throw "Unexpected package manifest schema. Exact numeric version 6 is required."
+    }
+    if ((($manifest.fileCount -isnot [int]) -and ($manifest.fileCount -isnot [long])) -or
+        ($manifest.fileCount -le 0)) {
+        throw "Package manifest fileCount must be a positive JSON integer."
+    }
     if ([string]$manifest.product -ne "Dragon DiskForge") { throw "Unexpected package product '$($manifest.product)'." }
     if ([string]$manifest.version -ne $expected) { throw "Package manifest version '$($manifest.version)' does not match expected '$expected'." }
     if ([string]$manifest.architecture -ne "x64") { throw "Unexpected package architecture '$($manifest.architecture)'." }
@@ -64,6 +78,11 @@ try {
         if (-not (Test-Path $runtimePath -PathType Leaf)) {
             throw "Verified package is not runtime-complete; missing '$runtimeFileName'."
         }
+    }
+
+    $actualFileCount = @(Get-ChildItem -LiteralPath $tempRoot -Recurse -File).Count
+    if ($actualFileCount -ne $manifest.fileCount) {
+        throw "Package manifest fileCount does not match the extracted ZIP payload."
     }
 
     if (@(Get-ChildItem -Path $tempRoot -Recurse -File -Filter "*.pdb").Count -ne 0) { throw "Verified package contains debug symbol files." }

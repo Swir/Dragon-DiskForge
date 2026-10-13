@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'scripts/beta-post-release-verify.ps1'
+      - 'scripts/beta-post-release-retained-binding.ps1'
+      - 'scripts/beta-post-release-retained-binding.ps1'
       - '.github/workflows/beta-post-release-verify-contract.yml'
       - 'docs/BETA-PUBLISHING.md'
   push:

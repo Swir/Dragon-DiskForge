@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgeInstallerPostUninstallResidueRetryContract",
+  "product": "Dragon DiskForge",
+  "version": "0.5.0-beta.1",
+  "targetScript": "scripts/verify-installer.ps1",
+  "executionPoint": "after-successful-silent-uninstall-before-harness-cleanup",
+  "forbiddenProductMarkers": [
+    "DragonDiskForge.App.exe",
+    "package-manifest.json",
+    "unins000.exe"
+  ],
+  "retryPolicy": {
+    "maxAttempts": 20,
+    "delayMilliseconds": 250,
+    "maximumObservationWindowMilliseconds": 5000,
+    "reason": "allow short uninstaller self-delete latency without accepting persistent product payload residue"
+  },
+  "semantics": {
+    "failClosedOnPersistentForbiddenMarker": true,
+    "allowUnrelatedBenignResidue": true,
+    "requireAllForbiddenMarkersAbsentBeforeHarnessCleanup": true
+  },
+  "shellCoverage": [
+    "pwsh",
+    "windows-powershell-5.1"
+  ],
+  "cases": [
+    {
+      "name": "clean-after-uninstall",
+      "attempts": [
+        []
+      ],
+      "expected": "pass"
+    },
+    {
+      "name": "benign-residue-only",
+      "attempts": [
+        [
+          "install.log",
+          "user-note.txt"
+        ]
+      ],
+      "expected": "pass"
+    },
+    {
+      "name": "application-executable-persists",
+      "attempts": [
+        [
+          "DragonDiskForge.App.exe"
+        ]
+      ],
+      "expected": "fail"
+    },
+    {
+      "name": "package-manifest-persists",
+      "attempts": [
+        [
+          "package-manifest.json"
+        ]
+      ],
+      "expected": "fail"
+    },
+    {
+      "name": "uninstaller-self-delete-within-retry-window",
+      "attempts": [
+        [
+          "unins000.exe"
+        ],
+        [
+          "unins000.exe"
+        ],
+        []
+      ],
+      "expected": "pass"
+    },
+    {
+      "name": "uninstaller-persists-through-retry-window",
+      "repeatAttempt": [
+        "unins000.exe"
+      ],
+      "repeatCount": 20,
+      "expected": "fail"
+    },
+    {
+      "name": "multiple-product-markers-persist",
+      "attempts": [
+        [
+          "DragonDiskForge.App.exe",
+          "package-manifest.json",
+          "unins000.exe"
+        ]
+      ],
+      "expected": "fail"
+    }
+  ]
+}

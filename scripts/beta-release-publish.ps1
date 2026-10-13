@@ -490,6 +490,24 @@ function Prepare-ReleaseBundle {
     }
 }
 
+
+function Invoke-PublishedInstallerSmoke {
+    param([Parameter(Mandatory = $true)]$Bundle,[Parameter(Mandatory = $true)][string]$Repo,[Parameter(Mandatory = $true)][string]$Version,[Parameter(Mandatory = $true)][string]$GitHubCli)
+    if($env:OS -ne 'Windows_NT'){throw 'Published installer smoke verification must run on Windows.'}
+    $root=Join-Path ([System.IO.Path]::GetTempPath()) ('DragonDiskForge-published-installer-smoke-'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $root -Force|Out-Null
+    try{
+        $installerName=[System.IO.Path]::GetFileName([string]$Bundle.installerPath);$sidecarName=[System.IO.Path]::GetFileName([string]$Bundle.installerChecksumPath)
+        & $GitHubCli release download $Bundle.tag --repo $Repo --pattern $installerName --pattern $sidecarName --dir $root --clobber
+        if($LASTEXITCODE -ne 0){throw 'Cannot download the just-published installer assets for runtime smoke verification.'}
+        $proof=Get-FileProof -FilePath (Join-Path $root $installerName) -SidecarPath (Join-Path $root $sidecarName) -Label 'Published installer'
+        if([string]$proof.sha256 -ne [string]$Bundle.installerSha256){throw "Published installer SHA-256 '$($proof.sha256)' does not match verified candidate '$($Bundle.installerSha256)'."}
+        $scriptRoot=Split-Path -Parent $PSCommandPath;$smokeScript=Resolve-File -Path (Join-Path $scriptRoot 'beta-public-installer-smoke-contract.ps1') -Label 'Public installer smoke contract';$installerVerifier=Resolve-File -Path (Join-Path $scriptRoot 'verify-installer.ps1') -Label 'Installer verifier';$powershell=Get-Command powershell.exe -ErrorAction SilentlyContinue
+        if($null -eq $powershell){throw 'Windows PowerShell is required for published installer smoke verification.'}
+        & $powershell.Source -NoLogo -NoProfile -ExecutionPolicy Bypass -File $smokeScript -Mode verify -InstallerPath $proof.path -InstallerVerifierPath $installerVerifier -ExpectedVersion $Version
+        if($LASTEXITCODE -ne 0){throw "Published installer smoke verification failed with exit code $LASTEXITCODE."};return $true
+    }finally{if(Test-Path -LiteralPath $root){Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue}}
+}
+
 function Publish-ReleaseBundle {
     param(
         [Parameter(Mandatory = $true)]$Bundle,
@@ -533,6 +551,7 @@ function Publish-ReleaseBundle {
     )
     $releaseArguments = Get-ReleaseCreateArguments -Repo $Repo -Tag $Bundle.tag -SourceCommit $Bundle.sourceCommit -Version $Version -NotesPath $Bundle.notesPath -Assets $assets
     $created = $false
+    $runtimeInstallerVerified = $false
     try {
         & $gh.Source @releaseArguments
         if ($LASTEXITCODE -ne 0) {
@@ -569,6 +588,7 @@ function Publish-ReleaseBundle {
                 throw "Published pre-release is missing expected asset '$asset'."
             }
         }
+        $runtimeInstallerVerified = Invoke-PublishedInstallerSmoke -Bundle $Bundle -Repo $Repo -Version $Version -GitHubCli $gh.Source
     }
     catch {
         $publicationError = $_
@@ -588,6 +608,7 @@ function Publish-ReleaseBundle {
         sourceCommit = [string]$Bundle.sourceCommit
         packageSha256 = [string]$Bundle.packageSha256
         installerSha256 = [string]$Bundle.installerSha256
+        runtimeInstallerVerified = [bool]$runtimeInstallerVerified
     }
 }
 
@@ -795,6 +816,7 @@ switch ($Mode) {
         Write-Host "Source commit: $($published.sourceCommit)"
         Write-Host "Package SHA-256: $($published.packageSha256)"
         Write-Host "Installer SHA-256: $($published.installerSha256)"
+        Write-Host ("runtimeInstallerVerified={0}" -f ([bool]$published.runtimeInstallerVerified).ToString().ToLowerInvariant())
         exit 0
     }
 }

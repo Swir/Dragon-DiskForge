@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgePostReleaseRuntimeInstallerContract",
+  "version": "0.5.0-beta.1",
+  "publicInstaller": {
+    "fileName": "DragonDiskForge-0.5.0-beta.1-win-x64-setup.exe",
+    "smokeContractPath": "scripts/beta-public-installer-smoke-contract.ps1",
+    "installerVerifierPath": "scripts/verify-installer.ps1",
+    "mode": "verify",
+    "smokeInstall": true,
+    "requiresInstall": true,
+    "requiresUninstall": true
+  },
+  "requiredSequence": [
+    "downloadPublicInstaller",
+    "verifyPublicInstallerHash",
+    "invokePublicInstallerSmokeContract",
+    "verifyInstall",
+    "verifyUninstall",
+    "verifyPostUninstallProductResidue"
+  ],
+  "requiredResultFlags": {
+    "runtimeInstallerVerified": true
+  },
+  "failClosed": {
+    "installerHashMismatch": true,
+    "installerVerifierFailure": true,
+    "installFailure": true,
+    "uninstallFailure": true,
+    "forbiddenProductResidue": true
+  },
+  "compatibility": {
+    "powershell7": true,
+    "windowsPowerShell51": true
+  }
+}

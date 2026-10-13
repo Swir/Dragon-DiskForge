@@ -104,13 +104,59 @@ function Assert-ExactHeadCiSnapshot {
         throw "Exact-head GitHub Actions run set is incomplete: expected $ExpectedTotal run(s), received $($exactRuns.Count)."
     }
 
+    $byWorkflow = @{}
+    foreach ($run in $exactRuns) {
+        if ($null -eq $run.PSObject.Properties['workflow_id']) {
+            throw "Exact-head GitHub Actions run is missing workflow_id."
+        }
+        if ($null -eq $run.PSObject.Properties['run_number']) {
+            throw "Exact-head GitHub Actions run is missing run_number."
+        }
+
+        $workflowIdText = [string]$run.workflow_id
+        $runNumberText = [string]$run.run_number
+        [int64]$workflowId = 0
+        [int64]$runNumber = 0
+        if ([string]::IsNullOrWhiteSpace($workflowIdText) -or
+            -not [int64]::TryParse($workflowIdText, [ref]$workflowId) -or
+            $workflowId -le 0) {
+            throw "Exact-head GitHub Actions run has invalid workflow_id '$workflowIdText'."
+        }
+        if ([string]::IsNullOrWhiteSpace($runNumberText) -or
+            -not [int64]::TryParse($runNumberText, [ref]$runNumber) -or
+            $runNumber -le 0) {
+            throw "Exact-head GitHub Actions run has invalid run_number '$runNumberText'."
+        }
+
+        $key = [string]$workflowId
+        if (-not $byWorkflow.ContainsKey($key)) {
+            $byWorkflow[$key] = @()
+        }
+        $byWorkflow[$key] += [pscustomobject]@{
+            workflowId = $workflowId
+            runNumber = $runNumber
+            run = $run
+        }
+    }
+
+    $effectiveRuns = @()
+    foreach ($key in $byWorkflow.Keys) {
+        $group = @($byWorkflow[$key])
+        $maxRunNumber = [int64](($group | Measure-Object -Property runNumber -Maximum).Maximum)
+        $latest = @($group | Where-Object { [int64]$_.runNumber -eq $maxRunNumber })
+        if ($latest.Count -ne 1) {
+            throw "Exact-head GitHub Actions gate has ambiguous latest run for workflow_id '$key' at run_number '$maxRunNumber'."
+        }
+        $effectiveRuns += $latest[0].run
+    }
+
     foreach ($requiredName in $RequiredWorkflowNames) {
-        if (@($exactRuns | Where-Object { [string]$_.name -eq $requiredName }).Count -eq 0) {
+        if (@($effectiveRuns | Where-Object { [string]$_.name -eq $requiredName }).Count -eq 0) {
             throw "Exact-head GitHub Actions gate is missing required workflow '$requiredName'."
         }
     }
 
-    $notGreen = @($exactRuns | Where-Object {
+    $notGreen = @($effectiveRuns | Where-Object {
         [string]$_.status -ne 'completed' -or [string]$_.conclusion -ne 'success'
     })
     if ($notGreen.Count -gt 0) {
@@ -123,11 +169,15 @@ function Assert-ExactHeadCiSnapshot {
 
     return [pscustomobject]@{
         sourceCommit = $commit
-        runCount = $exactRuns.Count
+        runCount = $effectiveRuns.Count
+        rawRunCount = $exactRuns.Count
+        effectiveRunCount = $effectiveRuns.Count
+        supersededRunCount = $exactRuns.Count - $effectiveRuns.Count
         requiredWorkflowCount = $RequiredWorkflowNames.Count
         state = 'green'
     }
 }
+
 
 function Get-ExactHeadCiProof {
     param(
@@ -252,18 +302,75 @@ function Invoke-SelfTest {
     )
 
     $greenRuns = @(
-        [pscustomobject]@{ name = $required[0]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 1 },
-        [pscustomobject]@{ name = $required[1]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 2 },
-        [pscustomobject]@{ name = $required[2]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 3 },
-        [pscustomobject]@{ name = $required[3]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 4 },
-        [pscustomobject]@{ name = $required[4]; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 5 },
-        [pscustomobject]@{ name = 'Dragon DiskForge Extra Contract'; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 6 }
+        [pscustomobject]@{ name = $required[0]; workflow_id = 1001; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 10 },
+        [pscustomobject]@{ name = $required[1]; workflow_id = 1002; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 20 },
+        [pscustomobject]@{ name = $required[2]; workflow_id = 1003; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 30 },
+        [pscustomobject]@{ name = $required[3]; workflow_id = 1004; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 40 },
+        [pscustomobject]@{ name = $required[4]; workflow_id = 1005; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 50 },
+        [pscustomobject]@{ name = 'Dragon DiskForge Extra Contract'; workflow_id = 1006; head_sha = $commit; status = 'completed'; conclusion = 'success'; run_number = 60 }
     )
 
     $proof = Assert-ExactHeadCiSnapshot -Runs $greenRuns -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required
-    if ([string]$proof.state -ne 'green' -or [int]$proof.runCount -ne 6) {
+    if ([string]$proof.state -ne 'green' -or
+        [int]$proof.rawRunCount -ne 6 -or
+        [int]$proof.effectiveRunCount -ne 6 -or
+        [int]$proof.supersededRunCount -ne 0) {
         throw 'Self-test failed: a complete green exact-head workflow set was not accepted.'
     }
+
+    $superseded = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
+    $superseded += [pscustomobject]@{
+        name = $required[0]
+        workflow_id = 1001
+        head_sha = $commit
+        status = 'completed'
+        conclusion = 'cancelled'
+        run_number = 9
+    }
+    $proof = Assert-ExactHeadCiSnapshot -Runs $superseded -SourceCommit $commit -ExpectedTotal 7 -RequiredWorkflowNames $required
+    if ([int]$proof.rawRunCount -ne 7 -or
+        [int]$proof.effectiveRunCount -ne 6 -or
+        [int]$proof.supersededRunCount -ne 1) {
+        throw 'Self-test failed: superseded historical workflow run was not collapsed correctly.'
+    }
+
+    $newerFailure = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
+    $newerFailure += [pscustomobject]@{
+        name = $required[0]
+        workflow_id = 1001
+        head_sha = $commit
+        status = 'completed'
+        conclusion = 'failure'
+        run_number = 11
+    }
+    $rejected = $false
+    try { Assert-ExactHeadCiSnapshot -Runs $newerFailure -SourceCommit $commit -ExpectedTotal 7 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Self-test failed: newer failed workflow run did not override the older green run.' }
+
+    $ambiguousLatest = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
+    $ambiguousLatest += [pscustomobject]@{
+        name = $required[0]
+        workflow_id = 1001
+        head_sha = $commit
+        status = 'completed'
+        conclusion = 'success'
+        run_number = 10
+    }
+    $rejected = $false
+    try { Assert-ExactHeadCiSnapshot -Runs $ambiguousLatest -SourceCommit $commit -ExpectedTotal 7 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Self-test failed: ambiguous latest workflow run was accepted.' }
+
+    $missingWorkflowId = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
+    $missingWorkflowId[0].PSObject.Properties.Remove('workflow_id')
+    $rejected = $false
+    try { Assert-ExactHeadCiSnapshot -Runs $missingWorkflowId -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Self-test failed: missing workflow_id was accepted.' }
+
+    $nonPositiveRunNumber = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
+    $nonPositiveRunNumber[0].run_number = 0
+    $rejected = $false
+    try { Assert-ExactHeadCiSnapshot -Runs $nonPositiveRunNumber -SourceCommit $commit -ExpectedTotal 6 -RequiredWorkflowNames $required | Out-Null } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Self-test failed: non-positive run_number was accepted.' }
 
     $pending = @($greenRuns | ForEach-Object { $_.PSObject.Copy() })
     $pending[4].status = 'in_progress'

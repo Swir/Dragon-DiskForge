@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "DragonDiskForgePostReleaseToolingPinContract",
+  "product": "Dragon DiskForge",
+  "version": "0.5.0-beta.1",
+  "baselinePath": "docs/post-release-baseline-0.5.0-beta.1.json",
+  "baselineSchemaVersion": 3,
+  "baselineBlobSha": "35c1c72d1d19fa7d2868713f7eda43aaf2bfea45",
+  "toolingPinPolicy": {
+    "mode": "exact-commit-plus-blob",
+    "failClosed": true,
+    "requirePublicReadBack": true
+  },
+  "requiredTooling": {
+    "scripts/beta-post-release-verify.ps1": "2887b815b1ad7c28c06bdce1a1e820b82cbfd2da",
+    "scripts/verify-package.ps1": "dd40d32edfddcd6f9b36dc4128e20f0965e4e0ba",
+    "scripts/verify-installer.ps1": "13e1771239f61ddf654717c196172fc1fecc3f44",
+    "scripts/beta-retained-release-identity.ps1": "071a71f4bb04f3529d801b19db5d1e6629250cc7",
+    "scripts/beta-retained-public-binding.ps1": "58df9f57b4f90003454140404fb6fa67573e8091",
+    "scripts/beta-public-installer-smoke-contract.ps1": "11a5125b406f9dd21af28cd99af25cec252759be"
+  },
+  "verification": {
+    "shells": [
+      "pwsh",
+      "powershell-5.1"
+    ],
+    "algorithm": "git-blob-sha1",
+    "expectedResult": "all-required-tooling-files-exist-and-match-pinned-blobs"
+  },
+  "negativeCases": [
+    {
+      "name": "missing-required-pin",
+      "expected": "reject"
+    },
+    {
+      "name": "malformed-blob-sha",
+      "expected": "reject"
+    },
+    {
+      "name": "required-tooling-file-missing",
+      "expected": "reject"
+    },
+    {
+      "name": "required-tooling-blob-mismatch",
+      "expected": "reject"
+    },
+    {
+      "name": "fail-closed-disabled",
+      "expected": "reject"
+    },
+    {
+      "name": "public-read-back-disabled",
+      "expected": "reject"
+    }
+  ]
+}
